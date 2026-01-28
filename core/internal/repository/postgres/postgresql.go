@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	"car-numers/pkg/utils"
 	"context"
+	"core/pkg/utils"
 	"database/sql"
 	"sync"
 

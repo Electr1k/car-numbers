@@ -1,11 +1,11 @@
 package main
 
 import (
-	"car-numers/config"
-	"car-numers/internal/repository/postgres"
-	usecases "car-numers/internal/usecase/car_number"
-	provides "car-numers/pkg/providers/car_number"
 	"context"
+	"core/config"
+	"core/internal/repository/postgres"
+	usecases "core/internal/usecase/car_number"
+	provides "core/pkg/providers/car_number"
 )
 
 var (

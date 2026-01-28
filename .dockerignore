@@ -1,0 +1,5 @@
+pgdata/
+*.log
+.git/
+tmp/
+.dockerignore

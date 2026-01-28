@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	"car-numers/internal/domain"
 	"context"
+	"core/internal/domain"
 	"time"
 )
 

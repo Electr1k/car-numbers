@@ -1,8 +1,8 @@
 package price
 
 import (
-	"car-numers/internal/repository"
-	proveders "car-numers/pkg/providers/car_number"
+	"core/internal/repository"
+	proveders "core/pkg/providers/car_number"
 	"time"
 )
 

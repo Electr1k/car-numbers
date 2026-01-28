@@ -2,7 +2,7 @@ package car_number
 
 import (
 	"bytes"
-	"car-numers/internal/domain"
+	"core/internal/domain"
 	"fmt"
 	"io"
 	"net/http"

@@ -1,4 +1,4 @@
-module car-numers
+module core
 
 go 1.25
 
