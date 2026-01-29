@@ -33,6 +33,8 @@ services:
       - DATABASE_PORT=5432
       - PYTHONPATH=/app
     env_file: .env
+    ports:
+      - "8000:8000"
     depends_on:
       - postgres
     restart: always
