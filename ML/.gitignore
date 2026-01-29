@@ -1,0 +1,6 @@
+venv
+models
+catboost_info
+aa.py
+CarNumberFeatureExtractor.py
+price_predictor(old).py

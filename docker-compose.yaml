@@ -17,6 +17,26 @@ services:
     env_file: .env
     restart: always
 
+  ml-service:
+    build:
+      context: ./ML
+      dockerfile: ../docker/ml/Dockerfile.dev
+    volumes:
+      - ./ML:/app
+      - ./ML/models:/app/models
+      - ./ML/catboost_info:/app/catboost_info
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_NAME=${DATABASE_DATABASE:-postgres}
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres1}
+      - DATABASE_PORT=5432
+      - PYTHONPATH=/app
+    env_file: .env
+    depends_on:
+      - postgres
+    restart: always
+
   postgres:
     image: postgres:15-alpine
     ports:
