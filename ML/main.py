@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
 from typing import Optional
@@ -18,6 +19,20 @@ class TrainRequest(BaseModel):
 
 # FastAPI приложение
 app = FastAPI(title="Car Number Price API", version="1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",      # Фронтенд в dev
+        "http://localhost:8080",      # Возможно Go сервер
+        "http://frontend:80",         # Фронтенд в Docker сети
+        "http://frontend:3000",       # Альтернативный порт
+        "*"                           # Для разработки можно разрешить все
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешить все методы
+    allow_headers=["*"],  # Разрешить все заголовки
+)
 
 def init_predictor():
     """Загружаем модель при старте"""

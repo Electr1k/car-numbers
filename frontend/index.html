@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Предсказатель цен автономеров РФ</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1><i class="fas fa-car"></i> Предсказатель цен автономеров РФ</h1>
+        <p class="subtitle">Введите номер автомобиля в формате А123ВС777 для получения прогноза цены</p>
+    </header>
+
+    <main>
+        <div class="input-section">
+            <div class="input-group">
+                <label for="numberInput">
+                    <i class="fas fa-tag"></i> Номер автомобиля:
+                </label>
+                <div class="input-wrapper">
+                    <input
+                            type="text"
+                            id="numberInput"
+                            placeholder="Например: А123ВС777 или с742ру974"
+                            maxlength="9"
+                    >
+                    <button id="clearBtn" class="clear-btn" title="Очистить">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="hint">
+                    <i class="fas fa-info-circle"></i>
+                    Формат: буква + 3 цифры + 2 буквы + 2-3 цифры региона
+                </div>
+            </div>
+
+            <button id="predictBtn" class="predict-btn">
+                <i class="fas fa-chart-line"></i> Предсказать цену
+            </button>
+
+            <button id="trainBtn" class="train-btn">
+                <i class="fas fa-brain"></i> Переобучить модель
+            </button>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Анализируем номер и делаем прогноз...</p>
+        </div>
+
+        <div id="error" class="error hidden">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p id="errorText"></p>
+        </div>
+
+        <div id="result" class="result hidden">
+            <div class="result-header">
+                <h2><i class="fas fa-search"></i> Результаты анализа</h2>
+                <div class="confidence">
+                    <span id="confidenceValue">75%</span> уверенность
+                </div>
+            </div>
+
+            <div class="number-display">
+                <div class="number-parts">
+                    <span class="part letter" id="letter1">А</span>
+                    <span class="part digit" id="digit1">1</span>
+                    <span class="part digit" id="digit2">2</span>
+                    <span class="part digit" id="digit3">3</span>
+                    <span class="part letter" id="letter2">В</span>
+                    <span class="part letter" id="letter3">С</span>
+                    <span class="part region" id="region">777</span>
+                </div>
+            </div>
+
+            <div class="price-display">
+                <div class="price-item predicted">
+                    <div class="price-label">
+                        <i class="fas fa-bullseye"></i> Предсказанная цена
+                    </div>
+                    <div class="price-value" id="predictedPrice">150 000 ₽</div>
+                </div>
+
+                <div class="price-range">
+                    <div class="range-labels">
+                        <span>Диапазон цен</span>
+                        <span id="rangeText">120 000 - 180 000 ₽</span>
+                    </div>
+
+                    <div class="range-bar">
+                        <div class="range-track"></div>
+                        <div class="range-min" id="rangeMin"></div>
+                        <div class="range-max" id="rangeMax"></div>
+                        <div class="range-predicted" id="rangePredicted"></div>
+                        <div class="range-pointer predicted-pointer">
+                            <div class="tooltip" id="predictedTooltip">150 000 ₽</div>
+                        </div>
+                    </div>
+
+                    <div class="range-values">
+                        <span id="minPrice">120 000 ₽</span>
+                        <span id="maxPrice">180 000 ₽</span>
+                    </div>
+                </div>
+
+                <div class="price-details">
+                    <div class="detail-item">
+                        <i class="fas fa-arrow-down"></i>
+                        <span>Минимальная оценка</span>
+                        <strong id="minPriceDetail">120 000 ₽</strong>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-arrow-up"></i>
+                        <span>Максимальная оценка</span>
+                        <strong id="maxPriceDetail">180 000 ₽</strong>
+                    </div>
+                    <div class="detail-item">
+                        <i class="fas fa-percentage"></i>
+                        <span>Уверенность прогноза</span>
+                        <strong id="confidenceDetail">75%</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="shareBtn" class="action-btn">
+                    <i class="fas fa-share-alt"></i> Поделиться
+                </button>
+                <button id="historyBtn" class="action-btn">
+                    <i class="fas fa-history"></i> История
+                </button>
+            </div>
+        </div>
+
+        <div id="history" class="history hidden">
+            <h3><i class="fas fa-history"></i> История запросов</h3>
+            <div id="historyList" class="history-list">
+                <!-- История будет добавляться динамически -->
+            </div>
+            <button id="clearHistoryBtn" class="clear-history-btn">
+                <i class="fas fa-trash"></i> Очистить историю
+            </button>
+        </div>
+    </main>
+
+    <footer>
+        <p>Система использует машинное обучение для предсказания рыночной стоимости автономеров</p>
+        <p class="api-status">Статус API: <span id="apiStatus" class="status-online">онлайн</span></p>
+    </footer>
+</div>
+
+<!-- Модальное окно для обучения -->
+<div id="trainModal" class="modal hidden">
+    <div class="modal-content">
+        <h3><i class="fas fa-brain"></i> Переобучение модели</h3>
+        <p>Переобучение модели может занять несколько минут. Использовать данные за:</p>
+        <div class="train-options">
+            <label>
+                <input type="radio" name="days" value="30" checked>
+                30 дней
+            </label>
+            <label>
+                <input type="radio" name="days" value="90">
+                90 дней
+            </label>
+            <label>
+                <input type="radio" name="days" value="365">
+                365 дней (год)
+            </label>
+        </div>
+        <div class="modal-buttons">
+            <button id="confirmTrainBtn" class="confirm-btn">
+                <i class="fas fa-play"></i> Начать обучение
+            </button>
+            <button id="cancelTrainBtn" class="cancel-btn">
+                <i class="fas fa-times"></i> Отмена
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
