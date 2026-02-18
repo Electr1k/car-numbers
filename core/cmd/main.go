@@ -5,7 +5,8 @@ import (
 	"core/config"
 	"core/internal/repository/postgres"
 	usecases "core/internal/usecase/car_number"
-	provides "core/pkg/providers/car_number"
+	provides "core/pkg/providers"
+	"fmt"
 )
 
 var (
@@ -36,7 +37,7 @@ func main() {
 
 	defer postgreSQL.Close()
 
-	registerUseCase.Handle()
+	fmt.Print(registerUseCase.Handle())
 }
 
 func createRepositories(ctx context.Context, cfg *config.Config) error {
