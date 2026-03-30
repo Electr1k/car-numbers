@@ -42,7 +42,7 @@ func main() {
 
 func createRepositories(ctx context.Context, cfg *config.Config) error {
 	var err error
-	postgreSQL, err = postgres.New(ctx, cfg.DatabaseURL)
+	postgreSQL, err = postgres.New(ctx, cfg.DatabaseConfig)
 	if err != nil {
 		return err
 	}

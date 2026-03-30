@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"core/config"
 	"core/pkg/utils"
 	"database/sql"
 	"sync"
@@ -14,8 +15,8 @@ type Postgres struct {
 	pool *pgxpool.Pool
 }
 
-func New(ctx context.Context, connectionString string) (*Postgres, error) {
-	pool, err := pgxpool.Connect(ctx, connectionString)
+func New(ctx context.Context, config config.DatabaseConfig) (*Postgres, error) {
+	pool, err := pgxpool.Connect(ctx, config.URL)
 	if err != nil {
 		return nil, err
 	}
