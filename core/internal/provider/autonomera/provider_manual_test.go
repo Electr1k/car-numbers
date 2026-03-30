@@ -27,14 +27,24 @@ func TestProviderManual(t *testing.T) {
 	client := autonomera.NewClient(clientCfg, logger)
 
 	// Create provider
-	provider := NewProvider(client, nil, logger)
+	parser := NewParser()
+	provider := NewProvider(client, parser, logger)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	numbers, err := provider.FetchNumbers(ctx, 0)
+	iterator, err := provider.FetchNumbers(ctx)
 	if err != nil {
 		t.Fatalf("FetchNumbers failed: %v", err)
+	}
+
+	if !iterator.HasNext() {
+		t.Fatal("Iterator has no data")
+	}
+
+	numbers, err := iterator.Next(ctx)
+	if err != nil {
+		t.Fatalf("Iterator.Next failed: %v", err)
 	}
 
 	if len(numbers) == 0 {

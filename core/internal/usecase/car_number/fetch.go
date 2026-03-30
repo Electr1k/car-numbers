@@ -10,12 +10,7 @@ import (
 )
 
 type NumberProvider interface {
-	FetchNumbers(ctx context.Context) (NumberIterator, error)
-}
-
-type NumberIterator interface {
-	Next(ctx context.Context) ([]domain.CarNumber, error)
-	HasNext() bool
+	FetchNumbers(ctx context.Context) (domain.NumberIterator, error)
 }
 
 type CarNumberRepository interface {
@@ -103,7 +98,7 @@ var errCutoffReached = errors.New("cutoff date reached")
 
 func (uc *FetchCarNumberUseCase) processBatch(
 	ctx context.Context,
-	iterator NumberIterator,
+	iterator domain.NumberIterator,
 	cutoffDate time.Time,
 	metrics *fetchMetrics,
 ) error {

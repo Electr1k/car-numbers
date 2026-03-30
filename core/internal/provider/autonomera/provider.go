@@ -46,8 +46,17 @@ func NewProvider(client *autonomera.Client, parser *Parser, logger *slog.Logger,
 	return p
 }
 
-func (p *Provider) FetchNumbers(ctx context.Context) (NumberIterator, error) {
-	return &offsetIterator{
+type OffsetIterator struct {
+	client    *autonomera.Client
+	parser    *Parser
+	logger    *slog.Logger
+	batchSize int
+	current   int
+	hasMore   bool
+}
+
+func (p *Provider) FetchNumbers(ctx context.Context) (domain.NumberIterator, error) {
+	return &OffsetIterator{
 		client:    p.client,
 		parser:    p.parser,
 		logger:    p.logger,
@@ -57,16 +66,7 @@ func (p *Provider) FetchNumbers(ctx context.Context) (NumberIterator, error) {
 	}, nil
 }
 
-type offsetIterator struct {
-	client    *autonomera.Client
-	parser    *Parser
-	logger    *slog.Logger
-	batchSize int
-	current   int
-	hasMore   bool
-}
-
-func (it *offsetIterator) Next(ctx context.Context) ([]domain.CarNumber, error) {
+func (it *OffsetIterator) Next(ctx context.Context) ([]domain.CarNumber, error) {
 	it.logger.Debug("fetching batch",
 		"offset", it.current,
 		"batch_size", it.batchSize)
@@ -87,11 +87,6 @@ func (it *offsetIterator) Next(ctx context.Context) ([]domain.CarNumber, error) 
 	return numbers, nil
 }
 
-func (it *offsetIterator) HasNext() bool {
+func (it *OffsetIterator) HasNext() bool {
 	return it.hasMore
-}
-
-type NumberIterator interface {
-	Next(ctx context.Context) ([]domain.CarNumber, error)
-	HasNext() bool
 }
