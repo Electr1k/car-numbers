@@ -1,17 +1,13 @@
-version: '3.8'
-
 services:
   server:
     build:
-      context: ./core  # Контекст теперь core директория
+      context: ./core
       dockerfile: ../docker/core/Dockerfile.dev
     ports:
       - "${HTTP_FORWARD_PORT:-8080}:${HTTP_PORT:-8080}"
     volumes:
       - ./core:/app
       - ./tmp:/app/tmp
-    environment:
-      - DATABASE_URL=postgresql://${DATABASE_USER:-postgres}:${DATABASE_PASSWORD:-postgres}@postgres:5432/${DATABASE_DATABASE:-postgres}?sslmode=disable
     depends_on:
       - postgres
     env_file: .env

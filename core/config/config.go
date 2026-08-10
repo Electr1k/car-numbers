@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Env            string `env:"ENV" env-default:"development"`
-	HttpServer     `env-prefix:"HTTP_"`
-	LogConfig      `env-prefix:"LOG_"`
+	Env        string `env:"ENV" env-default:"development"`
+	HttpServer `env-prefix:"HTTP_"`
+	LogConfig  `env-prefix:"LOG_"`
 	DatabaseConfig
+	AutoNomeraConfig
 	JwtSecret      string `env:"JWT_SECRET" env-required:"true"`
 	ProviderConfig `env-prefix:"PROVIDER_"`
 }
@@ -30,16 +31,20 @@ type LogConfig struct {
 }
 
 type DatabaseConfig struct {
-	URL             string        `env:"DATABASE_URL" env-required:"true"`
+	URL string `env:"DATABASE_URL" env-required:"true"`
 }
 
 type ProviderConfig struct {
-	AutoNomeraBaseURL string        `env:"AUTONOMERA_BASE_URL" env-default:"https://autonomera777.net/ajax/"`
-	AutoNomeraTimeout time.Duration `env:"AUTONOMERA_TIMEOUT" env-default:"60s"`
-	BatchSize         int           `env:"BATCH_SIZE" env-default:"20"`
-	StartPosition     int           `env:"START_POSITION" env-default:"0"`
-	StopAfter         time.Duration `env:"STOP_AFTER" env-default:"72h"`
-	RateLimitDelay    time.Duration `env:"RATE_LIMIT_DELAY" env-default:"1s"`
+	BatchSize      int           `env:"BATCH_SIZE" env-default:"20"`
+	StartPosition  int           `env:"START_POSITION" env-default:"0"`
+	StopAfter      time.Duration `env:"STOP_AFTER" env-default:"72h"`
+	RateLimitDelay time.Duration `env:"RATE_LIMIT_DELAY" env-default:"1s"`
+}
+
+type AutoNomeraConfig struct {
+	BaseURL   string        `env:"AUTONOMERA_BASE_URL" env-default:"https://autonomera777.ru"`
+	Timeout   time.Duration `env:"AUTONOMERA_TIMEOUT" env-default:"60s"`
+	StopAfter time.Duration `env:"AUTONOMERA_STOP_AFTER" env-default:"72h"`
 }
 
 func MustLoad() *Config {
