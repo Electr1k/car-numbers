@@ -2,6 +2,7 @@ package autonomera
 
 import (
 	"context"
+	"core/config"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,29 +11,26 @@ import (
 	"time"
 )
 
+const (
+	GetNumbers = "/ajax/get_numbers.php"
+)
+
 type Client struct {
-	client  *http.Client
-	logger  *slog.Logger
-	baseURL string
-	timeout time.Duration
+	client *http.Client
+	logger *slog.Logger
+	config config.AutoNomeraConfig
 }
 
-type Config struct {
-	BaseURL string
-	Timeout time.Duration
-}
-
-func NewClient(cfg Config, logger *slog.Logger) *Client {
+func NewClient(cfg config.AutoNomeraConfig, logger *slog.Logger) *Client {
 	return &Client{
-		logger:  logger,
-		client:  &http.Client{Timeout: cfg.Timeout},
-		baseURL: cfg.BaseURL,
-		timeout: cfg.Timeout,
+		client: &http.Client{Timeout: cfg.Timeout},
+		logger: logger,
+		config: cfg,
 	}
 }
 
 func (c *Client) FetchNumbersHTML(ctx context.Context, start int) ([]byte, error) {
-	url := c.baseURL + "get_numbers.php"
+	url := c.config.BaseURL + GetNumbers
 	queryParams := map[string]string{
 		"order": "a.`created`",
 		"dir":   "DESC",
@@ -53,7 +51,7 @@ func (c *Client) FetchNumbersHTML(ctx context.Context, start int) ([]byte, error
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	resp, err := c.client.Do(req)
+	response, err := c.client.Do(req)
 	if err != nil {
 		duration := time.Since(startTime)
 		c.logger.Error("http request failed",
@@ -62,21 +60,21 @@ func (c *Client) FetchNumbersHTML(ctx context.Context, start int) ([]byte, error
 			"duration_ms", duration.Milliseconds())
 		return nil, fmt.Errorf("execute request to %s: %w", fullURL, err)
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
 	duration := time.Since(startTime)
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+	if response.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(response.Body)
 		c.logger.Error("unexpected status code",
 			"url", fullURL,
-			"status_code", resp.StatusCode,
+			"status_code", response.StatusCode,
 			"duration_ms", duration.Milliseconds(),
 			"response_body_preview", string(body[:min(len(body), 200)]))
-		return nil, fmt.Errorf("unexpected status code %d from %s", resp.StatusCode, fullURL)
+		return nil, fmt.Errorf("unexpected status code %d from %s", response.StatusCode, fullURL)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		c.logger.Error("failed to read response body",
 			"url", fullURL,
@@ -87,18 +85,11 @@ func (c *Client) FetchNumbersHTML(ctx context.Context, start int) ([]byte, error
 
 	c.logger.Debug("http request completed",
 		"url", fullURL,
-		"status_code", resp.StatusCode,
+		"status_code", response.StatusCode,
 		"duration_ms", duration.Milliseconds(),
 		"response_size_bytes", len(body))
 
 	return body, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func (c *Client) buildQueryString(params map[string]string) string {
