@@ -8,10 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"time"
+	"strings"
 )
 
 const (
+	ProviderName = "autonomera777"
+
 	GetNumbers = "/ajax/get_numbers.php"
 )
 
@@ -24,7 +26,7 @@ type Client struct {
 func NewClient(cfg config.AutoNomeraConfig, logger *slog.Logger) *Client {
 	return &Client{
 		client: &http.Client{Timeout: cfg.Timeout},
-		logger: logger,
+		logger: logger.With("provider", ProviderName),
 		config: cfg,
 	}
 }
@@ -39,12 +41,7 @@ func (c *Client) FetchNumbersHTML(ctx context.Context, start int) ([]byte, error
 
 	fullURL := url + "?" + c.buildQueryString(queryParams)
 
-	c.logger.Debug("starting HTTP request",
-		"method", http.MethodGet,
-		"url", url,
-		"start", start)
-
-	startTime := time.Now()
+	c.logger.Debug("starting HTTP request", "method", http.MethodGet, "url", fullURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, nil)
 	if err != nil {
@@ -53,41 +50,27 @@ func (c *Client) FetchNumbersHTML(ctx context.Context, start int) ([]byte, error
 
 	response, err := c.client.Do(req)
 	if err != nil {
-		duration := time.Since(startTime)
-		c.logger.Error("http request failed",
-			"url", fullURL,
-			"error", err,
-			"duration_ms", duration.Milliseconds())
+		c.logger.Error("http request failed", "url", fullURL, "error", err)
 		return nil, fmt.Errorf("execute request to %s: %w", fullURL, err)
 	}
 	defer response.Body.Close()
-
-	duration := time.Since(startTime)
 
 	if response.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(response.Body)
 		c.logger.Error("unexpected status code",
 			"url", fullURL,
 			"status_code", response.StatusCode,
-			"duration_ms", duration.Milliseconds(),
 			"response_body_preview", string(body[:min(len(body), 200)]))
 		return nil, fmt.Errorf("unexpected status code %d from %s", response.StatusCode, fullURL)
 	}
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		c.logger.Error("failed to read response body",
-			"url", fullURL,
-			"error", err,
-			"duration_ms", duration.Milliseconds())
+		c.logger.Error("failed to read response body", "url", fullURL, "error", err)
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
 
-	c.logger.Debug("http request completed",
-		"url", fullURL,
-		"status_code", response.StatusCode,
-		"duration_ms", duration.Milliseconds(),
-		"response_size_bytes", len(body))
+	c.logger.Debug("http request completed", "url", fullURL, "response", strings.NewReader(string(body)), "status_code", response.StatusCode)
 
 	return body, nil
 }

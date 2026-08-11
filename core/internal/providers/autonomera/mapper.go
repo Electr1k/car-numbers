@@ -20,17 +20,25 @@ func NewMapper(config *config.AutoNomeraConfig) *Mapper {
 }
 
 func (m *Mapper) MapToDomain(string *goquery.Selection) (*domain.Number, *domain.Offer, error) {
+	raw, _ := string.Html()
+
 	id, exists := string.Attr("id")
 	if !exists || id == "" {
 		return nil, nil, fmt.Errorf("missing id attribute")
 	}
-	id = strings.Replace(id, "tem_number_id", "", -1)
+	id = strings.Replace(id, "item_number_id", "", -1)
 
 	href, exists := string.Attr("href")
 	if !exists || href == "" {
 		return nil, nil, fmt.Errorf("missing href attribute")
 	}
 	url := m.config.BaseURL + href
+
+	hrefSplit := strings.Split(href, "/")
+	vehicleType := ""
+	if len(hrefSplit) >= 2 {
+		vehicleType = hrefSplit[1]
+	}
 
 	title, exists := string.Attr("title")
 	if !exists || title == "" {
@@ -52,7 +60,7 @@ func (m *Mapper) MapToDomain(string *goquery.Selection) (*domain.Number, *domain
 	number, err := domain.NewNumber(
 		nil,
 		title,
-		domain.CarType,
+		m.mapType(vehicleType),
 		nil,
 		nil,
 	)
@@ -70,7 +78,7 @@ func (m *Mapper) MapToDomain(string *goquery.Selection) (*domain.Number, *domain
 		domain.ACTIVE,
 		&postedAt,
 		url,
-		string.Text(),
+		raw,
 		nil,
 		nil,
 	)
@@ -98,4 +106,17 @@ func (m *Mapper) mapPrice(priceText string) (float32, error) {
 	}
 
 	return float32(price), nil
+}
+
+func (m *Mapper) mapType(vehicleType string) string {
+	switch vehicleType {
+	case "standart":
+		return domain.CarType
+	case "moto":
+		return domain.MotoType
+	case "trailer":
+		return domain.TrailerType
+	default:
+		return domain.CarType
+	}
 }

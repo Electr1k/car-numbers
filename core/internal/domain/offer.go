@@ -6,8 +6,8 @@ import (
 
 // Offer - Предложение
 type Offer struct {
-	Id         *int       `validate:"omitempty"`     // Id - Идентификатор
-	NumberId   *int       `validate:"omitempty"`     // NumberId - Идентификатор номера
+	Id         *int64     `validate:"omitempty"`     // Id - Идентификатор
+	NumberId   *int64     `validate:"omitempty"`     // NumberId - Идентификатор номера
 	Provider   string     `validate:"required"`      // Provider - Провайдер, в котором найдено предложение
 	ExternalId string     `validate:"required"`      // ExternalId - Идентификатор у провайдера
 	Price      float32    `validate:"required,gt=0"` // Price - Цена
@@ -20,8 +20,8 @@ type Offer struct {
 }
 
 func NewOffer(
-	id *int,
-	numberId *int,
+	id *int64,
+	numberId *int64,
 	provider string,
 	externalId string,
 	price float32,

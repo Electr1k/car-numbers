@@ -10,15 +10,15 @@ var validate = validator.New(validator.WithRequiredStructEnabled())
 
 // Number - Номер
 type Number struct {
-	Id        *int       `validate:"omitempty"`            // Id - Идентификатор
+	Id        *int64     `validate:"omitempty"`            // Id - Идентификатор
 	Number    string     `validate:"required,min=8,max=9"` // Number - Номер
-	Type      string     `validate:"required"`             // Type - Тип номера (авто)
+	Type      string     `validate:"required"`             // Type - Тип номера (авто, мото, прицеп)
 	CreatedAt *time.Time `validate:""`
 	UpdateAt  *time.Time `validate:""`
 }
 
 func NewNumber(
-	id *int,
+	id *int64,
 	number string,
 	numberType string,
 	createdAt *time.Time,

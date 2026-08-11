@@ -3,10 +3,10 @@ package autonomera
 import (
 	"context"
 	"core/internal/domain"
-	"core/internal/providers"
 	"core/pkg/integration/autonomera"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -17,11 +17,6 @@ type Service struct {
 	mapper Mapper
 }
 
-type Offer struct {
-	Number *domain.Number
-	Offer  *domain.Offer
-}
-
 func NewService(client autonomera.Client, mapper Mapper) *Service {
 	return &Service{
 		client: client,
@@ -29,8 +24,13 @@ func NewService(client autonomera.Client, mapper Mapper) *Service {
 	}
 }
 
-func (s *Service) Parse(ctx context.Context) ([]Offer, error) {
-	response, err := s.client.FetchNumbersHTML(ctx, 0)
+type Offer struct {
+	Number *domain.Number
+	Offer  *domain.Offer
+}
+
+func (s *Service) FetchOffers(ctx context.Context, start int) ([]Offer, error) {
+	response, err := s.client.FetchNumbersHTML(ctx, start)
 	if err != nil {
 		return nil, err
 	}
@@ -55,8 +55,7 @@ func (s *Service) Parse(ctx context.Context) ([]Offer, error) {
 	})
 
 	if len(parseErrors) > 0 && len(offers) == 0 {
-		return nil, fmt.Errorf("%w: all %d rows failed: %w",
-			providers.ErrParsingFailed, len(parseErrors), errors.Join(parseErrors...))
+		slog.Log(ctx, slog.LevelError, "Bad offers", "errors", errors.Join(parseErrors...))
 	}
 
 	return offers, nil

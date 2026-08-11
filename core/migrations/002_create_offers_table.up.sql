@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS offers (
     raw text NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT offers_numer_id_provider_uk UNIQUE (number_id, provider)
+    CONSTRAINT offers_provider_external_id_uk UNIQUE (provider, external_id)
 );
 
 

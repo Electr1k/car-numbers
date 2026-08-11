@@ -4,6 +4,12 @@ package domain
 const (
 	// CarType - Авто
 	CarType string = "car"
+
+	// MotoType - Мото
+	MotoType string = "moto"
+
+	// TrailerType - Прицеп
+	TrailerType string = "trailer"
 )
 
 // Провайдеры
