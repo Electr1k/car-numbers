@@ -22,8 +22,6 @@ func NewService(client *Client, mapper *Mapper) *Service {
 }
 
 // FetchOffers забирает одну страницу раздела и маппит её в домен
-//
-// Статус предложений задаётся разделом, а не разметкой - в строке выдачи его нет
 func (s *Service) FetchOffers(ctx context.Context, section Section, offset int) (providers.FetchResult, error) {
 	status, err := statusForSection(section)
 	if err != nil {

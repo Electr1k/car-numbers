@@ -43,7 +43,7 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 
 	raw, err := sel.Html()
 	if err != nil {
-		return empty, fmt.Errorf("%w: read row html: %w", providers.ErrSchemaDrift, err)
+		return empty, fmt.Errorf("%w: read row html: %w", providers.ErrBrokenOffer, err)
 	}
 
 	idAttr, err := requiredAttr(sel, "id")
@@ -107,7 +107,7 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 func requiredAttr(sel *goquery.Selection, name string) (string, error) {
 	value, exists := sel.Attr(name)
 	if !exists || value == "" {
-		return "", fmt.Errorf("%w: missing %s attribute", providers.ErrSchemaDrift, name)
+		return "", fmt.Errorf("%w: missing %s attribute", providers.ErrBrokenOffer, name)
 	}
 
 	return value, nil
@@ -119,11 +119,11 @@ func parseExternalID(idAttr string) (string, error) {
 
 	if externalID == idAttr {
 		return "", fmt.Errorf("%w: id attribute %q has no %q prefix",
-			providers.ErrSchemaDrift, idAttr, externalIDPrefix)
+			providers.ErrBrokenOffer, idAttr, externalIDPrefix)
 	}
 
 	if externalID == "" {
-		return "", fmt.Errorf("%w: empty external id in %q", providers.ErrSchemaDrift, idAttr)
+		return "", fmt.Errorf("%w: empty external id in %q", providers.ErrBrokenOffer, idAttr)
 	}
 
 	return externalID, nil
@@ -133,7 +133,7 @@ func parseExternalID(idAttr string) (string, error) {
 func parseNumberType(href string) (domain.NumberType, error) {
 	segments := strings.Split(strings.TrimPrefix(href, "/"), "/")
 	if len(segments) == 0 || segments[0] == "" {
-		return "", fmt.Errorf("%w: no vehicle type in href %q", providers.ErrSchemaDrift, href)
+		return "", fmt.Errorf("%w: no vehicle type in href %q", providers.ErrBrokenOffer, href)
 	}
 
 	switch segments[0] {
@@ -145,7 +145,7 @@ func parseNumberType(href string) (domain.NumberType, error) {
 		return domain.NumberTypeTrailer, nil
 	default:
 		return "", fmt.Errorf("%w: unknown vehicle type %q in href %q",
-			providers.ErrSchemaDrift, segments[0], href)
+			providers.ErrBrokenOffer, segments[0], href)
 	}
 }
 
@@ -153,12 +153,12 @@ func parseNumberType(href string) (domain.NumberType, error) {
 func parsePostedAt(sel *goquery.Selection) (time.Time, error) {
 	date := strings.TrimSpace(sel.Find(dateSelector).Text())
 	if date == "" {
-		return time.Time{}, fmt.Errorf("%w: empty date cell", providers.ErrSchemaDrift)
+		return time.Time{}, fmt.Errorf("%w: empty date cell", providers.ErrBrokenOffer)
 	}
 
 	postedAt, err := time.Parse(dateLayout, date)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("%w: parse date %q: %w", providers.ErrSchemaDrift, date, err)
+		return time.Time{}, fmt.Errorf("%w: parse date %q: %w", providers.ErrBrokenOffer, date, err)
 	}
 
 	return postedAt, nil
@@ -166,8 +166,7 @@ func parsePostedAt(sel *goquery.Selection) (time.Time, error) {
 
 // parsePrice - цена в рублях
 func parsePrice(priceText string) (float64, error) {
-	// Разделителем разрядов бывает и обычный пробел, и неразрывный, и тонкий -
-	// выкидываем любой пробельный символ, а не перечисленные поимённо
+	// Выкидывает любой пробельный символ
 	cleaned := strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {
 			return -1
@@ -179,7 +178,7 @@ func parsePrice(priceText string) (float64, error) {
 	cleaned = strings.ReplaceAll(cleaned, "₽", "")
 
 	if cleaned == "" {
-		return 0, fmt.Errorf("%w: empty price cell", providers.ErrSchemaDrift)
+		return 0, fmt.Errorf("%w: empty price cell", providers.ErrBrokenOffer)
 	}
 
 	price, err := strconv.ParseFloat(cleaned, 64)

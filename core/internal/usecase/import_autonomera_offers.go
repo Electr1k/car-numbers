@@ -27,30 +27,24 @@ const (
 	maxEmptyPages = 2
 
 	// defaultMaxPages - потолок страниц, когда он не задан явно
-	//
-	// Совсем без потолка импорт оставлять нельзя: сайт за пределами выдачи
-	// может отдавать последнюю страницу снова и снова, и тогда ни пустых
-	// страниц, ни ошибок не будет - цикл станет бесконечным
-	defaultMaxPages = 10000
+	defaultMaxPages = 30000
 
 	// maxCountBrokenOffers - максимальное количество битых офферов в батче
 	maxCountBrokenOffers = 5
 )
 
-// ImportParams - границы одного прогона импорта
-//
-// Нулевое поле означает «не ограничивать»: так можно догрузить недостающий
-// участок выдачи или выкачать раздел целиком
+// ImportParams - входные параметры импорта
 type ImportParams struct {
+	// Section - раздел выдачи, из которого забираем предложения
+	Section autonomera.Section
+
 	// StartOffset - с какой позиции выдачи начинать
 	StartOffset int
 
 	// MaxPages - потолок страниц за прогон
-	// Ноль подставляет defaultMaxPages, а не снимает потолок совсем
 	MaxPages int
 
-	// StopAfter - не забирать публикации старше этого возраста
-	// Ноль - без ограничения по дате, так забирают архив
+	// StopAfter - не забирать публикации старше этого возраста. 0 - без ограничений
 	StopAfter time.Duration
 }
 
@@ -77,7 +71,6 @@ func (p ImportParams) pageLimit() int {
 }
 
 // stopDate - нижняя граница импорта по дате публикации
-// Нулевое время означает, что проверка не выполняется
 func (p ImportParams) stopDate() time.Time {
 	if p.StopAfter == 0 {
 		return time.Time{}
@@ -87,8 +80,8 @@ func (p ImportParams) stopDate() time.Time {
 }
 
 var (
-	// ErrTooManySchemaErrors - Превышен лимит неразобранных офферов
-	ErrTooManySchemaErrors = errors.New("too many schema errors on page")
+	// ErrTooManyBrokenOffers - превышен лимит неразобранных офферов
+	ErrTooManyBrokenOffers = errors.New("too many broken offers on page")
 
 	// ErrPageLimitExceeded - выдача не кончилась за отведённое число страниц
 	ErrPageLimitExceeded = errors.New("page limit exceeded")
@@ -116,9 +109,8 @@ func NewImportAutonomeraOffersUseCase(
 	}
 }
 
-// Handle постранично забирает предложения раздела и складывает их в базу
-// Границы прогона задаёт params, см. ImportParams
-func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, section autonomera.Section, params ImportParams) error {
+// Handle - собирает предложения поставщика и сохраняет их в базу
+func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params ImportParams) error {
 	if err := params.validate(); err != nil {
 		return err
 	}
@@ -133,7 +125,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, section aut
 		result     = "failed"
 	)
 
-	logger := uc.logger.With("section", section)
+	logger := uc.logger.With("section", params.Section)
 
 	logger.Info("import started",
 		"start_offset", offset,
@@ -155,7 +147,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, section aut
 			return err
 		}
 
-		offers, err := uc.provider.FetchOffers(ctx, section, offset)
+		offers, err := uc.provider.FetchOffers(ctx, params.Section, offset)
 		if err != nil {
 			return fmt.Errorf("fetch page at offset %d: %w", offset, err)
 		}
@@ -174,12 +166,12 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, section aut
 		}
 		emptyPages = 0
 
-		if err := checkSchemaDrift(offers); err != nil {
+		if err := checkBrokenOffers(offers); err != nil {
 			logger.Error("stopping import",
 				"page", page,
 				"offset", offset,
 				"error", err,
-				"reasons", offers.Reasons())
+				"errors", offers.ErrorMessages())
 
 			return err
 		}
@@ -215,18 +207,15 @@ func checkStopDate(result providers.FetchResult, stopDate time.Time) bool {
 	return !oldest.IsZero() && oldest.Before(stopDate)
 }
 
-// checkSchemaDrift - не слишком ли много строк на странице не разобралось
-//
-// Порог абсолютный, а не в долях: на хвосте выдачи страница бывает из одной
-// строки, и процент там ничего не значит
-func checkSchemaDrift(result providers.FetchResult) error {
-	countBrokenOffers := result.SchemaDriftCount()
+// checkBrokenOffers - не слишком ли много строк на странице не разобралось
+func checkBrokenOffers(result providers.FetchResult) error {
+	countBrokenOffers := result.BrokenOfferCount()
 	if countBrokenOffers <= maxCountBrokenOffers {
 		return nil
 	}
 
 	return fmt.Errorf("%w: %d of %d rows (limit %d)",
-		ErrTooManySchemaErrors, countBrokenOffers, result.RowsFound, maxCountBrokenOffers)
+		ErrTooManyBrokenOffers, countBrokenOffers, result.RowsFound, maxCountBrokenOffers)
 }
 
 func logPage(logger *slog.Logger, page, offset int, result providers.FetchResult, saved int) {
@@ -244,7 +233,7 @@ func logPage(logger *slog.Logger, page, offset int, result providers.FetchResult
 	}
 
 	logger.Warn("page processed with skipped rows",
-		append(attrs, "reasons", result.Reasons())...)
+		append(attrs, "errors", result.ErrorMessages())...)
 }
 
 // oldestPostedAt возвращает самую раннюю дату публикации в батче

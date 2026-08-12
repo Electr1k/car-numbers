@@ -19,11 +19,11 @@ type FetchResult struct {
 	RowErrors []RowError
 }
 
-// SchemaDriftCount - сколько строк упало из-за изменившейся разметки
-func (r FetchResult) SchemaDriftCount() int {
+// BrokenOfferCount - количество офферов, которые не смогли разобрать
+func (r FetchResult) BrokenOfferCount() int {
 	count := 0
 	for _, rowErr := range r.RowErrors {
-		if errors.Is(rowErr.Err, ErrSchemaDrift) {
+		if errors.Is(rowErr.Err, ErrBrokenOffer) {
 			count++
 		}
 	}
@@ -31,11 +31,13 @@ func (r FetchResult) SchemaDriftCount() int {
 	return count
 }
 
-func (r FetchResult) Reasons() []string {
-	reasons := make([]string, 0, len(r.RowErrors))
+// ErrorMessages - тексты ошибок разбора, по одному на строку
+// Именно тексты, а не []error: значения нужны только для лога
+func (r FetchResult) ErrorMessages() []string {
+	errs := make([]string, 0, len(r.RowErrors))
 	for _, rowErr := range r.RowErrors {
-		reasons = append(reasons, fmt.Sprintf("row %d: %s", rowErr.Index, rowErr.Err))
+		errs = append(errs, fmt.Sprintf("row %d: %s", rowErr.Index, rowErr.Err))
 	}
 
-	return reasons
+	return errs
 }
