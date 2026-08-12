@@ -29,7 +29,8 @@ type LogConfig struct {
 }
 
 type DatabaseConfig struct {
-	URL string `env:"URL" env-required:"true"`
+	URL            string `env:"URL" env-required:"true"`
+	MigrationsPath string `env:"MIGRATIONS_PATH" env-default:"./migrations"`
 }
 
 // AutoNomeraConfig - Конфиг для autonomera777
