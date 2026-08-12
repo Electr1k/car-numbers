@@ -3,24 +3,57 @@ package domain
 import (
 	"time"
 
-	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 )
 
-var validate = validator.New(validator.WithRequiredStructEnabled())
+// NumberType - тип ТС, которому принадлежит номер
+type NumberType string
+
+const (
+	// NumberTypeCar - Авто
+	NumberTypeCar NumberType = "car"
+
+	// NumberTypeMoto - Мото
+	NumberTypeMoto NumberType = "moto"
+
+	// NumberTypeTrailer - Прицеп
+	NumberTypeTrailer NumberType = "trailer"
+)
 
 // Number - Номер
 type Number struct {
-	Id        *int64     `validate:"omitempty"`            // Id - Идентификатор
-	Number    string     `validate:"required,min=8,max=9"` // Number - Номер
-	Type      string     `validate:"required"`             // Type - Тип номера (авто, мото, прицеп)
-	CreatedAt *time.Time `validate:""`
-	UpdateAt  *time.Time `validate:""`
+	Id        uuid.UUID  `validate:"required"`                        // Id - Идентификатор
+	Number    string     `validate:"required,min=8,max=9"`            // Number - Номер
+	Type      NumberType `validate:"required,oneof=car moto trailer"` // Type - Тип номера
+	CreatedAt *time.Time
+	UpdatedAt *time.Time
 }
 
-func NewNumber(
-	id *int64,
+// NewNumber - Создание номера, которого ещё не существовало
+func NewNumber(number string, numberType NumberType) (*Number, error) {
+	id, err := newID()
+	if err != nil {
+		return nil, err
+	}
+
+	return newNumber(id, number, numberType, nil, nil)
+}
+
+// RestoreNumber - Восстановление существующего номера из хранилища
+func RestoreNumber(
+	id uuid.UUID,
 	number string,
-	numberType string,
+	numberType NumberType,
+	createdAt *time.Time,
+	updatedAt *time.Time,
+) (*Number, error) {
+	return newNumber(id, number, numberType, createdAt, updatedAt)
+}
+
+func newNumber(
+	id uuid.UUID,
+	number string,
+	numberType NumberType,
 	createdAt *time.Time,
 	updatedAt *time.Time,
 ) (*Number, error) {
@@ -29,16 +62,12 @@ func NewNumber(
 		Number:    number,
 		Type:      numberType,
 		CreatedAt: createdAt,
-		UpdateAt:  updatedAt,
+		UpdatedAt: updatedAt,
 	}
 
-	if err := n.Validate(); err != nil {
+	if err := validate.Struct(n); err != nil {
 		return nil, err
 	}
 
 	return n, nil
-}
-
-func (p *Number) Validate() error {
-	return validate.Struct(p)
 }
