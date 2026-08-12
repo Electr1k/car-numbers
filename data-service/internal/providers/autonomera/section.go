@@ -1,7 +1,7 @@
 package autonomera
 
 import (
-	"core/internal/domain"
+	"data-service/internal/domain"
 	"fmt"
 )
 

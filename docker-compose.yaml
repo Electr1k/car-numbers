@@ -1,19 +1,35 @@
 services:
-  server:
+  # Разовый прогон схемы: отрабатывает и выходит, data-api ждёт его завершения.
+  # on-failure нужен, чтобы пережить холодный старт базы: пока data-db
+  # инициализирует каталог данных, подключение отваливается
+  data-migrate:
     build:
-      context: ./core
-      dockerfile: ../docker/core/Dockerfile.dev
+      context: ./data-service
+      dockerfile: ../docker/data-service/Dockerfile.dev
+    volumes:
+      - ./data-service:/app
+    command: ["go", "run", "./cmd/migrate"]
+    depends_on:
+      - data-db
+    env_file: .env
+    restart: on-failure
+
+  data-api:
+    build:
+      context: ./data-service
+      dockerfile: ../docker/data-service/Dockerfile.dev
     ports:
       - "${HTTP_FORWARD_PORT:-8080}:${HTTP_PORT:-8080}"
     volumes:
-      - ./core:/app
+      - ./data-service:/app
       - ./tmp:/app/tmp
     depends_on:
-      - postgres
+      data-migrate:
+        condition: service_completed_successfully
     env_file: .env
     restart: always
 
-  ml-service:
+  ml-api:
     build:
       context: ./ML
       dockerfile: ../docker/ml/Dockerfile.dev
@@ -22,7 +38,7 @@ services:
       - ./ML/models:/app/models
       - ./ML/catboost_info:/app/catboost_info
     environment:
-      - DATABASE_HOST=postgres
+      - DATABASE_HOST=data-db
       - DATABASE_NAME=${DATABASE_DATABASE:-postgres}
       - DATABASE_USER=${DATABASE_USER:-postgres}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres1}
@@ -32,7 +48,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
+      - data-db
     restart: always
 
   frontend:
@@ -44,10 +60,10 @@ services:
     volumes:
       - ./frontend:/usr/share/nginx/html
     depends_on:
-      - ml-service
+      - ml-api
     restart: always
 
-  postgres:
+  data-db:
     image: postgres:15-alpine
     ports:
       - ${DATABASE_PORT:-5555}:5432

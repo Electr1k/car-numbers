@@ -1,8 +1,8 @@
 package autonomera
 
 import (
-	"core/internal/domain"
-	"core/internal/providers"
+	"data-service/internal/domain"
+	"data-service/internal/providers"
 	"fmt"
 	"strconv"
 	"strings"

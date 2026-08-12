@@ -2,7 +2,7 @@ package autonomera
 
 import (
 	"context"
-	"core/internal/providers"
+	"data-service/internal/providers"
 	"errors"
 	"io"
 	"log/slog"

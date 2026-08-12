@@ -2,10 +2,10 @@ package usecase
 
 import (
 	"context"
-	"core/config"
-	"core/internal/domain"
-	"core/internal/providers"
-	"core/internal/providers/autonomera"
+	"data-service/config"
+	"data-service/internal/domain"
+	"data-service/internal/providers"
+	"data-service/internal/providers/autonomera"
 	"errors"
 	"fmt"
 	"log/slog"

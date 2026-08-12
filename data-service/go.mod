@@ -1,4 +1,4 @@
-module core
+module data-service
 
 go 1.25
 

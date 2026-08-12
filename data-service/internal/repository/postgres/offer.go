@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"core/internal/domain"
+	"data-service/internal/domain"
 	"fmt"
 
 	"github.com/jackc/pgx/v4"

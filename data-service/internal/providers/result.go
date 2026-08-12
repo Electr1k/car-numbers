@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"core/internal/domain"
+	"data-service/internal/domain"
 	"errors"
 	"fmt"
 )

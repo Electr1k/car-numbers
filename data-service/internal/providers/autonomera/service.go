@@ -3,7 +3,7 @@ package autonomera
 import (
 	"bytes"
 	"context"
-	"core/internal/providers"
+	"data-service/internal/providers"
 	"fmt"
 
 	"github.com/PuerkitoBio/goquery"

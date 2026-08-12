@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"core/config"
+	"data-service/config"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )

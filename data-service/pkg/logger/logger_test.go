@@ -114,10 +114,10 @@ func TestNew_TextFormat(t *testing.T) {
 
 func TestNew_LogLevels(t *testing.T) {
 	tests := []struct {
-		name          string
-		configLevel   string
-		logLevel      string
-		shouldLog     bool
+		name        string
+		configLevel string
+		logLevel    string
+		shouldLog   bool
 	}{
 		{"debug config logs debug", "debug", "debug", true},
 		{"debug config logs info", "debug", "info", true},
@@ -225,9 +225,9 @@ func TestNew_DefaultLevel(t *testing.T) {
 	}
 
 	logger := New(cfg)
-	
+
 	logger.Debug("debug message")
-	
+
 	logger.Info("info message")
 
 	w.Close()
