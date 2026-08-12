@@ -1,62 +1,58 @@
 package autonomera
 
 import (
+	"bytes"
 	"context"
-	"core/internal/domain"
-	"core/pkg/integration/autonomera"
-	"errors"
+	"core/internal/providers"
 	"fmt"
-	"log/slog"
-	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
 
 type Service struct {
-	client autonomera.Client
-	mapper Mapper
+	client *Client
+	mapper *Mapper
 }
 
-func NewService(client autonomera.Client, mapper Mapper) *Service {
+func NewService(client *Client, mapper *Mapper) *Service {
 	return &Service{
 		client: client,
 		mapper: mapper,
 	}
 }
 
-type Offer struct {
-	Number *domain.Number
-	Offer  *domain.Offer
-}
-
-func (s *Service) FetchOffers(ctx context.Context, start int) ([]Offer, error) {
-	response, err := s.client.FetchNumbersHTML(ctx, start)
+// FetchOffers забирает одну страницу раздела и маппит её в домен
+//
+// Статус предложений задаётся разделом, а не разметкой - в строке выдачи его нет
+func (s *Service) FetchOffers(ctx context.Context, section Section, offset int) (providers.FetchResult, error) {
+	status, err := statusForSection(section)
 	if err != nil {
-		return nil, err
+		return providers.FetchResult{}, err
 	}
 
-	html, err := goquery.NewDocumentFromReader(strings.NewReader(string(response)))
+	response, err := s.client.FetchOffersHTML(ctx, section, offset)
 	if err != nil {
-		return nil, fmt.Errorf("parse html document: %w", err)
+		return providers.FetchResult{}, err
 	}
 
-	var offers []Offer
-	var parseErrors []error
+	document, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
+	if err != nil {
+		return providers.FetchResult{}, fmt.Errorf("parse html document: %w", err)
+	}
 
-	html.Find("a.table__tr--td").Each(func(i int, html *goquery.Selection) {
-		number, offer, err := s.mapper.MapToDomain(html)
+	var result providers.FetchResult
 
+	document.Find(offerRowSelector).Each(func(index int, row *goquery.Selection) {
+		result.RowsFound++
+
+		offer, err := s.mapper.MapToDomain(row, status)
 		if err != nil {
-			parseErrors = append(parseErrors, fmt.Errorf("row %d: %w", i, err))
+			result.RowErrors = append(result.RowErrors, providers.RowError{Index: index, Err: err})
 			return
 		}
 
-		offers = append(offers, Offer{number, offer})
+		result.Offers = append(result.Offers, offer)
 	})
 
-	if len(parseErrors) > 0 && len(offers) == 0 {
-		slog.Log(ctx, slog.LevelError, "Bad offers", "errors", errors.Join(parseErrors...))
-	}
-
-	return offers, nil
+	return result, nil
 }

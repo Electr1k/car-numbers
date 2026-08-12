@@ -1,5 +1,10 @@
 package autonomera
 
+import (
+	"core/internal/domain"
+	"fmt"
+)
+
 // Section - раздел объявлений на сайте провайдера (активные/архив)
 type Section string
 
@@ -18,5 +23,17 @@ func (s Section) queryValue() (string, bool) {
 		return "numbersarchive", true
 	default:
 		return "", false
+	}
+}
+
+// statusForSection - в каком статусе находятся предложения из этого раздела
+func statusForSection(section Section) (domain.OfferStatus, error) {
+	switch section {
+	case SectionActive:
+		return domain.OfferStatusActive, nil
+	case SectionArchive:
+		return domain.OfferStatusInactive, nil
+	default:
+		return "", fmt.Errorf("unknown section %q", section)
 	}
 }
