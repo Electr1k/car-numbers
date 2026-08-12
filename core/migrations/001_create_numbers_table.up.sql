@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS numbers (
-    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id UUID PRIMARY KEY,
     number VARCHAR(9) NOT NULL,
     type VARCHAR(16) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS numbers (
 
 CREATE INDEX IF NOT EXISTS idx_number ON numbers(number);
 
-comment on column numbers.id is 'Идентификатор';
+comment on column numbers.id is 'Идентификатор (UUIDv7)';
 comment on column numbers.number is 'Номер';
 comment on column numbers.type is 'Тип ТС';
