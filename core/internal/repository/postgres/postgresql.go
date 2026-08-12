@@ -4,14 +4,13 @@ import (
 	"context"
 	"core/config"
 	"core/pkg/utils"
-	"database/sql"
-	"sync"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+const databaseName = "postgres"
+
 type Postgres struct {
-	mu   sync.Mutex
 	pool *pgxpool.Pool
 }
 
@@ -25,7 +24,7 @@ func New(ctx context.Context, config config.DatabaseConfig) (*Postgres, error) {
 		return nil, err
 	}
 
-	if err := utils.RunMigrations(ctx, pool, "postgres"); err != nil {
+	if err := utils.RunMigrations(ctx, pool, databaseName); err != nil {
 		return nil, err
 	}
 
@@ -36,12 +35,4 @@ func (p *Postgres) Close() {
 	if p.pool != nil {
 		p.pool.Close()
 	}
-}
-
-func nullFloatToFloat32Ptr(n sql.NullFloat64) *float32 {
-	if n.Valid {
-		val := float32(n.Float64)
-		return &val
-	}
-	return nil
 }
