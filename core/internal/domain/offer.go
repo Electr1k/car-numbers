@@ -26,7 +26,7 @@ type Offer struct {
 	NumberId   uuid.UUID   `validate:"required"`                            // NumberId - Идентификатор номера
 	Provider   Provider    `validate:"required,oneof=autonomera"`           // Provider - Провайдер, в котором найдено предложение
 	ExternalId string      `validate:"required"`                            // ExternalId - Идентификатор у провайдера
-	Price      float32     `validate:"required,gt=0"`                       // Price - Цена
+	Price      float64     `validate:"required,gt=0"`                       // Price - Цена
 	Status     OfferStatus `validate:"required,oneof=active sold inactive"` // Status - Статус предложения
 	PostedAt   *time.Time  `validate:"required"`                            // PostedAt - Дата публикации
 	Url        string      `validate:"required"`                            // Url - Ссылка на предложение
@@ -40,7 +40,7 @@ func NewOffer(
 	numberId uuid.UUID,
 	provider Provider,
 	externalId string,
-	price float32,
+	price float64,
 	status OfferStatus,
 	postedAt *time.Time,
 	url string,
@@ -60,7 +60,7 @@ func RestoreOffer(
 	numberId uuid.UUID,
 	provider Provider,
 	externalId string,
-	price float32,
+	price float64,
 	status OfferStatus,
 	postedAt *time.Time,
 	url string,
@@ -76,7 +76,7 @@ func newOffer(
 	numberId uuid.UUID,
 	provider Provider,
 	externalId string,
-	price float32,
+	price float64,
 	status OfferStatus,
 	postedAt *time.Time,
 	url string,
