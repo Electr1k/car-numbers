@@ -3,7 +3,7 @@ package autonomera
 import (
 	"bytes"
 	"context"
-	"data-service/internal/providers"
+	"data-service/internal/provider"
 	"fmt"
 
 	"github.com/PuerkitoBio/goquery"
@@ -22,30 +22,30 @@ func NewService(client *Client, mapper *Mapper) *Service {
 }
 
 // FetchOffers забирает одну страницу раздела и маппит её в домен
-func (s *Service) FetchOffers(ctx context.Context, section Section, offset int) (providers.FetchResult, error) {
+func (s *Service) FetchOffers(ctx context.Context, section Section, offset int) (provider.FetchResult, error) {
 	status, err := statusForSection(section)
 	if err != nil {
-		return providers.FetchResult{}, err
+		return provider.FetchResult{}, err
 	}
 
 	response, err := s.client.FetchOffersHTML(ctx, section, offset)
 	if err != nil {
-		return providers.FetchResult{}, err
+		return provider.FetchResult{}, err
 	}
 
 	document, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
 	if err != nil {
-		return providers.FetchResult{}, fmt.Errorf("parse html document: %w", err)
+		return provider.FetchResult{}, fmt.Errorf("parse html document: %w", err)
 	}
 
-	var result providers.FetchResult
+	var result provider.FetchResult
 
 	document.Find(offerRowSelector).Each(func(index int, row *goquery.Selection) {
 		result.RowsFound++
 
 		offer, err := s.mapper.MapToDomain(row, status)
 		if err != nil {
-			result.RowErrors = append(result.RowErrors, providers.RowError{Index: index, Err: err})
+			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
 			return
 		}
 

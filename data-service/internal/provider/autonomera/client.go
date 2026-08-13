@@ -2,7 +2,7 @@ package autonomera
 
 import (
 	"context"
-	"data-service/internal/providers"
+	"data-service/internal/provider"
 	"fmt"
 	"io"
 	"log/slog"
@@ -59,7 +59,7 @@ func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int
 
 	response, err := c.http.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("%w: get %s: %w", providers.ErrProviderUnavailable, requestURL, err)
+		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestURL, err)
 	}
 	defer response.Body.Close()
 
@@ -69,7 +69,7 @@ func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
 	if err != nil {
-		return nil, fmt.Errorf("%w: read body from %s: %w", providers.ErrInvalidResponse, requestURL, err)
+		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestURL, err)
 	}
 
 	c.logger.Debug("section page fetched",
@@ -96,13 +96,13 @@ func (c *Client) buildURL(section Section, start int) string {
 
 // processBadStatus - Процессинг ошибки по статус коду
 func processBadStatus(response *http.Response, requestURL string) error {
-	statesError := providers.ErrInvalidResponse
+	statesError := provider.ErrInvalidResponse
 
 	switch {
 	case response.StatusCode == http.StatusTooManyRequests:
-		statesError = providers.ErrRateLimitExceeded
+		statesError = provider.ErrRateLimitExceeded
 	case response.StatusCode >= http.StatusInternalServerError:
-		statesError = providers.ErrProviderUnavailable
+		statesError = provider.ErrProviderUnavailable
 	}
 
 	var responsePart string

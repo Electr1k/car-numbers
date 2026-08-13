@@ -2,7 +2,7 @@ package autonomera
 
 import (
 	"data-service/internal/domain"
-	"data-service/internal/providers"
+	"data-service/internal/provider"
 	"errors"
 	"strings"
 	"testing"
@@ -149,7 +149,7 @@ func TestMapToDomainBrokenOffer(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
-			if !errors.Is(err, providers.ErrBrokenOffer) {
+			if !errors.Is(err, provider.ErrBrokenOffer) {
 				t.Fatalf("want ErrBrokenOffer, got %v", err)
 			}
 		})
@@ -175,7 +175,7 @@ func TestMapToDomainRowSkipped(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
-			if !errors.Is(err, providers.ErrRowSkipped) {
+			if !errors.Is(err, provider.ErrRowSkipped) {
 				t.Fatalf("want ErrRowSkipped, got %v", err)
 			}
 		})

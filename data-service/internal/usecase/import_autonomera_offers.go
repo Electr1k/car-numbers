@@ -4,8 +4,8 @@ import (
 	"context"
 	"data-service/config"
 	"data-service/internal/domain"
-	"data-service/internal/providers"
-	"data-service/internal/providers/autonomera"
+	"data-service/internal/provider"
+	"data-service/internal/provider/autonomera"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,7 +14,7 @@ import (
 
 // OfferProvider - источник предложений
 type OfferProvider interface {
-	FetchOffers(ctx context.Context, section autonomera.Section, offset int) (providers.FetchResult, error)
+	FetchOffers(ctx context.Context, section autonomera.Section, offset int) (provider.FetchResult, error)
 }
 
 // OfferSaver сохраняет батч атомарно
@@ -197,7 +197,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 }
 
 // checkStopDate - проверка достижения нижней даты импорта
-func checkStopDate(result providers.FetchResult, stopDate time.Time) bool {
+func checkStopDate(result provider.FetchResult, stopDate time.Time) bool {
 	if stopDate.IsZero() {
 		return false
 	}
@@ -208,7 +208,7 @@ func checkStopDate(result providers.FetchResult, stopDate time.Time) bool {
 }
 
 // checkBrokenOffers - не слишком ли много строк на странице не разобралось
-func checkBrokenOffers(result providers.FetchResult) error {
+func checkBrokenOffers(result provider.FetchResult) error {
 	countBrokenOffers := result.BrokenOfferCount()
 	if countBrokenOffers <= maxCountBrokenOffers {
 		return nil
@@ -218,7 +218,7 @@ func checkBrokenOffers(result providers.FetchResult) error {
 		ErrTooManyBrokenOffers, countBrokenOffers, result.RowsFound, maxCountBrokenOffers)
 }
 
-func logPage(logger *slog.Logger, page, offset int, result providers.FetchResult, saved int) {
+func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult, saved int) {
 	attrs := []any{
 		"page", page,
 		"offset", offset,

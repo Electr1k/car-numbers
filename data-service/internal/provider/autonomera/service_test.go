@@ -3,7 +3,7 @@ package autonomera
 import (
 	"context"
 	"data-service/internal/domain"
-	"data-service/internal/providers"
+	"data-service/internal/provider"
 	"errors"
 	"io"
 	"log/slog"
@@ -144,7 +144,7 @@ func TestFetchOffersCollectsRowErrors(t *testing.T) {
 	if broken := result.BrokenOfferCount(); broken != 1 {
 		t.Errorf("BrokenOfferCount = %d, want 1", broken)
 	}
-	if !errors.Is(result.RowErrors[1].Err, providers.ErrRowSkipped) {
+	if !errors.Is(result.RowErrors[1].Err, provider.ErrRowSkipped) {
 		t.Errorf("second row error = %v, want ErrRowSkipped", result.RowErrors[1].Err)
 	}
 }
@@ -155,7 +155,7 @@ func TestFetchOffersPropagatesClientError(t *testing.T) {
 	})
 
 	_, err := service.FetchOffers(context.Background(), SectionActive, 0)
-	if !errors.Is(err, providers.ErrRateLimitExceeded) {
+	if !errors.Is(err, provider.ErrRateLimitExceeded) {
 		t.Fatalf("want ErrRateLimitExceeded, got %v", err)
 	}
 }

@@ -2,7 +2,7 @@ package autonomera
 
 import (
 	"data-service/internal/domain"
-	"data-service/internal/providers"
+	"data-service/internal/provider"
 	"fmt"
 	"strconv"
 	"strings"
@@ -43,7 +43,7 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 
 	raw, err := sel.Html()
 	if err != nil {
-		return empty, fmt.Errorf("%w: read row html: %w", providers.ErrBrokenOffer, err)
+		return empty, fmt.Errorf("%w: read row html: %w", provider.ErrBrokenOffer, err)
 	}
 
 	idAttr, err := requiredAttr(sel, "id")
@@ -83,7 +83,7 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 
 	number, err := domain.NewNumber(title, numberType)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid number %q: %w", providers.ErrRowSkipped, title, err)
+		return empty, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, title, err)
 	}
 
 	offer, err := domain.NewOffer(
@@ -97,7 +97,7 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 		raw,
 	)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid offer %q: %w", providers.ErrRowSkipped, externalID, err)
+		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalID, err)
 	}
 
 	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
@@ -107,7 +107,7 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 func requiredAttr(sel *goquery.Selection, name string) (string, error) {
 	value, exists := sel.Attr(name)
 	if !exists || value == "" {
-		return "", fmt.Errorf("%w: missing %s attribute", providers.ErrBrokenOffer, name)
+		return "", fmt.Errorf("%w: missing %s attribute", provider.ErrBrokenOffer, name)
 	}
 
 	return value, nil
@@ -119,11 +119,11 @@ func parseExternalID(idAttr string) (string, error) {
 
 	if externalID == idAttr {
 		return "", fmt.Errorf("%w: id attribute %q has no %q prefix",
-			providers.ErrBrokenOffer, idAttr, externalIDPrefix)
+			provider.ErrBrokenOffer, idAttr, externalIDPrefix)
 	}
 
 	if externalID == "" {
-		return "", fmt.Errorf("%w: empty external id in %q", providers.ErrBrokenOffer, idAttr)
+		return "", fmt.Errorf("%w: empty external id in %q", provider.ErrBrokenOffer, idAttr)
 	}
 
 	return externalID, nil
@@ -133,7 +133,7 @@ func parseExternalID(idAttr string) (string, error) {
 func parseNumberType(href string) (domain.NumberType, error) {
 	segments := strings.Split(strings.TrimPrefix(href, "/"), "/")
 	if len(segments) == 0 || segments[0] == "" {
-		return "", fmt.Errorf("%w: no vehicle type in href %q", providers.ErrBrokenOffer, href)
+		return "", fmt.Errorf("%w: no vehicle type in href %q", provider.ErrBrokenOffer, href)
 	}
 
 	switch segments[0] {
@@ -145,7 +145,7 @@ func parseNumberType(href string) (domain.NumberType, error) {
 		return domain.NumberTypeTrailer, nil
 	default:
 		return "", fmt.Errorf("%w: unknown vehicle type %q in href %q",
-			providers.ErrBrokenOffer, segments[0], href)
+			provider.ErrBrokenOffer, segments[0], href)
 	}
 }
 
@@ -153,12 +153,12 @@ func parseNumberType(href string) (domain.NumberType, error) {
 func parsePostedAt(sel *goquery.Selection) (time.Time, error) {
 	date := strings.TrimSpace(sel.Find(dateSelector).Text())
 	if date == "" {
-		return time.Time{}, fmt.Errorf("%w: empty date cell", providers.ErrBrokenOffer)
+		return time.Time{}, fmt.Errorf("%w: empty date cell", provider.ErrBrokenOffer)
 	}
 
 	postedAt, err := time.Parse(dateLayout, date)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("%w: parse date %q: %w", providers.ErrBrokenOffer, date, err)
+		return time.Time{}, fmt.Errorf("%w: parse date %q: %w", provider.ErrBrokenOffer, date, err)
 	}
 
 	return postedAt, nil
@@ -178,13 +178,13 @@ func parsePrice(priceText string) (float64, error) {
 	cleaned = strings.ReplaceAll(cleaned, "₽", "")
 
 	if cleaned == "" {
-		return 0, fmt.Errorf("%w: empty price cell", providers.ErrBrokenOffer)
+		return 0, fmt.Errorf("%w: empty price cell", provider.ErrBrokenOffer)
 	}
 
 	price, err := strconv.ParseFloat(cleaned, 64)
 	if err != nil {
 		return 0, fmt.Errorf("%w: price %q is not a number",
-			providers.ErrRowSkipped, strings.TrimSpace(priceText))
+			provider.ErrRowSkipped, strings.TrimSpace(priceText))
 	}
 
 	return price, nil

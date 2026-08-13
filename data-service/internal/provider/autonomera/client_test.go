@@ -2,7 +2,7 @@ package autonomera
 
 import (
 	"context"
-	"data-service/internal/providers"
+	"data-service/internal/provider"
 	"errors"
 	"io"
 	"log/slog"
@@ -26,11 +26,11 @@ func TestStatusCodeMapsToSentinel(t *testing.T) {
 		status int
 		want   error
 	}{
-		{http.StatusTooManyRequests, providers.ErrRateLimitExceeded},
-		{http.StatusInternalServerError, providers.ErrProviderUnavailable},
-		{http.StatusBadGateway, providers.ErrProviderUnavailable},
-		{http.StatusNotFound, providers.ErrInvalidResponse},
-		{http.StatusForbidden, providers.ErrInvalidResponse},
+		{http.StatusTooManyRequests, provider.ErrRateLimitExceeded},
+		{http.StatusInternalServerError, provider.ErrProviderUnavailable},
+		{http.StatusBadGateway, provider.ErrProviderUnavailable},
+		{http.StatusNotFound, provider.ErrInvalidResponse},
+		{http.StatusForbidden, provider.ErrInvalidResponse},
 	}
 
 	for _, c := range cases {
