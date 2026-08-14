@@ -8,14 +8,13 @@ import (
 	"data-service/internal/provider/autonomera"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/usecase"
+	"data-service/internal/worker"
 	"data-service/pkg/logger"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -47,13 +46,9 @@ func run() error {
 	jobRepository := postgres.NewJobRepository(database)
 	offerRepository := postgres.NewOfferRepository(database)
 
-	mapper := autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL)
-
-	autonomeraClient := autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log)
-
 	autonomeraService := autonomera.NewService(
-		autonomeraClient,
-		mapper,
+		autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log),
+		autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL),
 	)
 
 	importAutonomeraUseCase := usecase.NewImportAutonomeraOffersUseCase(
@@ -63,52 +58,14 @@ func run() error {
 		log.With("provider", domain.ProviderAutonomera),
 	)
 
-	imortJob, err := job.NewImportAutonomeraJob(jobRepository, *importAutonomeraUseCase)
-	resolver := job.NewResolver(jobRepository, imortJob)
+	resolver := job.NewResolver()
 
-	for {
-		if ctx.Err() != nil {
-			log.Info("worker jobs stopped")
-			return nil
-		}
-
-		domainJob, err := jobRepository.GetJob(ctx)
-		if errors.Is(err, domain.ErrNoJob) {
-			time.Sleep(time.Second)
-			continue
-		}
-		if err != nil {
-			log.Error("get job", "error", err)
-			time.Sleep(time.Second)
-			continue
-		}
-		log.Info("got job", "job", domainJob)
-
-		task, err := resolver.ResolveJob(*domainJob)
-		if err != nil {
-			err = jobRepository.UpdateJobStatus(ctx, domainJob.Id, domain.JobStatusFailed)
-			if err != nil {
-				log.Error("failed to update job status", "error", err, "job_id", domainJob.Id)
-			}
-			time.Sleep(time.Second)
-			continue
-		}
-
-		err = task.Handle(ctx, domainJob.Payload)
-		if err != nil {
-			err = jobRepository.UpdateJobStatus(ctx, domainJob.Id, domain.JobStatusFailed)
-			if err != nil {
-				log.Error("failed to update job status", "error", err, "job_id", domainJob.Id)
-			}
-			time.Sleep(time.Second)
-			continue
-		}
-
-		err = jobRepository.UpdateJobStatus(ctx, domainJob.Id, domain.JobStatusSuccess)
-		if err != nil {
-			log.Error("failed to update job status", "error", err, "job_id", domainJob.Id)
-		}
-
-		time.Sleep(time.Second)
+	if err := resolver.Register(
+		domain.JobNameImportAutonomeraOffers,
+		job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase),
+	); err != nil {
+		return fmt.Errorf("register jobs: %w", err)
 	}
+
+	return worker.New(jobRepository, resolver, domain.JobQueueDefault, log).Run(ctx)
 }

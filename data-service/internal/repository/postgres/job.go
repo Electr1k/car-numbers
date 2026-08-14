@@ -11,6 +11,9 @@ import (
 	"github.com/jackc/pgx/v4"
 )
 
+// stuckJobTimeout - через сколько взятая джоба считается брошенной и уходит в повторный прогон
+const stuckJobTimeout = 2 * time.Hour
+
 // JobRepository - хранение задач
 type JobRepository struct {
 	postgres *Postgres
@@ -21,23 +24,38 @@ func NewJobRepository(postgres *Postgres) *JobRepository {
 }
 
 const getJobQuery = `
-SELECT id, name, queue, status, start_after, payload
+SELECT id, name, start_after, payload, COALESCE(error, '')
 FROM jobs
-WHERE status = $1 AND start_after <= NOW()
+WHERE queue = $1
+  AND start_after <= NOW()
+  AND (status = $2 OR (status = $3 AND locked_at <= $4))
 ORDER BY start_after
 LIMIT 1
 FOR UPDATE SKIP LOCKED
 `
 
-const updateJobStatusQuery = `
+const lockJobQuery = `
 UPDATE jobs
-SET status = $1
+SET status = $1, locked_at = NOW(), updated_at = NOW()
 WHERE id = $2
+RETURNING locked_at
 `
+
+const failJobQuery = `
+UPDATE jobs
+SET status = $1, locked_at = NULL, error = $2, updated_at = NOW()
+WHERE id = $3
+`
+
+const deleteJobQuery = `
+DELETE FROM jobs
+WHERE id = $1
+`
+
 const createJobQuery = `
 INSERT INTO jobs (id, name, queue, status, start_after, payload) VALUES ($1, $2, $3, $4, $5, $6);`
 
-func (r *JobRepository) GetJob(ctx context.Context) (*domain.Job, error) {
+func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*domain.Job, error) {
 	tx, err := r.postgres.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -47,14 +65,17 @@ func (r *JobRepository) GetJob(ctx context.Context) (*domain.Job, error) {
 	var (
 		id         uuid.UUID
 		name       string
-		queue      string
-		status     string
 		startAfter time.Time
 		payload    string
+		errorText  string
 	)
 
-	err = tx.QueryRow(ctx, getJobQuery, string(domain.JobStatusWaiting)).
-		Scan(&id, &name, &queue, &status, &startAfter, &payload)
+	err = tx.QueryRow(ctx, getJobQuery,
+		string(queue),
+		string(domain.JobStatusPending),
+		string(domain.JobStatusRunning),
+		time.Now().Add(-stuckJobTimeout),
+	).Scan(&id, &name, &startAfter, &payload, &errorText)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNoJob
 	}
@@ -62,18 +83,27 @@ func (r *JobRepository) GetJob(ctx context.Context) (*domain.Job, error) {
 		return nil, fmt.Errorf("failed scan job: %w", err)
 	}
 
-	status = string(domain.JobStatusPending)
+	var lockedAt time.Time
 
-	_, err = tx.Exec(ctx, updateJobStatusQuery, status, id)
+	err = tx.QueryRow(ctx, lockJobQuery, string(domain.JobStatusRunning), id).Scan(&lockedAt)
 	if err != nil {
-		return nil, fmt.Errorf("failed update job status: %w", err)
+		return nil, fmt.Errorf("failed lock job: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	job, err := domain.RestoreJob(id, domain.JobName(name), domain.JobQueue(queue), domain.JobStatus(status), startAfter, payload)
+	job, err := domain.RestoreJob(
+		id,
+		domain.JobName(name),
+		queue,
+		domain.JobStatusRunning,
+		startAfter,
+		payload,
+		&lockedAt,
+		errorText,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed restore job: %w", err)
 	}
@@ -81,10 +111,24 @@ func (r *JobRepository) GetJob(ctx context.Context) (*domain.Job, error) {
 	return job, nil
 }
 
-func (r *JobRepository) UpdateJobStatus(ctx context.Context, id uuid.UUID, status domain.JobStatus) error {
-	_, err := r.postgres.pool.Exec(ctx, updateJobStatusQuery, string(status), id)
+func (r *JobRepository) MarkJobFailed(ctx context.Context, id uuid.UUID, jobErr error) error {
+	var errorText string
+	if jobErr != nil {
+		errorText = jobErr.Error()
+	}
+
+	_, err := r.postgres.pool.Exec(ctx, failJobQuery, string(domain.JobStatusFailed), errorText, id)
 	if err != nil {
-		return fmt.Errorf("failed update job status: %w", err)
+		return fmt.Errorf("failed mark job failed: %w", err)
+	}
+
+	return nil
+}
+
+func (r *JobRepository) DeleteJob(ctx context.Context, id uuid.UUID) error {
+	_, err := r.postgres.pool.Exec(ctx, deleteJobQuery, id)
+	if err != nil {
+		return fmt.Errorf("failed delete job: %w", err)
 	}
 
 	return nil

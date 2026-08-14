@@ -65,19 +65,16 @@ func main() {
 	createUseCases(cfg)
 	log.Info("starting fetch process")
 
-	jobs, err := job.NewImportAutonomeraJob(jobRepository, *importAutonomeraUseCase)
+	jobs := job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase)
+
+	err := jobs.Dispatch(ctx, job.ImportAutonomeraPayload{
+		Section:     autonomera.SectionArchive,
+		StartOffset: 0,
+		MaxPages:    0,
+		StopAfter:   job.Duration(72 * time.Hour),
+	}, nil)
 	if err != nil {
-		log.Error("failed to create import autonomera job", "error", err)
-	} else {
-		err := jobs.Dispatch(ctx, job.ImportAutonomeraPayload{
-			Section:     autonomera.SectionArchive,
-			StartOffset: 0,
-			MaxPages:    0,
-			StopAfter:   72 * time.Hour,
-		}, nil)
-		if err != nil {
-			log.Error("failed dispatch import autonomera job", "error", err)
-		}
+		log.Error("failed dispatch import autonomera job", "error", err)
 	}
 
 	log.Info("fetch process completed successfully")

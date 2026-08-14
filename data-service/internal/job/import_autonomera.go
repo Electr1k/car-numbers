@@ -12,54 +12,47 @@ import (
 
 type ImportAutonomeraJob struct {
 	job *Job
-	uc  usecase.ImportAutonomeraOffersUseCase
+	uc  *usecase.ImportAutonomeraOffersUseCase
 }
 
 type ImportAutonomeraPayload struct {
 	Section     autonomera.Section `json:"section"`
-	StartOffset int                `json:"startOffset"`
-	MaxPages    int                `json:"maxPages"`
-	StopAfter   time.Duration      `json:"stopAfter"`
+	StartOffset int                `json:"start_offset"`
+	MaxPages    int                `json:"max_pages"`
+	StopAfter   Duration           `json:"stop_after"`
 }
 
-func NewImportAutonomeraJob(repository storeInterface, usecase usecase.ImportAutonomeraOffersUseCase) (*ImportAutonomeraJob, error) {
+func NewImportAutonomeraJob(store store, uc *usecase.ImportAutonomeraOffersUseCase) *ImportAutonomeraJob {
 	return &ImportAutonomeraJob{
-		job: newJob(repository, domain.JobNameImportAutonomerOffers, domain.JobQueueDefault, false),
-		uc:  usecase,
-	}, nil
+		job: newJob(store, domain.JobNameImportAutonomeraOffers, domain.JobQueueDefault, false),
+		uc:  uc,
+	}
 }
 
 func (j *ImportAutonomeraJob) Dispatch(ctx context.Context, payload ImportAutonomeraPayload, startAfter *time.Time) error {
-	jsonData, err := json.Marshal(payload)
+	encoded, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal payload: %w", err)
+		return fmt.Errorf("marshal payload: %w", err)
 	}
 
-	err = j.job.dispatch(ctx, string(jsonData), startAfter)
-	if err != nil {
-		return fmt.Errorf("failed to dispatch job: %w", err)
+	if err := j.job.dispatch(ctx, string(encoded), startAfter); err != nil {
+		return fmt.Errorf("dispatch job: %w", err)
 	}
 
 	return nil
 }
 
-func (i ImportAutonomeraJob) Handle(ctx context.Context, payload string) error {
-	var payloadObject ImportAutonomeraPayload
+func (j *ImportAutonomeraJob) Handle(ctx context.Context, payload string) error {
+	var decoded ImportAutonomeraPayload
 
-	err := json.Unmarshal([]byte(payload), &payloadObject)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal payload: %w", err)
+	if err := json.Unmarshal([]byte(payload), &decoded); err != nil {
+		return fmt.Errorf("unmarshal payload: %w", err)
 	}
 
-	err = i.uc.Handle(ctx, usecase.ImportParams{
-		Section:     payloadObject.Section,
-		StartOffset: payloadObject.StartOffset,
-		MaxPages:    payloadObject.MaxPages,
-		StopAfter:   payloadObject.StopAfter,
+	return j.uc.Handle(ctx, usecase.ImportParams{
+		Section:     decoded.Section,
+		StartOffset: decoded.StartOffset,
+		MaxPages:    decoded.MaxPages,
+		StopAfter:   time.Duration(decoded.StopAfter),
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

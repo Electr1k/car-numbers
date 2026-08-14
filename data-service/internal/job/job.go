@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-type storeInterface interface {
+type store interface {
 	CreateJob(ctx context.Context, job domain.Job) (*domain.Job, error)
 }
 
 type Job struct {
-	store storeInterface
+	store store
 
 	name domain.JobName
 
@@ -22,7 +22,7 @@ type Job struct {
 }
 
 func newJob(
-	store storeInterface,
+	store store,
 	name domain.JobName,
 	queue domain.JobQueue,
 	executedParallel bool,
@@ -42,7 +42,7 @@ func (j *Job) dispatch(ctx context.Context, payload string, startAfter *time.Tim
 		startAfter = &start
 	}
 
-	domainJob, err := domain.NewJob(j.name, j.queue, domain.JobStatusWaiting, *startAfter, payload)
+	domainJob, err := domain.NewJob(j.name, j.queue, domain.JobStatusPending, *startAfter, payload)
 	if err != nil {
 		return fmt.Errorf("dispatch job: %w", err)
 	}
