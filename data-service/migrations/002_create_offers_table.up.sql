@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS offers (
 );
 
 
-CREATE INDEX offers_number_id ON offers (number_id);
+CREATE INDEX idx_offers_number_id ON offers (number_id);
 
 comment on column offers.id is 'Идентификатор (UUIDv7)';
 comment on column offers.number_id is 'Идентификатор номера';

@@ -1,7 +1,4 @@
 services:
-  # Разовый прогон схемы: отрабатывает и выходит, data-api ждёт его завершения.
-  # on-failure нужен, чтобы пережить холодный старт базы: пока data-db
-  # инициализирует каталог данных, подключение отваливается
   data-migrate:
     build:
       context: ./data-service
@@ -23,6 +20,20 @@ services:
     volumes:
       - ./data-service:/app
       - ./tmp:/app/tmp
+    depends_on:
+      data-migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    restart: always
+
+  data-worker:
+    build:
+      context: ./data-service
+      dockerfile: ../docker/data-service/Dockerfile.dev
+    volumes:
+      - ./data-service:/app
+      - ./tmp:/app/tmp
+    command: ["air", "-c", ".air.worker.toml"]
     depends_on:
       data-migrate:
         condition: service_completed_successfully

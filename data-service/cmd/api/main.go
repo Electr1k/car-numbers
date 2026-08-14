@@ -4,7 +4,8 @@ import (
 	"context"
 	"data-service/config"
 	"data-service/internal/domain"
-	"data-service/internal/providers/autonomera"
+	"data-service/internal/job"
+	"data-service/internal/provider/autonomera"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/usecase"
 	"data-service/pkg/logger"
@@ -23,6 +24,8 @@ var (
 	autonomeraService *autonomera.Service
 
 	offerRepository *postgres.OfferRepository
+
+	jobRepository *postgres.JobRepository
 
 	importAutonomeraUseCase *usecase.ImportAutonomeraOffersUseCase
 
@@ -51,13 +54,6 @@ func main() {
 		cancel()
 	}()
 
-	if err := postgres.Migrate(cfg.DatabaseConfig.URL, cfg.DatabaseConfig.MigrationsPath); err != nil {
-		log.Error("failed to apply migrations", "error", err)
-		os.Exit(1)
-	}
-
-	log.Info("migrations applied", "path", cfg.DatabaseConfig.MigrationsPath)
-
 	if err := createRepositories(ctx, cfg); err != nil {
 		log.Error("failed to create repositories", "error", err)
 		os.Exit(1)
@@ -67,18 +63,21 @@ func main() {
 	createIntegrationClients(cfg)
 	createProviders(cfg)
 	createUseCases(cfg)
-
 	log.Info("starting fetch process")
 
-	//Пока догружаем архив, активный листинг поедет по крону
-	dataInput := usecase.ImportParams{
-		Section:     autonomera.SectionArchive,
-		StartOffset: 7000,
-		MaxPages:    0,
-		StopAfter:   time.Duration(0),
-	}
-	if err := importAutonomeraUseCase.Handle(ctx, dataInput); err != nil {
-		return
+	jobs, err := job.NewImportAutonomeraJob(jobRepository, *importAutonomeraUseCase)
+	if err != nil {
+		log.Error("failed to create import autonomera job", "error", err)
+	} else {
+		err := jobs.Dispatch(ctx, job.ImportAutonomeraPayload{
+			Section:     autonomera.SectionArchive,
+			StartOffset: 0,
+			MaxPages:    0,
+			StopAfter:   72 * time.Hour,
+		}, nil)
+		if err != nil {
+			log.Error("failed dispatch import autonomera job", "error", err)
+		}
 	}
 
 	log.Info("fetch process completed successfully")
@@ -92,6 +91,7 @@ func createRepositories(ctx context.Context, config *config.Config) error {
 	}
 
 	offerRepository = postgres.NewOfferRepository(postgreSQL)
+	jobRepository = postgres.NewJobRepository(postgreSQL)
 
 	return nil
 }
