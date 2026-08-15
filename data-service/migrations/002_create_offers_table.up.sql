@@ -3,11 +3,16 @@ CREATE TABLE IF NOT EXISTS offers (
     number_id UUID NOT NULL REFERENCES numbers(id),
     provider VARCHAR(255) NOT NULL,
     external_id text NOT NULL,
-    price DECIMAL(12,2) NOT NULL,
+    price DECIMAL(12,2),
     status VARCHAR(255) NOT NULL,
+    whereabouts VARCHAR(16),
+    reissue_included BOOLEAN,
+    view_count INT,
     posted_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    refreshed_at TIMESTAMP WITH TIME ZONE NOT NULL,
     url VARCHAR(255) NOT NULL,
     raw text NOT NULL,
+    raw_detail text,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT offers_provider_external_id_uk UNIQUE (provider, external_id)
@@ -22,6 +27,11 @@ comment on column offers.provider is 'Провайдер, в котором на
 comment on column offers.external_id is 'Идентификатор у провайдера';
 comment on column offers.price is 'Цена';
 comment on column offers.status is 'Статус предложения';
-comment on column offers.posted_at is 'Дата публикации';
+comment on column offers.whereabouts is 'Где находится номер (на авто/хранении)';
+comment on column offers.reissue_included is 'Переоформление включено в стоимость';
+comment on column offers.view_count is 'Число просмотров у провайдера';
+comment on column offers.posted_at is 'Дата создания предложения у провайдера';
+comment on column offers.refreshed_at is 'Дата поднятия/обновления предложения у провайдера';
 comment on column offers.url is 'Ссылка на предложение';
 comment on column offers.raw is 'Сырой объект поставщика';
+comment on column offers.raw_detail is 'Сырой объект поставщика с детальной информацией';
