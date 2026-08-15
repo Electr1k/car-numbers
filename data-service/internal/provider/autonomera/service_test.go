@@ -123,7 +123,7 @@ func TestFetchOffersCollectsRowErrors(t *testing.T) {
 	broken.href = "/quadro/а123аа77"
 
 	skipped := defaultRow()
-	skipped.price = "Договорная"
+	skipped.price = "0 ₽"
 
 	service := newTestService(t, servePage(page(defaultRow(), broken, skipped)))
 

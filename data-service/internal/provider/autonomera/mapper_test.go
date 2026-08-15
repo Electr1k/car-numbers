@@ -65,7 +65,7 @@ func newTestMapper() *Mapper {
 }
 
 func TestMapToDomainHappyPath(t *testing.T) {
-	result, err := newTestMapper().MapToDomain(defaultRow().selection(t), domain.OfferStatusActive)
+	result, err := newTestMapper().MapOfferToDomain(defaultRow().selection(t), domain.OfferStatusActive)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestMapToDomainHappyPath(t *testing.T) {
 	if result.Offer.Url != "https://autonomera777.ru/standart/а123аа77" {
 		t.Errorf("url = %q", result.Offer.Url)
 	}
-	if result.Offer.Price != 1200000 {
+	if result.Offer.Price == nil || *result.Offer.Price != 1200000 {
 		t.Errorf("price = %v", result.Offer.Price)
 	}
 	if result.Offer.Status != domain.OfferStatusActive {
@@ -113,7 +113,7 @@ func TestMapToDomainVehicleTypes(t *testing.T) {
 		fixture := defaultRow()
 		fixture.href = c.href
 
-		result, err := newTestMapper().MapToDomain(fixture.selection(t), domain.OfferStatusActive)
+		result, err := newTestMapper().MapOfferToDomain(fixture.selection(t), domain.OfferStatusActive)
 		if err != nil {
 			t.Fatalf("%s: unexpected error: %v", c.href, err)
 		}
@@ -145,7 +145,7 @@ func TestMapToDomainBrokenOffer(t *testing.T) {
 			fixture := defaultRow()
 			c.mutate(&fixture)
 
-			_, err := newTestMapper().MapToDomain(fixture.selection(t), domain.OfferStatusActive)
+			_, err := newTestMapper().MapOfferToDomain(fixture.selection(t), domain.OfferStatusActive)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -161,7 +161,6 @@ func TestMapToDomainRowSkipped(t *testing.T) {
 		name   string
 		mutate func(*row)
 	}{
-		{"договорная цена", func(r *row) { r.price = "Договорная" }},
 		{"цена ноль", func(r *row) { r.price = "0 ₽" }},
 		{"номер короче восьми", func(r *row) { r.title = "а123" }},
 	}
@@ -171,7 +170,7 @@ func TestMapToDomainRowSkipped(t *testing.T) {
 			fixture := defaultRow()
 			c.mutate(&fixture)
 
-			_, err := newTestMapper().MapToDomain(fixture.selection(t), domain.OfferStatusActive)
+			_, err := newTestMapper().MapOfferToDomain(fixture.selection(t), domain.OfferStatusActive)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -179,6 +178,19 @@ func TestMapToDomainRowSkipped(t *testing.T) {
 				t.Fatalf("want ErrRowSkipped, got %v", err)
 			}
 		})
+	}
+}
+
+func TestMapToDomainNegotiablePrice(t *testing.T) {
+	fixture := defaultRow()
+	fixture.price = "Договорная"
+
+	result, err := newTestMapper().MapOfferToDomain(fixture.selection(t), domain.OfferStatusActive)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Offer.Price != nil {
+		t.Errorf("price = %v, want nil (negotiable)", *result.Offer.Price)
 	}
 }
 
@@ -203,7 +215,7 @@ func TestParsePriceSeparators(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if price != c.want {
+			if price == nil || *price != c.want {
 				t.Fatalf("price = %v, want %v", price, c.want)
 			}
 		})

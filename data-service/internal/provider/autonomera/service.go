@@ -43,7 +43,7 @@ func (s *Service) FetchOffers(ctx context.Context, section Section, offset int) 
 	document.Find(offerRowSelector).Each(func(index int, row *goquery.Selection) {
 		result.RowsFound++
 
-		offer, err := s.mapper.MapToDomain(row, status)
+		offer, err := s.mapper.MapOfferToDomain(row, status)
 		if err != nil {
 			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
 			return

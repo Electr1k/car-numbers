@@ -9,8 +9,23 @@ import (
 
 func newTestOffer(numberId uuid.UUID, provider Provider, status OfferStatus) (*Offer, error) {
 	postedAt := time.Now()
+	price := 1000.0
 
-	return NewOffer(numberId, provider, "42", 1000, status, &postedAt, "https://example.com/42", "<tr></tr>")
+	return NewOffer(
+		numberId,
+		provider,
+		"42",
+		&price,
+		status,
+		nil,
+		nil,
+		nil,
+		&postedAt,
+		&postedAt,
+		"https://example.com/42",
+		"<tr></tr>",
+		nil,
+	)
 }
 
 func TestNewOfferAssignsID(t *testing.T) {
@@ -54,9 +69,26 @@ func TestNewOfferAcceptsKnownStatuses(t *testing.T) {
 
 func TestRestoreOfferRequiresID(t *testing.T) {
 	postedAt := time.Now()
+	price := 1000.0
 
-	_, err := RestoreOffer(uuid.Nil, uuid.New(), ProviderAutonomera, "42", 1000,
-		OfferStatusActive, &postedAt, "https://example.com/42", "<tr></tr>", nil, nil)
+	_, err := RestoreOffer(
+		uuid.Nil,
+		uuid.New(),
+		ProviderAutonomera,
+		"42",
+		&price,
+		OfferStatusActive,
+		nil,
+		nil,
+		nil,
+		&postedAt,
+		&postedAt,
+		"https://example.com/42",
+		"<tr></tr>",
+		nil,
+		nil,
+		nil,
+	)
 	if err == nil {
 		t.Fatal("expected error for zero id, got nil")
 	}

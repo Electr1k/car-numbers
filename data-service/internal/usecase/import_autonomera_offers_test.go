@@ -52,8 +52,23 @@ func resultWith(t *testing.T, count int, postedAt time.Time, rowErrs ...error) p
 			t.Fatalf("build number: %v", err)
 		}
 
-		offer, err := domain.NewOffer(number.Id, domain.ProviderAutonomera, "42", 1000,
-			domain.OfferStatusActive, &postedAt, "https://example.com/42", "<tr></tr>")
+		price := 1000.0
+
+		offer, err := domain.NewOffer(
+			number.Id,
+			domain.ProviderAutonomera,
+			"42",
+			&price,
+			domain.OfferStatusActive,
+			nil,
+			nil,
+			nil,
+			&postedAt,
+			&postedAt,
+			"https://example.com/42",
+			"<tr></tr>",
+			nil,
+		)
 		if err != nil {
 			t.Fatalf("build offer: %v", err)
 		}

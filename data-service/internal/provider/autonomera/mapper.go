@@ -27,6 +27,10 @@ const (
 
 	// dateLayout - формат даты публикации
 	dateLayout = "02.01.2006"
+
+	offerDetailSelector = "div.article"
+
+	priceNegotiable = "Договорная"
 )
 
 type Mapper struct {
@@ -37,8 +41,8 @@ func NewMapper(baseURL string) *Mapper {
 	return &Mapper{baseURL: strings.TrimRight(baseURL, "/")}
 }
 
-// MapToDomain - Маппит строку выдачи в домен
-func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) (domain.OfferWithNumber, error) {
+// MapOfferToDomain - Маппит строку выдачи в домен
+func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferStatus) (domain.OfferWithNumber, error) {
 	var empty domain.OfferWithNumber
 
 	raw, err := sel.Html()
@@ -92,9 +96,14 @@ func (m *Mapper) MapToDomain(sel *goquery.Selection, status domain.OfferStatus) 
 		externalID,
 		price,
 		status,
+		nil,
+		nil,
+		nil,
+		&postedAt,
 		&postedAt,
 		m.baseURL+href,
 		raw,
+		nil,
 	)
 	if err != nil {
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalID, err)
@@ -165,7 +174,7 @@ func parsePostedAt(sel *goquery.Selection) (time.Time, error) {
 }
 
 // parsePrice - цена в рублях
-func parsePrice(priceText string) (float64, error) {
+func parsePrice(priceText string) (*float64, error) {
 	// Выкидывает любой пробельный символ
 	cleaned := strings.Map(func(r rune) rune {
 		if unicode.IsSpace(r) {
@@ -176,16 +185,19 @@ func parsePrice(priceText string) (float64, error) {
 	}, priceText)
 
 	cleaned = strings.ReplaceAll(cleaned, "₽", "")
+	if cleaned == priceNegotiable {
+		return nil, nil
+	}
 
 	if cleaned == "" {
-		return 0, fmt.Errorf("%w: empty price cell", provider.ErrBrokenOffer)
+		return nil, fmt.Errorf("%w: empty price cell", provider.ErrBrokenOffer)
 	}
 
 	price, err := strconv.ParseFloat(cleaned, 64)
 	if err != nil {
-		return 0, fmt.Errorf("%w: price %q is not a number",
+		return nil, fmt.Errorf("%w: price %q is not a number",
 			provider.ErrRowSkipped, strings.TrimSpace(priceText))
 	}
 
-	return price, nil
+	return &price, nil
 }
