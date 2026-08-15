@@ -37,6 +37,7 @@ type Job struct {
 	Status     JobStatus  `validate:"required"`      // JobStatus - Статус исполнения
 	StartAfter time.Time  `validate:"required"`      // StartAfter - Отложенный запуск
 	Payload    string     `validate:"required,json"` // Payload - Json с входными данными
+	UniqueKey  string     `validate:"required"`      // UniqueKey - Ключ дедупликации
 	LockedAt   *time.Time // LockedAt - Когда джоба взята воркером
 	Error      string     // Error - Причина последнего падения
 }
@@ -48,10 +49,11 @@ func RestoreJob(
 	status JobStatus,
 	startAfter time.Time,
 	payload string,
+	uniqueKey string,
 	lockedAt *time.Time,
 	errorText string,
 ) (*Job, error) {
-	return newJob(id, name, queue, status, startAfter, payload, lockedAt, errorText)
+	return newJob(id, name, queue, status, startAfter, payload, uniqueKey, lockedAt, errorText)
 }
 
 func NewJob(
@@ -60,13 +62,14 @@ func NewJob(
 	status JobStatus,
 	startAfter time.Time,
 	payload string,
+	uniqueKey string,
 ) (*Job, error) {
 	id, err := newID()
 	if err != nil {
 		return nil, err
 	}
 
-	return newJob(id, name, queue, status, startAfter, payload, nil, "")
+	return newJob(id, name, queue, status, startAfter, payload, uniqueKey, nil, "")
 }
 
 func newJob(
@@ -76,6 +79,7 @@ func newJob(
 	status JobStatus,
 	startAfter time.Time,
 	payload string,
+	uniqueKey string,
 	lockedAt *time.Time,
 	errorText string,
 ) (*Job, error) {
@@ -86,6 +90,7 @@ func newJob(
 		Status:     status,
 		StartAfter: startAfter,
 		Payload:    payload,
+		UniqueKey:  uniqueKey,
 		LockedAt:   lockedAt,
 		Error:      errorText,
 	}

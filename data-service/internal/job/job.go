@@ -8,7 +8,7 @@ import (
 )
 
 type store interface {
-	CreateJob(ctx context.Context, job domain.Job) (*domain.Job, error)
+	CreateJob(ctx context.Context, job domain.Job) (bool, error)
 }
 
 type Job struct {
@@ -35,22 +35,21 @@ func newJob(
 	}
 }
 
-func (j *Job) dispatch(ctx context.Context, payload string, startAfter *time.Time) error {
-
+func (j *Job) dispatch(ctx context.Context, payload string, uniqueKey string, startAfter *time.Time) (bool, error) {
 	if startAfter == nil {
 		start := time.Now()
 		startAfter = &start
 	}
 
-	domainJob, err := domain.NewJob(j.name, j.queue, domain.JobStatusPending, *startAfter, payload)
+	domainJob, err := domain.NewJob(j.name, j.queue, domain.JobStatusPending, *startAfter, payload, uniqueKey)
 	if err != nil {
-		return fmt.Errorf("dispatch job: %w", err)
+		return false, fmt.Errorf("dispatch job: %w", err)
 	}
 
-	_, err = j.store.CreateJob(ctx, *domainJob)
+	created, err := j.store.CreateJob(ctx, *domainJob)
 	if err != nil {
-		return fmt.Errorf("dispatch job: %w", err)
+		return false, fmt.Errorf("dispatch job: %w", err)
 	}
 
-	return nil
+	return created, nil
 }

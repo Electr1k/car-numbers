@@ -24,7 +24,7 @@ func NewJobRepository(postgres *Postgres) *JobRepository {
 }
 
 const getJobQuery = `
-SELECT id, name, start_after, payload, COALESCE(error, '')
+SELECT id, name, start_after, payload, unique_key, COALESCE(error, '')
 FROM jobs
 WHERE queue = $1
   AND start_after <= NOW()
@@ -53,7 +53,10 @@ WHERE id = $1
 `
 
 const createJobQuery = `
-INSERT INTO jobs (id, name, queue, status, start_after, payload) VALUES ($1, $2, $3, $4, $5, $6);`
+INSERT INTO jobs (id, name, queue, status, start_after, payload, unique_key)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+ON CONFLICT (unique_key) WHERE status IN ('pending', 'running') DO NOTHING
+`
 
 func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*domain.Job, error) {
 	tx, err := r.postgres.pool.Begin(ctx)
@@ -67,6 +70,7 @@ func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*dom
 		name       string
 		startAfter time.Time
 		payload    string
+		uniqueKey  string
 		errorText  string
 	)
 
@@ -75,7 +79,7 @@ func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*dom
 		string(domain.JobStatusPending),
 		string(domain.JobStatusRunning),
 		time.Now().Add(-stuckJobTimeout),
-	).Scan(&id, &name, &startAfter, &payload, &errorText)
+	).Scan(&id, &name, &startAfter, &payload, &uniqueKey, &errorText)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNoJob
 	}
@@ -101,6 +105,7 @@ func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*dom
 		domain.JobStatusRunning,
 		startAfter,
 		payload,
+		uniqueKey,
 		&lockedAt,
 		errorText,
 	)
@@ -134,11 +139,19 @@ func (r *JobRepository) DeleteJob(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (r *JobRepository) CreateJob(ctx context.Context, job domain.Job) (*domain.Job, error) {
-	_, err := r.postgres.pool.Exec(ctx, createJobQuery, job.Id, string(job.Name), string(job.Queue), string(job.Status), job.StartAfter, job.Payload)
+func (r *JobRepository) CreateJob(ctx context.Context, job domain.Job) (bool, error) {
+	tag, err := r.postgres.pool.Exec(ctx, createJobQuery,
+		job.Id,
+		string(job.Name),
+		string(job.Queue),
+		string(job.Status),
+		job.StartAfter,
+		job.Payload,
+		job.UniqueKey,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed create job: %w", err)
+		return false, fmt.Errorf("failed create job: %w", err)
 	}
 
-	return &job, nil
+	return tag.RowsAffected() > 0, nil
 }

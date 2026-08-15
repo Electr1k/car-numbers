@@ -29,17 +29,22 @@ func NewImportAutonomeraJob(store store, uc *usecase.ImportAutonomeraOffersUseCa
 	}
 }
 
-func (j *ImportAutonomeraJob) Dispatch(ctx context.Context, payload ImportAutonomeraPayload, startAfter *time.Time) error {
+func ImportAutonomeraUniqueKey(section autonomera.Section) string {
+	return fmt.Sprintf("%s:%s", domain.JobNameImportAutonomeraOffers, section)
+}
+
+func (j *ImportAutonomeraJob) Dispatch(ctx context.Context, payload ImportAutonomeraPayload, startAfter *time.Time) (bool, error) {
 	encoded, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("marshal payload: %w", err)
+		return false, fmt.Errorf("marshal payload: %w", err)
 	}
 
-	if err := j.job.dispatch(ctx, string(encoded), startAfter); err != nil {
-		return fmt.Errorf("dispatch job: %w", err)
+	created, err := j.job.dispatch(ctx, string(encoded), ImportAutonomeraUniqueKey(payload.Section), startAfter)
+	if err != nil {
+		return false, fmt.Errorf("dispatch job: %w", err)
 	}
 
-	return nil
+	return created, nil
 }
 
 func (j *ImportAutonomeraJob) Handle(ctx context.Context, payload string) error {

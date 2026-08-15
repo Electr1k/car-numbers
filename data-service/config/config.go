@@ -38,10 +38,6 @@ type AutoNomeraConfig struct {
 	BaseURL   string `env:"BASE_URL" env-default:"https://autonomera777.ru"`
 	BatchSize int    `env:"BATCH_SIZE" env-default:"20"`
 
-	// Расписание кронов: пауза отсчитывается от конца прогона, а не от начала
-	ActiveInterval  time.Duration `env:"ACTIVE_INTERVAL" env-default:"1h"`
-	ArchiveInterval time.Duration `env:"ARCHIVE_INTERVAL" env-default:"1h"`
-
 	// ImportDepth - насколько глубоко по дате публикации заходит регулярный
 	// прогон. Разовые догрузки задают глубину сами, мимо конфига
 	ImportDepth time.Duration `env:"IMPORT_DEPTH" env-default:"72h"`

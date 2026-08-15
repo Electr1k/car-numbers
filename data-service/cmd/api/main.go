@@ -7,8 +7,10 @@ import (
 	"data-service/internal/job"
 	"data-service/internal/provider/autonomera"
 	"data-service/internal/repository/postgres"
-	"data-service/internal/usecase"
+	"data-service/internal/scheduler"
 	"data-service/pkg/logger"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -16,101 +18,85 @@ import (
 	"time"
 )
 
-var (
-	postgreSQL *postgres.Postgres
-
-	autonomeraClient *autonomera.Client
-
-	autonomeraService *autonomera.Service
-
-	offerRepository *postgres.OfferRepository
-
-	jobRepository *postgres.JobRepository
-
-	importAutonomeraUseCase *usecase.ImportAutonomeraOffersUseCase
-
-	log *slog.Logger
-)
-
 func main() {
+	if err := run(); err != nil {
+		slog.Error("api stopped with error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	cfg := config.MustLoad()
 
-	log = logger.New(logger.Config{
+	log := logger.New(logger.Config{
 		Level:  cfg.LogConfig.Level,
 		Format: cfg.LogConfig.Format,
 	})
 
-	log.Info("starting application", "env", cfg.Env)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	log.Info("starting api", "env", cfg.Env)
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		sig := <-sigChan
-		log.Info("received shutdown signal", "signal", sig)
-		cancel()
-	}()
-
-	if err := createRepositories(ctx, cfg); err != nil {
-		log.Error("failed to create repositories", "error", err)
-		os.Exit(1)
-	}
-	defer postgreSQL.Close()
-
-	createIntegrationClients(cfg)
-	createProviders(cfg)
-	createUseCases(cfg)
-	log.Info("starting fetch process")
-
-	jobs := job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase)
-
-	err := jobs.Dispatch(ctx, job.ImportAutonomeraPayload{
-		Section:     autonomera.SectionArchive,
-		StartOffset: 0,
-		MaxPages:    0,
-		StopAfter:   job.Duration(72 * time.Hour),
-	}, nil)
+	database, err := postgres.New(ctx, cfg.DatabaseConfig)
 	if err != nil {
-		log.Error("failed dispatch import autonomera job", "error", err)
+		return fmt.Errorf("connect to database: %w", err)
 	}
+	defer database.Close()
 
-	log.Info("fetch process completed successfully")
-}
+	sched := scheduler.New(postgres.NewJobRepository(database), log)
 
-func createRepositories(ctx context.Context, config *config.Config) error {
-	var err error
-	postgreSQL, err = postgres.New(ctx, config.DatabaseConfig)
+	entries, err := scheduleEntries(cfg.AutoNomeraConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("build schedule: %w", err)
 	}
 
-	offerRepository = postgres.NewOfferRepository(postgreSQL)
-	jobRepository = postgres.NewJobRepository(postgreSQL)
+	for _, entry := range entries {
+		if err := sched.Add(entry); err != nil {
+			return fmt.Errorf("register schedule: %w", err)
+		}
+	}
 
-	return nil
+	return sched.Run(ctx)
 }
 
-func createIntegrationClients(cfg *config.Config) {
-	autonomeraClient = autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log)
+func scheduleEntries(cfg config.AutoNomeraConfig) ([]scheduler.Entry, error) {
+	active, err := importAutonomeraPayload(autonomera.SectionActive, cfg.ImportDepth)
+	if err != nil {
+		return nil, err
+	}
+
+	archive, err := importAutonomeraPayload(autonomera.SectionArchive, cfg.ImportDepth)
+	if err != nil {
+		return nil, err
+	}
+
+	return []scheduler.Entry{
+		{
+			Name:      domain.JobNameImportAutonomeraOffers,
+			Queue:     domain.JobQueueDefault,
+			Spec:      "0 * * * *",
+			Payload:   active,
+			UniqueKey: job.ImportAutonomeraUniqueKey(autonomera.SectionActive),
+		},
+		{
+			Name:      domain.JobNameImportAutonomeraOffers,
+			Queue:     domain.JobQueueDefault,
+			Spec:      "30 * * * *",
+			Payload:   archive,
+			UniqueKey: job.ImportAutonomeraUniqueKey(autonomera.SectionArchive),
+		},
+	}, nil
 }
 
-func createProviders(cfg *config.Config) {
-	mapper := autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL)
+func importAutonomeraPayload(section autonomera.Section, depth time.Duration) (string, error) {
+	encoded, err := json.Marshal(job.ImportAutonomeraPayload{
+		Section:   section,
+		StopAfter: job.Duration(depth),
+	})
+	if err != nil {
+		return "", fmt.Errorf("marshal %s payload: %w", section, err)
+	}
 
-	autonomeraService = autonomera.NewService(
-		autonomeraClient,
-		mapper,
-	)
-}
-
-func createUseCases(cfg *config.Config) {
-	importAutonomeraUseCase = usecase.NewImportAutonomeraOffersUseCase(
-		autonomeraService,
-		offerRepository,
-		cfg.AutoNomeraConfig,
-		log.With("provider", domain.ProviderAutonomera),
-	)
+	return string(encoded), nil
 }
