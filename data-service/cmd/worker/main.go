@@ -46,6 +46,7 @@ func run() error {
 
 	jobRepository := postgres.NewJobRepository(database)
 	offerRepository := postgres.NewOfferRepository(database)
+	featureRepository := postgres.NewFeatureRepository(database)
 
 	autonomeraService := autonomera.NewService(
 		autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log),
@@ -55,6 +56,7 @@ func run() error {
 	importAutonomeraUseCase := usecase.NewImportAutonomeraOffersUseCase(
 		autonomeraService,
 		offerRepository,
+		featureRepository,
 		cfg.AutoNomeraConfig,
 		log.With("provider", domain.ProviderAutonomera),
 	)
@@ -63,6 +65,7 @@ func run() error {
 	importOfferDetailUseCase := usecase.NewImportOfferDetailUseCase(
 		providerResolver,
 		offerRepository,
+		featureRepository,
 		log,
 	)
 

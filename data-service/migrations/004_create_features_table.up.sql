@@ -18,25 +18,25 @@ VALUES(
     '01a00b6d-bdad-76db-901f-5e3794b8c96e',
     'import-autonomera-offers',
     'Импорт предложений из autonomera777'
-)
+);
 
 INSERT INTO features (id, key, name)
 VALUES(
     '01a00b73-9ac2-7148-ba5c-478b058d035e',
-    'dispatch-import-offer-detail',
+    'dispatch-import-autonomera-offers',
     'Вызов импорта предложений из autonomera777'
-)
+);
 
 INSERT INTO features (id, key, name)
 VALUES(
     '01a00b6f-a3bf-72b5-9797-1b99d1945d7b',
     'import-offer-detail',
     'Импорт детальной информации об оффере (из любого провайдера)'
-)
+);
 
 INSERT INTO features (id, key, name)
 VALUES(
     '01a00b72-26c0-709c-be8f-bac499ff5a46',
     'dispatch-import-offer-detail',
     'Вызов импорта детальной информации об оффере (из любого провайдера)'
-)
+);

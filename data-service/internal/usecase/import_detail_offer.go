@@ -25,26 +25,39 @@ type OfferRepository interface {
 
 // ImportOfferDetailUseCase - догрузка деталки по офферу
 type ImportOfferDetailUseCase struct {
-	resolver   Resolver
-	repository OfferRepository
-	logger     *slog.Logger
+	resolver       Resolver
+	repository     OfferRepository
+	featureStorage FeatureStorage
+	logger         *slog.Logger
 }
 
 func NewImportOfferDetailUseCase(
 	resolver Resolver,
 	repository OfferRepository,
+	featureStorage FeatureStorage,
 	logger *slog.Logger,
 ) *ImportOfferDetailUseCase {
 	return &ImportOfferDetailUseCase{
-		resolver:   resolver,
-		repository: repository,
-		logger:     logger,
+		resolver:       resolver,
+		repository:     repository,
+		featureStorage: featureStorage,
+		logger:         logger,
 	}
 }
 
 // Handle - собирает предложения поставщика и сохраняет их в базу
 func (uc *ImportOfferDetailUseCase) Handle(ctx context.Context, id uuid.UUID) error {
 	logger := uc.logger.With("offer_id", id)
+
+	feature, err := uc.featureStorage.GetFeatureByKey(ctx, domain.FeatureKeyImportOfferDetail)
+	if err != nil {
+		return err
+	}
+
+	if feature.Active == false {
+		return domain.FeatureIsUnactive
+	}
+
 	logger.Info("import detail started")
 
 	offer, err := uc.repository.GetOfferById(ctx, id)

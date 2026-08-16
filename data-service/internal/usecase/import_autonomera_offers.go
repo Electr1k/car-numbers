@@ -12,14 +12,16 @@ import (
 	"time"
 )
 
-// OfferProvider - источник предложений
 type OfferProvider interface {
 	FetchOffers(ctx context.Context, section autonomera.Section, offset int) (provider.FetchResult, error)
 }
 
-// OfferSaver сохраняет батч атомарно
 type OfferSaver interface {
 	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) (int, error)
+}
+
+type FeatureStorage interface {
+	GetFeatureByKey(ctx context.Context, key domain.FeatureKey) (*domain.Feature, error)
 }
 
 const (
@@ -89,23 +91,26 @@ var (
 
 // ImportAutonomeraOffersUseCase - постраничный импорт раздела autonomera777
 type ImportAutonomeraOffersUseCase struct {
-	provider   OfferProvider
-	repository OfferSaver
-	config     config.AutoNomeraConfig
-	logger     *slog.Logger
+	provider       OfferProvider
+	repository     OfferSaver
+	featureStorage FeatureStorage
+	config         config.AutoNomeraConfig
+	logger         *slog.Logger
 }
 
 func NewImportAutonomeraOffersUseCase(
 	provider OfferProvider,
 	repository OfferSaver,
+	featureStorage FeatureStorage,
 	config config.AutoNomeraConfig,
 	logger *slog.Logger,
 ) *ImportAutonomeraOffersUseCase {
 	return &ImportAutonomeraOffersUseCase{
-		provider:   provider,
-		repository: repository,
-		config:     config,
-		logger:     logger,
+		provider:       provider,
+		repository:     repository,
+		featureStorage: featureStorage,
+		config:         config,
+		logger:         logger,
 	}
 }
 
@@ -126,6 +131,15 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 	)
 
 	logger := uc.logger.With("section", params.Section)
+
+	feature, err := uc.featureStorage.GetFeatureByKey(ctx, domain.FeatureKeyImportAutonomeraOffers)
+	if err != nil {
+		return err
+	}
+
+	if feature.Active == false {
+		return domain.FeatureIsUnactive
+	}
 
 	logger.Info("import started",
 		"start_offset", offset,
