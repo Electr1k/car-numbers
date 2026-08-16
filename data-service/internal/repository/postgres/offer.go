@@ -71,6 +71,17 @@ JOIN numbers ON offers.number_id = numbers.id
 WHERE offers.status = $1 AND offers.provider = $2
 ;`
 
+const upsertPriceHistoryQuery = `
+INSERT INTO price_history (id, offer_id, number_id, price)
+SELECT $1::uuid, $2::uuid, $3::uuid, $4::numeric(12,2)
+WHERE $4::numeric(12,2) IS DISTINCT FROM (
+	SELECT price
+	FROM price_history
+	WHERE offer_id = $2::uuid
+	ORDER BY created_at DESC, id DESC
+	LIMIT 1
+)`
+
 const updateOfferQuery = `
 UPDATE offers SET
 price = $2,
@@ -132,11 +143,47 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 		return nil, fmt.Errorf("close batch: %w", err)
 	}
 
+	if err := r.upsertPriceHistory(ctx, tx, saved); err != nil {
+		return nil, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return saved, nil
+}
+
+// upsertPriceHistory - Запись наблюдений цены, единственное место записи в price_history
+func (r *OfferRepository) upsertPriceHistory(ctx context.Context, tx pgx.Tx, items []domain.OfferWithNumber) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	batch := &pgx.Batch{}
+	for _, item := range items {
+		history, err := domain.NewPriceHistoryFromOffer(item.Offer)
+		if err != nil {
+			return fmt.Errorf("build price history for offer %s: %w", item.Offer.Id, err)
+		}
+
+		batch.Queue(upsertPriceHistoryQuery, history.Id, history.OfferId, history.NumberId, history.Price)
+	}
+
+	results := tx.SendBatch(ctx, batch)
+
+	for _, item := range items {
+		if _, err := results.Exec(); err != nil {
+			results.Close()
+			return fmt.Errorf("track price for offer %s: %w", item.Offer.Id, err)
+		}
+	}
+
+	if err := results.Close(); err != nil {
+		return fmt.Errorf("close price history batch: %w", err)
+	}
+
+	return nil
 }
 
 func (r *OfferRepository) GetOfferById(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error) {
@@ -234,7 +281,13 @@ func scanOfferWithNumber(row rowScanner) (domain.OfferWithNumber, error) {
 }
 
 func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) error {
-	tag, err := r.postgres.pool.Exec(ctx, updateOfferQuery, offer.Id, offer.Price, offer.Whereabouts,
+	tx, err := r.postgres.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, updateOfferQuery, offer.Id, offer.Price, offer.Whereabouts,
 		offer.ReissueIncluded, offer.ViewCount, offer.PostedAt, offer.RefreshedAt,
 		offer.RawDetailed, offer.Comment,
 	)
@@ -244,6 +297,14 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("update offer %s: offer not found", offer.Id)
+	}
+
+	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithNumber{{Offer: offer}}); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return nil
