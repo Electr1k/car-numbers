@@ -23,19 +23,19 @@ type OfferRepository interface {
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }
 
-// ImportDetailOfferUseCase - догрузка деталки по офферу
-type ImportDetailOfferUseCase struct {
+// ImportOfferDetailUseCase - догрузка деталки по офферу
+type ImportOfferDetailUseCase struct {
 	resolver   Resolver
 	repository OfferRepository
 	logger     *slog.Logger
 }
 
-func NewImportDetailOfferUseCase(
+func NewImportOfferDetailUseCase(
 	resolver Resolver,
 	repository OfferRepository,
 	logger *slog.Logger,
-) *ImportDetailOfferUseCase {
-	return &ImportDetailOfferUseCase{
+) *ImportOfferDetailUseCase {
+	return &ImportOfferDetailUseCase{
 		resolver:   resolver,
 		repository: repository,
 		logger:     logger,
@@ -43,7 +43,7 @@ func NewImportDetailOfferUseCase(
 }
 
 // Handle - собирает предложения поставщика и сохраняет их в базу
-func (uc *ImportDetailOfferUseCase) Handle(ctx context.Context, id uuid.UUID) error {
+func (uc *ImportOfferDetailUseCase) Handle(ctx context.Context, id uuid.UUID) error {
 	logger := uc.logger.With("offer_id", id)
 	logger.Info("import detail started")
 

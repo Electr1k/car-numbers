@@ -28,7 +28,7 @@ const (
 	// dateLayout - формат даты публикации
 	dateLayout = "02.01.2006"
 
-	offerDetailSelector = "div.article"
+	offerDetailSelector = "div.wrap-table"
 
 	offerDetailNumber = "input.filter-plate-number__input"
 
@@ -224,6 +224,16 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 		return nil, err
 	}
 
+	if offer.Number.Type == domain.NumberTypeMoto {
+		runes := []rune(number)
+		// Для мото буквы и цифры при парсинге склиеваются не в том порядке - меняем местами
+		letters := runes[0:2]
+		digits := runes[2:6]
+		reg := runes[6:]
+
+		number = string(digits) + string(letters) + string(reg)
+	}
+
 	if number != offer.Number.Number {
 		return nil, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, number)
 	}
@@ -267,7 +277,12 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 		return nil, parseErr
 	}
 
-	comment := sel.Find(".article-comment__content").Text()
+	commentText := strings.TrimSpace(sel.Find(".article-comment__content").Text())
+	var comment *string = nil
+	if len(commentText) != 0 {
+		comment = &commentText
+	}
+
 	_, err = offer.Offer.ApplyDetail(
 		offer.Offer.Status,
 		price,
@@ -277,7 +292,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 		postedAt,
 		refreshedAt,
 		raw,
-		&comment,
+		comment,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)

@@ -9,8 +9,10 @@ var (
 	ErrProviderUnavailable = errors.New("provider unavailable")
 	// ErrInvalidResponse - ошибка получения респонса
 	ErrInvalidResponse = errors.New("invalid provider response")
-	// ErrRateLimitExceeded - уперлись в рейт лимиты
+	// ErrRateLimitExceeded - рейт лимит
 	ErrRateLimitExceeded = errors.New("rate limit exceeded")
+	// ErrNotFound - сущеность не найдена
+	ErrNotFound = errors.New("not found")
 
 	// Ошибки маппинга
 

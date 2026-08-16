@@ -133,6 +133,8 @@ func processBadStatus(response *http.Response, requestURL string) error {
 	switch {
 	case response.StatusCode == http.StatusTooManyRequests:
 		statesError = provider.ErrRateLimitExceeded
+	case response.StatusCode == http.StatusNotFound:
+		statesError = provider.ErrNotFound
 	case response.StatusCode >= http.StatusInternalServerError:
 		statesError = provider.ErrProviderUnavailable
 	}

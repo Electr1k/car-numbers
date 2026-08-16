@@ -13,7 +13,8 @@ var ErrNoJob = errors.New("no job available")
 type JobName string
 
 const (
-	JobNameImportAutonomeraOffers JobName = "import-autonomera-offers"
+	JobNameImportAutonomeraOffers   JobName = "import-autonomera-offers"
+	JobNameImportOfferDetailJobName JobName = "import-offer-detail"
 )
 
 type JobStatus string

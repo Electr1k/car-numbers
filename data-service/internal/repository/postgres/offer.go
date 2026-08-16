@@ -50,6 +50,16 @@ JOIN numbers ON offers.number_id = numbers.id
 WHERE offers.id = $1
 ;`
 
+const getOffersQuery = `
+SELECT
+    offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
+    refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
+    numbers.id, number, type, numbers.created_at, numbers.updated_at
+FROM offers
+JOIN numbers ON offers.number_id = numbers.id
+WHERE offers.status = $1 AND offers.provider = $2
+;`
+
 const updateOfferQuery = `
 UPDATE offers SET
 price = $2,
@@ -120,11 +130,48 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 }
 
 func (r *OfferRepository) GetOfferById(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error) {
-	data := r.postgres.pool.QueryRow(ctx, getOfferByIdQuery, id)
+	row := r.postgres.pool.QueryRow(ctx, getOfferByIdQuery, id)
 
+	item, err := scanOfferWithNumber(row)
+	if err != nil {
+		return domain.OfferWithNumber{}, fmt.Errorf("get offer by id %s: %w", id, err)
+	}
+
+	return item, nil
+}
+
+// GetOffers - Предложения выбранного провайдера в заданном статусе вместе с их номерами
+func (r *OfferRepository) GetOffers(ctx context.Context, status domain.OfferStatus, provider domain.Provider) ([]domain.OfferWithNumber, error) {
+	rows, err := r.postgres.pool.Query(ctx, getOffersQuery, status, provider)
+	if err != nil {
+		return nil, fmt.Errorf("get offers (provider=%s, status=%s): %w", provider, status, err)
+	}
+	defer rows.Close()
+
+	var offers []domain.OfferWithNumber
+	for rows.Next() {
+		item, err := scanOfferWithNumber(rows)
+		if err != nil {
+			return nil, fmt.Errorf("get offers (provider=%s, status=%s): %w", provider, status, err)
+		}
+
+		offers = append(offers, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("get offers (provider=%s, status=%s): %w", provider, status, err)
+	}
+
+	return offers, nil
+}
+
+type rowScanner interface {
+	Scan(dest ...interface{}) error
+}
+
+// scanOfferWithNumber - разбирает одну строку выборки offers JOIN numbers в домен
+func scanOfferWithNumber(row rowScanner) (domain.OfferWithNumber, error) {
 	var (
-		offer           *domain.Offer
-		n               *domain.Number
 		offerId         uuid.UUID
 		provider        string
 		externalId      string
@@ -148,32 +195,32 @@ func (r *OfferRepository) GetOfferById(ctx context.Context, id uuid.UUID) (domai
 		numberUpdatedAt *time.Time
 	)
 
-	err := data.Scan(&offerId, &provider, &externalId, &price, &status, &whereabouts, &reissueIncluded, &viewCount, &postedAt,
+	err := row.Scan(&offerId, &provider, &externalId, &price, &status, &whereabouts, &reissueIncluded, &viewCount, &postedAt,
 		&refreshedAt, &url, &raw, &rawDetailed, &comment, &offerCreatedAt, &offerUpdatedAt, &numberId, &number, &vehicleType, &numberCreatedAt, &numberUpdatedAt)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("get offer by id %s: %w", id, err)
+		return domain.OfferWithNumber{}, err
 	}
 
-	n, err = domain.RestoreNumber(numberId, number, domain.NumberType(vehicleType), numberCreatedAt, numberUpdatedAt)
+	n, err := domain.RestoreNumber(numberId, number, domain.NumberType(vehicleType), numberCreatedAt, numberUpdatedAt)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("make offer %s: %w", id, err)
+		return domain.OfferWithNumber{}, fmt.Errorf("restore number %s: %w", numberId, err)
 	}
 
-	var whereaboutsVO *domain.OfferWhereabouts = nil
+	var whereaboutsVO *domain.OfferWhereabouts
 	if whereabouts != nil {
 		vo := domain.OfferWhereabouts(*whereabouts)
 		whereaboutsVO = &vo
 	}
 
-	offer, err = domain.RestoreOffer(
+	offer, err := domain.RestoreOffer(
 		offerId, numberId, domain.Provider(provider), externalId, price, domain.OfferStatus(status), whereaboutsVO, reissueIncluded,
 		viewCount, postedAt, refreshedAt, url, raw, rawDetailed, comment, offerCreatedAt, offerUpdatedAt,
 	)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("restore offer %s: %w", id, err)
+		return domain.OfferWithNumber{}, fmt.Errorf("restore offer %s: %w", offerId, err)
 	}
 
-	return domain.OfferWithNumber{Number: n, Offer: offer}, err
+	return domain.OfferWithNumber{Number: n, Offer: offer}, nil
 }
 
 func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) error {

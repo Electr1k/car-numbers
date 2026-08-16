@@ -6,6 +6,7 @@ import (
 	"data-service/internal/domain"
 	"data-service/internal/job"
 	"data-service/internal/provider/autonomera"
+	"data-service/internal/provider/resolver"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/usecase"
 	"data-service/internal/worker"
@@ -58,14 +59,28 @@ func run() error {
 		log.With("provider", domain.ProviderAutonomera),
 	)
 
-	resolver := job.NewResolver()
+	providerResolver := resolver.NewResolver(autonomeraService)
+	importOfferDetailUseCase := usecase.NewImportOfferDetailUseCase(
+		providerResolver,
+		offerRepository,
+		log,
+	)
 
-	if err := resolver.Register(
+	jobResolver := job.NewResolver()
+
+	if err := jobResolver.Register(
 		domain.JobNameImportAutonomeraOffers,
 		job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase),
 	); err != nil {
 		return fmt.Errorf("register jobs: %w", err)
 	}
 
-	return worker.New(jobRepository, resolver, domain.JobQueueDefault, log).Run(ctx)
+	if err := jobResolver.Register(
+		domain.JobNameImportOfferDetailJobName,
+		job.NewImportOfferDetailJob(jobRepository, importOfferDetailUseCase),
+	); err != nil {
+		return fmt.Errorf("register jobs: %w", err)
+	}
+
+	return worker.New(jobRepository, jobResolver, domain.JobQueueDefault, log).Run(ctx)
 }
