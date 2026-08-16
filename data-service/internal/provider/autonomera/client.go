@@ -81,6 +81,38 @@ func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int
 	return body, nil
 }
 
+// FetchOfferDetailHTML забирает одну страницу предложений и отдаёт сырой HTML
+func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	c.logger.Debug("fetching offer detail page", "url", url)
+
+	response, err := c.http.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, url, err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, processBadStatus(response, url)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	if err != nil {
+		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
+	}
+
+	c.logger.Debug("offer detail fetched",
+		"url", url,
+		"status_code", response.StatusCode,
+		"bytes", len(body))
+
+	return body, nil
+}
+
 func (c *Client) buildURL(section Section, start int) string {
 	query := url.Values{}
 	query.Set("order", orderColumn)

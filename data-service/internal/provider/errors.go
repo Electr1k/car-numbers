@@ -18,4 +18,6 @@ var (
 	ErrBrokenOffer = errors.New("failed to parse offer")
 	// ErrRowSkipped - ошибка валидация в домене (не всегда крит) - собрать смогли, но не поддерживает бизнес правила - скипаем
 	ErrRowSkipped = errors.New("row skipped: does not satisfy domain rules")
+	// ErrMapOffer - ошибка маппинга оффера (например изменился номер в оффере)
+	ErrMapOffer = errors.New("failed to map offer")
 )

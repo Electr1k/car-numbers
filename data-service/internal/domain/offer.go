@@ -46,22 +46,36 @@ type Offer struct {
 	Url             string            `validate:"required"`                            // Url - Ссылка на предложение
 	Raw             string            `validate:"required"`                            // Raw - Сырой объект поставщика
 	RawDetailed     *string           `validate:"omitempty"`                           // RawDetailed - Сырой объект поставщика с детальной информацией
+	Comment         *string           `validate:"omitempty"`                           // Comment - Комментарий
 	CreatedAt       *time.Time
 	UpdatedAt       *time.Time
 }
 
+// ApplyDetail - Добавление детальной информации в предложение
 func (o *Offer) ApplyDetail(
-	whereabouts OfferWhereabouts,
-	reissueIncluded bool,
-	viewCount int,
-	rawDetailed string,
+	status OfferStatus,
+	price *float64,
+	whereabouts *OfferWhereabouts,
+	reissueIncluded *bool,
+	viewCount *int,
 	postedAt *time.Time,
+	refreshAt *time.Time,
+	rawDetailed string,
+	comment *string,
 ) (*Offer, error) {
-	o.Whereabouts = &whereabouts
-	o.ReissueIncluded = &reissueIncluded
-	o.ViewCount = &viewCount
+	o.Status = status
+	o.Price = price
+	o.Whereabouts = whereabouts
+	o.ReissueIncluded = reissueIncluded
+	o.ViewCount = viewCount
 	o.RawDetailed = &rawDetailed
-	o.PostedAt = postedAt
+	if postedAt != nil {
+		o.PostedAt = postedAt
+	}
+	if refreshAt != nil {
+		o.RefreshedAt = refreshAt
+	}
+	o.Comment = comment
 
 	if err := validate.Struct(o); err != nil {
 		return nil, err
@@ -85,6 +99,7 @@ func NewOffer(
 	url string,
 	raw string,
 	rawDetailed *string,
+	comment *string,
 ) (*Offer, error) {
 	id, err := newID()
 	if err != nil {
@@ -106,6 +121,7 @@ func NewOffer(
 		url,
 		raw,
 		rawDetailed,
+		comment,
 		nil,
 		nil,
 	)
@@ -127,6 +143,7 @@ func RestoreOffer(
 	url string,
 	raw string,
 	rawDetailed *string,
+	comment *string,
 	createdAt *time.Time,
 	updatedAt *time.Time,
 ) (*Offer, error) {
@@ -145,6 +162,7 @@ func RestoreOffer(
 		url,
 		raw,
 		rawDetailed,
+		comment,
 		createdAt,
 		updatedAt,
 	)
@@ -165,6 +183,7 @@ func newOffer(
 	url string,
 	raw string,
 	rawDetailed *string,
+	comment *string,
 	createdAt *time.Time,
 	updatedAt *time.Time,
 ) (*Offer, error) {
@@ -183,6 +202,7 @@ func newOffer(
 		Url:             url,
 		Raw:             raw,
 		RawDetailed:     rawDetailed,
+		Comment:         comment,
 		CreatedAt:       createdAt,
 		UpdatedAt:       updatedAt,
 	}

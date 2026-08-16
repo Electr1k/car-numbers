@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS offers (
     url VARCHAR(255) NOT NULL,
     raw text NOT NULL,
     raw_detail text,
+    comment text,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT offers_provider_external_id_uk UNIQUE (provider, external_id)
@@ -35,3 +36,4 @@ comment on column offers.refreshed_at is 'Дата поднятия/обновл
 comment on column offers.url is 'Ссылка на предложение';
 comment on column offers.raw is 'Сырой объект поставщика';
 comment on column offers.raw_detail is 'Сырой объект поставщика с детальной информацией';
+comment on column offers.comment is 'Комментарий';

@@ -30,6 +30,16 @@ const (
 
 	offerDetailSelector = "div.article"
 
+	offerDetailNumber = "input.filter-plate-number__input"
+
+	offerDetailRegion = "input.filter-plate-region-code__input"
+
+	offerDetailOnCar = "div.func__item--on-car"
+
+	offerDetailOnStorage = "div.func__item--in-storage"
+
+	offerDetailReissueInclude = "div.func__item--key"
+
 	priceNegotiable = "Договорная"
 )
 
@@ -103,6 +113,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferSta
 		&postedAt,
 		m.baseURL+href,
 		raw,
+		nil,
 		nil,
 	)
 	if err != nil {
@@ -200,4 +211,158 @@ func parsePrice(priceText string) (*float64, error) {
 	}
 
 	return &price, nil
+}
+
+func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
+	raw, err := sel.Html()
+	if err != nil {
+		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrBrokenOffer, err)
+	}
+
+	number, err := parseNumberFromDetail(sel)
+	if err != nil {
+		return nil, err
+	}
+
+	if number != offer.Number.Number {
+		return nil, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, number)
+	}
+
+	whereAbouts := parseWhereaboutsFromDetail(sel)
+	reissueIncluded := parseReissueFromDetailed(sel)
+
+	var (
+		price       *float64
+		views       *int
+		postedAt    *time.Time
+		refreshedAt *time.Time
+		parseErr    error
+	)
+
+	table := sel.Find(".article__table.user-data-table")
+	if table.Length() == 0 {
+		return nil, fmt.Errorf("%w: no user-data table", provider.ErrBrokenOffer)
+	}
+	table.Find("div.user-data-table__tr").Each(func(i int, s *goquery.Selection) {
+		title := strings.TrimSpace(s.Find(".user-data-table__th").Text())
+		value := s.Find(".user-data-table__td")
+		switch title {
+
+		case "Цена авто с номером":
+			price, parseErr = parsePrice(value.Text())
+		case "Просмотров":
+			var count int
+			count, parseErr = strconv.Atoi(strings.TrimSpace(value.Text()))
+			if parseErr == nil {
+				views = &count
+			}
+		case "Дата размещения":
+			postedAt, parseErr = parseDateFromDetail(value.Text())
+		case "Дата поднятия":
+			refreshedAt, parseErr = parseDateFromDetail(value.Text())
+		}
+	})
+
+	if parseErr != nil {
+		return nil, parseErr
+	}
+
+	comment := sel.Find(".article-comment__content").Text()
+	_, err = offer.Offer.ApplyDetail(
+		offer.Offer.Status,
+		price,
+		whereAbouts,
+		reissueIncluded,
+		views,
+		postedAt,
+		refreshedAt,
+		raw,
+		&comment,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)
+	}
+
+	return offer, nil
+}
+
+func parseNumberFromDetail(sel *goquery.Selection) (string, error) {
+	var parts []string
+
+	// Символы номера лежат в value каждого input.filter-plate-number__input, в порядке DOM
+	sel.Find(offerDetailNumber).Each(func(i int, s *goquery.Selection) {
+		if val, exists := s.Attr("value"); exists {
+			parts = append(parts, val)
+		}
+	})
+
+	region, exists := sel.Find(offerDetailRegion).Attr("value")
+	if !exists || len(region) > 3 || len(parts) < 2 {
+		return "", fmt.Errorf("%w: invalid offer detail number %q region %q",
+			provider.ErrBrokenOffer, strings.Join(parts, ""), region)
+	}
+
+	return strings.Join(parts, "") + region, nil
+}
+
+func parseWhereaboutsFromDetail(sel *goquery.Selection) *domain.OfferWhereabouts {
+	onCar := sel.Find(offerDetailOnCar).Nodes
+	if onCar != nil {
+		whereAbouts := domain.OfferWhereaboutsOnCar
+		return &whereAbouts
+	}
+
+	onStorage := sel.Find(offerDetailOnStorage).Nodes
+	if onStorage != nil {
+		whereAbouts := domain.OfferWhereaboutsOnStorage
+		return &whereAbouts
+	}
+
+	return nil
+}
+
+func parseReissueFromDetailed(sel *goquery.Selection) *bool {
+	reissueInclude := sel.Find(offerDetailReissueInclude).Nodes
+	if reissueInclude != nil {
+		t := true
+		return &t
+	}
+
+	return nil
+}
+
+func parseDateFromDetail(strDate string) (*time.Time, error) {
+	months := map[string]string{
+		"января":   "January",
+		"февраля":  "February",
+		"марта":    "March",
+		"апреля":   "April",
+		"мая":      "May",
+		"июня":     "June",
+		"июля":     "July",
+		"августа":  "August",
+		"сентября": "September",
+		"октября":  "October",
+		"ноября":   "November",
+		"декабря":  "December",
+	}
+
+	parts := strings.Fields(strDate)
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("%w: invalid date format", provider.ErrBrokenOffer)
+	}
+
+	englishMonth := months[parts[1]]
+	if englishMonth == "" {
+		return nil, fmt.Errorf("%w: invalid date format", provider.ErrBrokenOffer)
+	}
+
+	englishDate := fmt.Sprintf("%s %s %s", parts[0], englishMonth, parts[2])
+
+	parsedTime, err := time.Parse("02 January 2006", englishDate)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid date format", provider.ErrBrokenOffer)
+	}
+
+	return &parsedTime, nil
 }
