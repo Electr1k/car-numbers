@@ -49,13 +49,12 @@ func NewImportOfferDetailUseCase(
 func (uc *ImportOfferDetailUseCase) Handle(ctx context.Context, id uuid.UUID) error {
 	logger := uc.logger.With("offer_id", id)
 
-	feature, err := uc.featureStorage.GetFeatureByKey(ctx, domain.FeatureKeyImportOfferDetail)
+	enabled, err := featureEnabled(ctx, uc.featureStorage, domain.FeatureKeyImportOfferDetail, logger)
 	if err != nil {
 		return err
 	}
-
-	if feature.Active == false {
-		return domain.FeatureIsUnactive
+	if !enabled {
+		return nil
 	}
 
 	logger.Info("import detail started")

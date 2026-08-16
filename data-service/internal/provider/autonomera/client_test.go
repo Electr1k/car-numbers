@@ -29,7 +29,7 @@ func TestStatusCodeMapsToSentinel(t *testing.T) {
 		{http.StatusTooManyRequests, provider.ErrRateLimitExceeded},
 		{http.StatusInternalServerError, provider.ErrProviderUnavailable},
 		{http.StatusBadGateway, provider.ErrProviderUnavailable},
-		{http.StatusNotFound, provider.ErrInvalidResponse},
+		{http.StatusNotFound, provider.ErrNotFound},
 		{http.StatusForbidden, provider.ErrInvalidResponse},
 	}
 

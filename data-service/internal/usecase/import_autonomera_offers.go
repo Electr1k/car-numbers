@@ -20,10 +20,6 @@ type OfferSaver interface {
 	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) (int, error)
 }
 
-type FeatureStorage interface {
-	GetFeatureByKey(ctx context.Context, key domain.FeatureKey) (*domain.Feature, error)
-}
-
 const (
 	// maxEmptyPages - сколько подряд пустых страниц считать концом выдачи
 	maxEmptyPages = 2
@@ -132,13 +128,12 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 
 	logger := uc.logger.With("section", params.Section)
 
-	feature, err := uc.featureStorage.GetFeatureByKey(ctx, domain.FeatureKeyImportAutonomeraOffers)
+	enabled, err := featureEnabled(ctx, uc.featureStorage, domain.FeatureKeyImportAutonomeraOffers, logger)
 	if err != nil {
 		return err
 	}
-
-	if feature.Active == false {
-		return domain.FeatureIsUnactive
+	if !enabled {
+		return nil
 	}
 
 	logger.Info("import started",

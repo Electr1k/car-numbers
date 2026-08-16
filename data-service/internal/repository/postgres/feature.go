@@ -40,8 +40,8 @@ func (r *FeatureRepository) GetFeatureByKey(ctx context.Context, key domain.Feat
 	)
 
 	err := row.Scan(&id, &keyFeature, &name, &active, &createdAt, &updatedAt)
-	if errors.As(err, &pgx.ErrNoRows) {
-		return nil, domain.FeatureNotFound
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrFeatureNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error on get feature: %w", err)

@@ -12,6 +12,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // providerFunc - фейковый провайдер по образцу http.HandlerFunc
@@ -31,12 +33,27 @@ func saveAll(_ context.Context, items []domain.OfferWithNumber) (int, error) {
 	return len(items), nil
 }
 
+type featureFunc func(ctx context.Context, key domain.FeatureKey) (*domain.Feature, error)
+
+func (f featureFunc) GetFeatureByKey(ctx context.Context, key domain.FeatureKey) (*domain.Feature, error) {
+	return f(ctx, key)
+}
+
+// featureActive - хранилище, в котором запрошенная фича включена
+func featureActive(_ context.Context, key domain.FeatureKey) (*domain.Feature, error) {
+	return &domain.Feature{Id: uuid.New(), Key: key, Name: string(key), Active: true}, nil
+}
+
 func testConfig() config.AutoNomeraConfig {
 	return config.AutoNomeraConfig{BatchSize: 20}
 }
 
 func newUseCase(p OfferProvider, saver OfferSaver) *ImportAutonomeraOffersUseCase {
-	return NewImportAutonomeraOffersUseCase(p, saver, testConfig(),
+	return newUseCaseWithFeature(p, saver, featureFunc(featureActive))
+}
+
+func newUseCaseWithFeature(p OfferProvider, saver OfferSaver, features FeatureStorage) *ImportAutonomeraOffersUseCase {
+	return NewImportAutonomeraOffersUseCase(p, saver, features, testConfig(),
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
@@ -82,6 +99,59 @@ func resultWith(t *testing.T, count int, postedAt time.Time, rowErrs ...error) p
 	}
 
 	return result
+}
+
+func TestHandleSkipsWhenFeatureDisabled(t *testing.T) {
+	p := providerFunc(func(_ context.Context, _ autonomera.Section, _ int) (provider.FetchResult, error) {
+		t.Fatal("provider must not be called when feature is disabled")
+		return provider.FetchResult{}, nil
+	})
+
+	features := featureFunc(func(_ context.Context, key domain.FeatureKey) (*domain.Feature, error) {
+		return &domain.Feature{Id: uuid.New(), Key: key, Name: string(key), Active: false}, nil
+	})
+
+	uc := newUseCaseWithFeature(p, saverFunc(saveAll), features)
+	if err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Отсутствующая в хранилище фича должна трактоваться как выключенная, а не как отказ
+func TestHandleSkipsWhenFeatureNotFound(t *testing.T) {
+	p := providerFunc(func(_ context.Context, _ autonomera.Section, _ int) (provider.FetchResult, error) {
+		t.Fatal("provider must not be called when feature is missing")
+		return provider.FetchResult{}, nil
+	})
+
+	features := featureFunc(func(_ context.Context, _ domain.FeatureKey) (*domain.Feature, error) {
+		return nil, domain.ErrFeatureNotFound
+	})
+
+	uc := newUseCaseWithFeature(p, saverFunc(saveAll), features)
+	if err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// Ошибка хранилища фич - это отказ, импорт не должен молча запускаться
+func TestHandleFailsWhenFeatureStorageFails(t *testing.T) {
+	storageErr := errors.New("connection refused")
+
+	p := providerFunc(func(_ context.Context, _ autonomera.Section, _ int) (provider.FetchResult, error) {
+		t.Fatal("provider must not be called when feature storage fails")
+		return provider.FetchResult{}, nil
+	})
+
+	features := featureFunc(func(_ context.Context, _ domain.FeatureKey) (*domain.Feature, error) {
+		return nil, storageErr
+	})
+
+	uc := newUseCaseWithFeature(p, saverFunc(saveAll), features)
+	err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	if !errors.Is(err, storageErr) {
+		t.Fatalf("err = %v, want %v", err, storageErr)
+	}
 }
 
 func TestHandleStopsWhenFeedExhausted(t *testing.T) {

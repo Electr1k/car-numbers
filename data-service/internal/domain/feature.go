@@ -14,7 +14,7 @@ const (
 	// FeatureKeyImportAutonomeraOffers - Импорт предложений из autonomera777
 	FeatureKeyImportAutonomeraOffers FeatureKey = "import-autonomera-offers"
 
-	// FeatureKeyDispatchImportAutonomeraOffers - Импорт предложений из autonomera777
+	// FeatureKeyDispatchImportAutonomeraOffers - Вызов импорта предложений из autonomera777
 	FeatureKeyDispatchImportAutonomeraOffers FeatureKey = "dispatch-import-autonomera-offers"
 
 	// FeatureKeyImportOfferDetail - Импорт детальной информации об оффере (из любого провайдера)
@@ -25,8 +25,7 @@ const (
 )
 
 var (
-	FeatureIsUnactive = errors.New("feature is unactive")
-	FeatureNotFound   = errors.New("feature not found")
+	ErrFeatureNotFound = errors.New("feature not found")
 )
 
 // Feature - Фичи (функционал)
@@ -34,7 +33,7 @@ type Feature struct {
 	Id        uuid.UUID  `validate:"required"` // Id - Идентификатор
 	Key       FeatureKey `validate:"required"` // Key - Ключ фичи
 	Name      string     `validate:"required"` // Name - Название фичи
-	Active    bool       `validate:"required"` // Active - Флаг активности фичи
+	Active    bool       // Active - Флаг активности фичи
 	CreatedAt *time.Time
 	UpdatedAt *time.Time
 }
