@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type OfferProvider interface {
@@ -17,7 +19,11 @@ type OfferProvider interface {
 }
 
 type OfferSaver interface {
-	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) (int, error)
+	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error)
+}
+
+type OfferDetailDispatcher interface {
+	DispatchOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error)
 }
 
 const (
@@ -87,26 +93,29 @@ var (
 
 // ImportAutonomeraOffersUseCase - постраничный импорт раздела autonomera777
 type ImportAutonomeraOffersUseCase struct {
-	provider       OfferProvider
-	repository     OfferSaver
-	featureStorage FeatureStorage
-	config         config.AutoNomeraConfig
-	logger         *slog.Logger
+	provider         OfferProvider
+	detailDispatcher OfferDetailDispatcher
+	repository       OfferSaver
+	featureStorage   FeatureStorage
+	config           config.AutoNomeraConfig
+	logger           *slog.Logger
 }
 
 func NewImportAutonomeraOffersUseCase(
 	provider OfferProvider,
+	detailDispatcher OfferDetailDispatcher,
 	repository OfferSaver,
 	featureStorage FeatureStorage,
 	config config.AutoNomeraConfig,
 	logger *slog.Logger,
 ) *ImportAutonomeraOffersUseCase {
 	return &ImportAutonomeraOffersUseCase{
-		provider:       provider,
-		repository:     repository,
-		featureStorage: featureStorage,
-		config:         config,
-		logger:         logger,
+		provider:         provider,
+		detailDispatcher: detailDispatcher,
+		repository:       repository,
+		featureStorage:   featureStorage,
+		config:           config,
+		logger:           logger,
 	}
 }
 
@@ -123,6 +132,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 		emptyPages int
 		saved      int
 		skipped    int
+		dispatched int
 		result     = "failed"
 	)
 
@@ -136,18 +146,11 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 		return nil
 	}
 
-	logger.Info("import started",
-		"start_offset", offset,
-		"stop_date", stopDate,
-		"page_limit", pageLimit)
+	logger.Info("import started", "start_offset", offset, "stop_date", stopDate, "page_limit", pageLimit)
 
 	// Итоговый лог
 	defer func() {
-		logger.Info("import finished",
-			"outcome", result,
-			"offset", offset,
-			"saved", saved,
-			"skipped", skipped)
+		logger.Info("import finished", "result", result, "offset", offset, "saved", saved, "skipped", skipped, "dispatched", dispatched)
 	}()
 
 	for page := 1; page <= pageLimit; page++ {
@@ -156,11 +159,13 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 			return err
 		}
 
+		// Получение оффера
 		offers, err := uc.provider.FetchOffers(ctx, params.Section, offset)
 		if err != nil {
 			return fmt.Errorf("fetch page at offset %d: %w", offset, err)
 		}
 
+		// Проверка достижения конца списка
 		if offers.RowsFound == 0 {
 			emptyPages++
 			if emptyPages >= maxEmptyPages {
@@ -175,6 +180,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 		}
 		emptyPages = 0
 
+		// Проверка максимального количества кривых офферов
 		if err := checkBrokenOffers(offers); err != nil {
 			logger.Error("stopping import",
 				"page", page,
@@ -185,15 +191,35 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 			return err
 		}
 
+		// Сохранение офферов
 		savedOnPage, err := uc.repository.SaveBatch(ctx, offers.Offers)
 		if err != nil {
 			return fmt.Errorf("save batch at offset %d: %w", offset, err)
 		}
-		saved += savedOnPage
+
+		dispatchedOnPage := 0
+		// Вызов асинхронного импорта деталки для офферов без них
+		for _, offer := range savedOnPage {
+			if offer.Offer.RawDetailed != nil {
+				continue
+			}
+
+			success, err := uc.detailDispatcher.DispatchOfferDetail(ctx, offer.Offer.Id)
+			if err != nil {
+				return fmt.Errorf("dispatch offer details at offset %d: %w", offset, err)
+			}
+			if success {
+				dispatchedOnPage++
+			}
+		}
+
+		saved += len(savedOnPage)
 		skipped += len(offers.RowErrors)
+		dispatched += dispatchedOnPage
 
-		logPage(logger, page, offset, offers, savedOnPage)
+		logPage(logger, page, offset, offers, len(savedOnPage), dispatchedOnPage)
 
+		// Проверка нижнего порога по дате
 		if checkStopDate(offers, stopDate) {
 			result = "stop date reached"
 			return nil
@@ -227,12 +253,13 @@ func checkBrokenOffers(result provider.FetchResult) error {
 		ErrTooManyBrokenOffers, countBrokenOffers, result.RowsFound, maxCountBrokenOffers)
 }
 
-func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult, saved int) {
+func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult, saved, dispatched int) {
 	attrs := []any{
 		"page", page,
 		"offset", offset,
 		"found", result.RowsFound,
 		"saved", saved,
+		"dispatched", dispatched,
 		"skipped", len(result.RowErrors),
 	}
 

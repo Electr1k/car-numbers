@@ -26,19 +26,30 @@ WITH upserted_number AS (
 	VALUES ($1, $2, $3)
 	ON CONFLICT (number, type) DO UPDATE SET
 		updated_at = CURRENT_TIMESTAMP
-	RETURNING id
+	RETURNING id, number, type, created_at, updated_at
+),
+upserted_offer AS (
+	INSERT INTO offers (id, number_id, provider, external_id, price, status, posted_at, refreshed_at, url, raw)
+	SELECT $4::uuid, upserted_number.id, $5, $6, $7, $8, $9, $10, $11, $12
+	FROM upserted_number
+	ON CONFLICT (provider, external_id) DO UPDATE SET
+		number_id    = EXCLUDED.number_id,
+		price        = EXCLUDED.price,
+		status       = EXCLUDED.status,
+		refreshed_at = EXCLUDED.refreshed_at,
+		url          = EXCLUDED.url,
+		raw          = EXCLUDED.raw,
+		updated_at   = CURRENT_TIMESTAMP
+	RETURNING id, provider, external_id, price, status, whereabouts, reissue_included, view_count,
+		posted_at, refreshed_at, url, raw, raw_detail, comment, created_at, updated_at
 )
-INSERT INTO offers (id, number_id, provider, external_id, price, status, posted_at, refreshed_at, url, raw)
-SELECT $4::uuid, upserted_number.id, $5, $6, $7, $8, $9, $10, $11, $12
-FROM upserted_number
-ON CONFLICT (provider, external_id) DO UPDATE SET
-	number_id    = EXCLUDED.number_id,
-	price        = EXCLUDED.price,
-	status       = EXCLUDED.status,
-	refreshed_at = EXCLUDED.refreshed_at,
-	url          = EXCLUDED.url,
-	raw          = EXCLUDED.raw,
-	updated_at   = CURRENT_TIMESTAMP;`
+SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, upserted_offer.price,
+	upserted_offer.status, upserted_offer.whereabouts, upserted_offer.reissue_included, upserted_offer.view_count,
+	upserted_offer.posted_at, upserted_offer.refreshed_at, upserted_offer.url, upserted_offer.raw,
+	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.created_at, upserted_offer.updated_at,
+	upserted_number.id, upserted_number.number, upserted_number.type,
+	upserted_number.created_at, upserted_number.updated_at
+FROM upserted_offer, upserted_number;`
 
 const getOfferByIdQuery = `
 SELECT 
@@ -74,21 +85,19 @@ updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
 
 // SaveBatch - Сохранение батча в одной транзакции и за один поход в базу
-// Возвращает количество записанных строк: вставленных и обновлённых
-func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWithNumber) (int, error) {
+func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
 	if len(items) == 0 {
-		return 0, nil
+		return nil, nil
 	}
 
 	tx, err := r.postgres.pool.Begin(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("begin transaction: %w", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	batch := &pgx.Batch{}
 	for _, item := range items {
-		// Порядок аргументов - $1..$12 запроса выше
 		batch.Queue(upsertOfferQuery,
 			item.Number.Id,
 			item.Number.Number,
@@ -107,26 +116,27 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 
 	results := tx.SendBatch(ctx, batch)
 
-	var saved int64
+	saved := make([]domain.OfferWithNumber, 0, len(items))
+
 	for _, item := range items {
-		tag, err := results.Exec()
+		stored, err := scanOfferWithNumber(results.QueryRow())
 		if err != nil {
 			results.Close()
-			return 0, fmt.Errorf("save offer %s/%s: %w", item.Offer.Provider, item.Offer.ExternalId, err)
+			return nil, fmt.Errorf("save offer %s/%s: %w", item.Offer.Provider, item.Offer.ExternalId, err)
 		}
 
-		saved += tag.RowsAffected()
+		saved = append(saved, stored)
 	}
 
 	if err := results.Close(); err != nil {
-		return 0, fmt.Errorf("close batch: %w", err)
+		return nil, fmt.Errorf("close batch: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return 0, fmt.Errorf("commit transaction: %w", err)
+		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	return int(saved), nil
+	return saved, nil
 }
 
 func (r *OfferRepository) GetOfferById(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error) {

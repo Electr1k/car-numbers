@@ -44,43 +44,50 @@ func run() error {
 	}
 	defer database.Close()
 
+	// Репозитории
 	jobRepository := postgres.NewJobRepository(database)
 	offerRepository := postgres.NewOfferRepository(database)
 	featureRepository := postgres.NewFeatureRepository(database)
 
+	// Провайдеры
 	autonomeraService := autonomera.NewService(
 		autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log),
 		autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL),
 	)
-
-	importAutonomeraUseCase := usecase.NewImportAutonomeraOffersUseCase(
-		autonomeraService,
-		offerRepository,
-		featureRepository,
-		cfg.AutoNomeraConfig,
-		log.With("provider", domain.ProviderAutonomera),
-	)
-
 	providerResolver := resolver.NewResolver(autonomeraService)
+
+	// Импорт деталки офферов
 	importOfferDetailUseCase := usecase.NewImportOfferDetailUseCase(
 		providerResolver,
 		offerRepository,
 		featureRepository,
 		log,
 	)
+	importOfferDetailJob := job.NewImportOfferDetailJob(jobRepository, importOfferDetailUseCase)
+
+	// Импорт офферов из autonomera
+	importAutonomeraUseCase := usecase.NewImportAutonomeraOffersUseCase(
+		autonomeraService,
+		importOfferDetailJob,
+		offerRepository,
+		featureRepository,
+		cfg.AutoNomeraConfig,
+		log.With("provider", domain.ProviderAutonomera),
+	)
+	importAutonomeraOfferJob := job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase)
 
 	jobResolver := job.NewResolver()
 
 	if err := jobResolver.Register(
 		domain.JobNameImportAutonomeraOffers,
-		job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase),
+		importAutonomeraOfferJob,
 	); err != nil {
 		return fmt.Errorf("register jobs: %w", err)
 	}
 
 	if err := jobResolver.Register(
 		domain.JobNameImportOfferDetailJobName,
-		job.NewImportOfferDetailJob(jobRepository, importOfferDetailUseCase),
+		importOfferDetailJob,
 	); err != nil {
 		return fmt.Errorf("register jobs: %w", err)
 	}

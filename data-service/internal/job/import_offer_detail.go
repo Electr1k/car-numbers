@@ -45,6 +45,10 @@ func (j *ImportOfferDetailJob) Dispatch(ctx context.Context, payload ImportOffer
 	return created, nil
 }
 
+func (j *ImportOfferDetailJob) DispatchOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
+	return j.Dispatch(ctx, ImportOfferDetailJobPayload{OfferId: offerId}, nil)
+}
+
 func (j *ImportOfferDetailJob) Handle(ctx context.Context, payload string) error {
 	var decoded ImportOfferDetailJobPayload
 
