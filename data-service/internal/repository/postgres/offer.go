@@ -85,13 +85,14 @@ WHERE $4::numeric(12,2) IS DISTINCT FROM (
 const updateOfferQuery = `
 UPDATE offers SET
 price = $2,
-whereabouts = $3,
-reissue_included = $4,
-view_count = $5,
-posted_at = $6,
-refreshed_at = $7,
-raw_detail = $8,
-comment = $9,
+status = $3,
+whereabouts = $4,
+reissue_included = $5,
+view_count = $6,
+posted_at = $7,
+refreshed_at = $8,
+raw_detail = $9,
+comment = $10,
 updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
 
@@ -287,7 +288,7 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 	}
 	defer tx.Rollback(ctx)
 
-	tag, err := tx.Exec(ctx, updateOfferQuery, offer.Id, offer.Price, offer.Whereabouts,
+	tag, err := tx.Exec(ctx, updateOfferQuery, offer.Id, offer.Price, offer.Status, offer.Whereabouts,
 		offer.ReissueIncluded, offer.ViewCount, offer.PostedAt, offer.RefreshedAt,
 		offer.RawDetailed, offer.Comment,
 	)
