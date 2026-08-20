@@ -3,7 +3,7 @@ package worker
 import (
 	"context"
 	"data-service/internal/domain"
-	"data-service/internal/job"
+	"data-service/internal/job/consumer"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -25,18 +25,18 @@ type JobStore interface {
 	DeleteJob(ctx context.Context, id uuid.UUID) error
 }
 
-type JobResolver interface {
-	Resolve(name domain.JobName) (job.Handler, error)
+type ConsumerResolver interface {
+	Resolve(name domain.JobName) (consumer.Handler, error)
 }
 
 type Worker struct {
 	store    JobStore
-	resolver JobResolver
+	resolver ConsumerResolver
 	queue    domain.JobQueue
 	logger   *slog.Logger
 }
 
-func New(store JobStore, resolver JobResolver, queue domain.JobQueue, logger *slog.Logger) *Worker {
+func New(store JobStore, resolver ConsumerResolver, queue domain.JobQueue, logger *slog.Logger) *Worker {
 	return &Worker{
 		store:    store,
 		resolver: resolver,
@@ -56,9 +56,8 @@ func (w *Worker) Run(ctx context.Context) error {
 
 		if err := w.processNext(ctx); err != nil {
 			w.logger.Error("process job", "error", err)
+			time.Sleep(pollInterval)
 		}
-
-		time.Sleep(pollInterval)
 	}
 }
 

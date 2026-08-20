@@ -90,7 +90,7 @@ func scheduleEntries(cfg config.AutoNomeraConfig) ([]scheduler.Entry, error) {
 }
 
 func importAutonomeraPayload(section autonomera.Section, depth time.Duration) (string, error) {
-	encoded, err := json.Marshal(job.ImportAutonomeraPayload{
+	encoded, err := json.Marshal(job.ImportAutonomeraOffersPayload{
 		Section:   section,
 		StopAfter: job.Duration(depth),
 	})

@@ -13,8 +13,8 @@ var ErrNoJob = errors.New("no job available")
 type JobName string
 
 const (
-	JobNameImportAutonomeraOffers   JobName = "import-autonomera-offers"
-	JobNameImportOfferDetailJobName JobName = "import-offer-detail"
+	JobNameImportAutonomeraOffers JobName = "import-autonomera-offers"
+	JobNameImportOfferDetail      JobName = "import-offer-detail"
 )
 
 type JobStatus string
@@ -28,7 +28,9 @@ const (
 type JobQueue string
 
 const (
-	JobQueueDefault JobQueue = "default"
+	JobQueueDefault                JobQueue = "default"
+	JobQueueImportAutonomeraOffers JobQueue = "import-autonomera-offers"
+	JobQueueImportOfferDetail      JobQueue = "import-offer-detail"
 )
 
 type Job struct {

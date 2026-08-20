@@ -1,4 +1,4 @@
-package job
+package consumer
 
 import (
 	"context"
@@ -16,16 +16,6 @@ type Resolver struct {
 
 func NewResolver() *Resolver {
 	return &Resolver{handlers: make(map[domain.JobName]Handler)}
-}
-
-func (r *Resolver) Register(name domain.JobName, handler Handler) error {
-	if _, ok := r.handlers[name]; ok {
-		return fmt.Errorf("job %q is already registered", name)
-	}
-
-	r.handlers[name] = handler
-
-	return nil
 }
 
 func (r *Resolver) Resolve(name domain.JobName) (Handler, error) {

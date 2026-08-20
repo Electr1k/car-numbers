@@ -5,6 +5,7 @@ import (
 	"data-service/config"
 	"data-service/internal/domain"
 	"data-service/internal/job"
+	"data-service/internal/job/consumer"
 	"data-service/internal/provider/autonomera"
 	"data-service/internal/provider/resolver"
 	"data-service/internal/repository/postgres"
@@ -76,7 +77,7 @@ func run() error {
 	)
 	importAutonomeraOfferJob := job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase)
 
-	jobResolver := job.NewResolver()
+	jobResolver := consumer.NewResolver()
 
 	if err := jobResolver.Register(
 		domain.JobNameImportAutonomeraOffers,
@@ -86,7 +87,7 @@ func run() error {
 	}
 
 	if err := jobResolver.Register(
-		domain.JobNameImportOfferDetailJobName,
+		domain.JobNameImportOfferDetail,
 		importOfferDetailJob,
 	); err != nil {
 		return fmt.Errorf("register jobs: %w", err)
