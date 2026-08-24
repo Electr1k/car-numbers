@@ -3,19 +3,18 @@ package main
 import (
 	"context"
 	"data-service/config"
-	"data-service/internal/domain"
 	"data-service/internal/job"
-	"data-service/internal/provider/autonomera"
+	"data-service/internal/job/cron"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/scheduler"
 	"data-service/pkg/logger"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -44,59 +43,22 @@ func run() error {
 	}
 	defer database.Close()
 
-	sched := scheduler.New(postgres.NewJobRepository(database), log)
+	sched := scheduler.New(log)
 
-	entries, err := scheduleEntries(cfg.AutoNomeraConfig)
-	if err != nil {
-		return fmt.Errorf("build schedule: %w", err)
+	if err := cron.Register(sched, cron.Deps{
+		Producer:   job.NewProducer(postgres.NewJobRepository(database)),
+		Specs:      cfg.CronConfig,
+		AutoNomera: cfg.AutoNomeraConfig,
+		Logger:     log,
+	}); err != nil {
+		return fmt.Errorf("register crons: %w", err)
 	}
 
-	for _, entry := range entries {
-		if err := sched.Add(entry); err != nil {
-			return fmt.Errorf("register schedule: %w", err)
-		}
-	}
+	group, groupCtx := errgroup.WithContext(ctx)
 
-	return sched.Run(ctx)
-}
-
-func scheduleEntries(cfg config.AutoNomeraConfig) ([]scheduler.Entry, error) {
-	active, err := importAutonomeraPayload(autonomera.SectionActive, cfg.ImportDepth)
-	if err != nil {
-		return nil, err
-	}
-
-	archive, err := importAutonomeraPayload(autonomera.SectionArchive, cfg.ImportDepth)
-	if err != nil {
-		return nil, err
-	}
-
-	return []scheduler.Entry{
-		{
-			Name:      domain.JobNameImportAutonomeraOffers,
-			Queue:     domain.JobQueueDefault,
-			Spec:      "0 * * * *",
-			Payload:   active,
-			UniqueKey: job.ImportAutonomeraUniqueKey(autonomera.SectionActive),
-		},
-		{
-			Name:      domain.JobNameImportAutonomeraOffers,
-			Queue:     domain.JobQueueDefault,
-			Spec:      "30 * * * *",
-			Payload:   archive,
-			UniqueKey: job.ImportAutonomeraUniqueKey(autonomera.SectionArchive),
-		},
-	}, nil
-}
-
-func importAutonomeraPayload(section autonomera.Section, depth time.Duration) (string, error) {
-	encoded, err := json.Marshal(job.ImportAutonomeraOffersPayload{
-		Section:   section,
-		StopAfter: job.Duration(depth),
+	group.Go(func() error {
+		return sched.Run(groupCtx)
 	})
-	if err != nil {
-		return "", fmt.Errorf("marshal %s payload: %w", section, err)
-	}
 
-	return string(encoded), nil
+	return group.Wait()
 }

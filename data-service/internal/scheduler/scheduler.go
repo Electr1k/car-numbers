@@ -2,135 +2,150 @@ package scheduler
 
 import (
 	"context"
-	"data-service/internal/domain"
 	"errors"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
 )
 
-const tickOffset = 100 * time.Millisecond
+const runTimeout = time.Minute
 
-type JobStore interface {
-	CreateJob(ctx context.Context, job domain.Job) (bool, error)
+type Task interface {
+	Run(ctx context.Context) error
 }
 
-type Entry struct {
-	Name      domain.JobName
-	Queue     domain.JobQueue
-	Spec      string
-	Payload   string
-	UniqueKey string
-}
-
+// entry - зарегистрированная задача со своим расписанием
 type entry struct {
-	Entry
+	name     string
+	spec     string
 	schedule cron.Schedule
+	task     Task
 }
 
-func (e entry) due(now time.Time) bool {
-	return e.schedule.Next(now.Add(-time.Second)).Equal(now)
-}
-
+// Scheduler - запускает задачи по cron-расписанию
 type Scheduler struct {
-	store   JobStore
-	logger  *slog.Logger
 	entries []entry
+	logger  *slog.Logger
 }
 
-func New(store JobStore, logger *slog.Logger) *Scheduler {
-	return &Scheduler{store: store, logger: logger}
+func New(logger *slog.Logger) *Scheduler {
+	return &Scheduler{logger: logger}
 }
 
-func (s *Scheduler) Add(e Entry) error {
+// Add - регистрирует задачу, спека разбирается сразу, на старте процесса
+func (s *Scheduler) Add(name string, spec string, task Task) error {
 	switch {
-	case e.Name == "":
-		return errors.New("entry name must not be empty")
-	case e.Queue == "":
-		return fmt.Errorf("entry %q: queue must not be empty", e.Name)
-	case e.Payload == "":
-		return fmt.Errorf("entry %q: payload must not be empty", e.Name)
-	case e.UniqueKey == "":
-		return fmt.Errorf("entry %q: unique key must not be empty", e.Name)
+	case name == "":
+		return errors.New("cron name must not be empty")
+	case task == nil:
+		return fmt.Errorf("cron %q: task must not be nil", name)
 	}
 
-	for _, existing := range s.entries {
-		if existing.UniqueKey == e.UniqueKey {
-			return fmt.Errorf("entry with unique key %q is already registered", e.UniqueKey)
-		}
-	}
-
-	schedule, err := cron.ParseStandard(e.Spec)
+	schedule, err := cron.ParseStandard(spec)
 	if err != nil {
-		return fmt.Errorf("entry %q: parse spec %q: %w", e.Name, e.Spec, err)
+		return fmt.Errorf("cron %q: parse spec %q: %w", name, spec, err)
 	}
 
-	s.entries = append(s.entries, entry{Entry: e, schedule: schedule})
+	s.entries = append(s.entries, entry{
+		name:     name,
+		spec:     spec,
+		schedule: schedule,
+		task:     task,
+	})
 
 	return nil
 }
 
 func (s *Scheduler) Run(ctx context.Context) error {
 	if len(s.entries) == 0 {
-		return errors.New("no entries registered")
+		s.logger.Warn("scheduler has no entries, idling")
+		<-ctx.Done()
+
+		return nil
 	}
 
 	s.logger.Info("scheduler started", "entries", len(s.entries))
 
-	for {
-		if !sleep(ctx, time.Until(nextTick(time.Now()))) {
-			s.logger.Info("scheduler stopped")
-			return nil
-		}
+	var wg sync.WaitGroup
 
-		s.tick(ctx, time.Now().Truncate(time.Minute))
-	}
-}
-
-func (s *Scheduler) tick(ctx context.Context, now time.Time) {
 	for _, e := range s.entries {
-		if !e.due(now) {
-			continue
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			s.loop(ctx, e)
+		}()
+	}
+
+	wg.Wait()
+	s.logger.Info("scheduler stopped")
+
+	return nil
+}
+
+// loop - крутит одну задачу: ждёт ближайший тик и запускает
+func (s *Scheduler) loop(ctx context.Context, e entry) {
+	logger := s.logger.With("cron", e.name, "spec", e.spec)
+
+	for {
+		next := e.schedule.Next(time.Now())
+		logger.Debug("next run scheduled", "at", next)
+
+		if !sleep(ctx, time.Until(next)) {
+			return
 		}
 
-		logger := s.logger.With("job", e.Name, "queue", e.Queue, "spec", e.Spec)
+		started := time.Now()
 
-		domainJob, err := domain.NewJob(e.Name, e.Queue, domain.JobStatusPending, now, e.Payload, e.UniqueKey)
-		if err != nil {
-			logger.Error("build scheduled job", "error", err)
-			continue
+		err := s.run(ctx, e)
+
+		switch {
+		case err != nil && ctx.Err() != nil:
+			logger.Info("cron interrupted by shutdown")
+			return
+		case err != nil:
+			logger.Error("cron failed", "error", err, "duration", time.Since(started))
+		default:
+			logger.Info("cron finished", "duration", time.Since(started))
 		}
 
-		created, err := s.store.CreateJob(ctx, *domainJob)
-		if err != nil {
-			logger.Error("enqueue scheduled job", "error", err)
-			continue
+		if time.Now().After(e.schedule.Next(next)) {
+			logger.Warn("cron run overran its next tick", "duration", time.Since(started))
 		}
-
-		if !created {
-			logger.Info("job skipped, previous one is still in the queue")
-			continue
-		}
-
-		logger.Info("job enqueued", "job_id", domainJob.Id)
 	}
 }
 
-func nextTick(now time.Time) time.Time {
-	return now.Truncate(time.Minute).Add(time.Minute + tickOffset)
+// run - выполняет задачу под таймаутом, паника задачи не роняет шедулер
+func (s *Scheduler) run(ctx context.Context, e entry) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cron panicked: %v\n%s", r, debug.Stack())
+		}
+	}()
+
+	runCtx, cancel := context.WithTimeout(ctx, runTimeout)
+	defer cancel()
+
+	return e.task.Run(runCtx)
 }
 
+// sleep - ждёт d, false если контекст отменён
 func sleep(ctx context.Context, d time.Duration) bool {
 	if d <= 0 {
 		return ctx.Err() == nil
 	}
 
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
 	select {
 	case <-ctx.Done():
 		return false
-	case <-time.After(d):
+	case <-timer.C:
 		return true
 	}
 }

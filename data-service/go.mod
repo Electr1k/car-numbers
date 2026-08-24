@@ -1,6 +1,6 @@
 module data-service
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.11.0
@@ -10,6 +10,8 @@ require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/joho/godotenv v1.5.1
+	github.com/robfig/cron/v3 v3.0.1
+	golang.org/x/sync v0.22.0
 )
 
 require (
@@ -28,7 +30,6 @@ require (
 	github.com/jackc/puddle v1.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect

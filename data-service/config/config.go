@@ -14,6 +14,7 @@ type Config struct {
 	LogConfig        `env-prefix:"LOG_"`
 	DatabaseConfig   `env-prefix:"DATABASE_"`
 	AutoNomeraConfig `env-prefix:"AUTONOMERA_"`
+	CronConfig       `env-prefix:"CRON_"`
 }
 
 type HttpServer struct {
@@ -33,14 +34,14 @@ type DatabaseConfig struct {
 	MigrationsPath string `env:"MIGRATIONS_PATH" env-default:"./migrations"`
 }
 
-// AutoNomeraConfig - Конфиг для autonomera777
 type AutoNomeraConfig struct {
-	BaseURL   string `env:"BASE_URL" env-default:"https://autonomera777.ru"`
-	BatchSize int    `env:"BATCH_SIZE" env-default:"20"`
-
-	// ImportDepth - насколько глубоко по дате публикации заходит регулярный
-	// прогон. Разовые догрузки задают глубину сами, мимо конфига
+	BaseURL     string        `env:"BASE_URL" env-default:"https://autonomera777.ru"`
+	BatchSize   int           `env:"BATCH_SIZE" env-default:"20"`
 	ImportDepth time.Duration `env:"IMPORT_DEPTH" env-default:"72h"`
+}
+
+type CronConfig struct {
+	ImportAutonomeraActiveOffers string `env:"IMPORT_AUTONOMERA_ACTIVE_OFFERS" env-default:"0 * * * *"`
 }
 
 func MustLoad() *Config {

@@ -45,7 +45,7 @@ func withDetail(item domain.OfferWithNumber) domain.OfferWithNumber {
 
 type dispatcherFunc func(ctx context.Context, offerId uuid.UUID) (bool, error)
 
-func (f dispatcherFunc) DispatchOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
+func (f dispatcherFunc) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
 	return f(ctx, offerId)
 }
 
@@ -79,7 +79,7 @@ func newUseCaseWithFeature(p OfferProvider, saver OfferSaver, features FeatureSt
 func newUseCaseWith(
 	p OfferProvider,
 	saver OfferSaver,
-	dispatcher OfferDetailDispatcher,
+	dispatcher OfferImportDetailDispatcher,
 	features FeatureStorage,
 ) *ImportAutonomeraOffersUseCase {
 	return NewImportAutonomeraOffersUseCase(p, dispatcher, saver, features, testConfig(),
