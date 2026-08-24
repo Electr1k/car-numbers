@@ -17,7 +17,7 @@ type Deps struct {
 }
 
 func Register(s *scheduler.Scheduler, d Deps) error {
-	return register(s, d.Logger,
+	err := register(s, d.Logger,
 		nameImportAutonomeraActiveOffers,
 		d.Specs.ImportAutonomeraActiveOffers,
 		&importAutonomeraActiveOffers{
@@ -26,6 +26,21 @@ func Register(s *scheduler.Scheduler, d Deps) error {
 			logger:   d.Logger.With("cron", nameImportAutonomeraActiveOffers),
 		},
 	)
+
+	err = register(s, d.Logger,
+		nameImportAutonomeraArchiveOffers,
+		d.Specs.ImportAutonomeraArchiveOffers,
+		&importAutonomeraArchiveOffers{
+			producer: d.Producer,
+			depth:    d.AutoNomera.ImportDepth,
+			logger:   d.Logger.With("cron", nameImportAutonomeraArchiveOffers),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("register crons: %w", err)
+	}
+
+	return nil
 }
 
 // register - пропускает крон с пустой спекой, такой крон выключен
