@@ -25,15 +25,10 @@ func (p *Producer) DispatchImportAutonomeraOffers(ctx context.Context, payload I
 		return false, fmt.Errorf("marshal payload: %w", err)
 	}
 
-	task, err := newTask(
+	return p.dispatch(ctx, newTask(
 		domain.JobNameImportAutonomeraOffers,
 		domain.JobQueueImportAutonomeraOffers,
 		string(encoded),
 		importAutonomeraOffersUniqueKey(payload.Section),
-	)
-	if err != nil {
-		return false, fmt.Errorf("new task: %w", err)
-	}
-
-	return p.dispatch(ctx, task)
+	))
 }

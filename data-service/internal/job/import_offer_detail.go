@@ -17,21 +17,16 @@ func importOfferDetailUniqueKey(offerId uuid.UUID) string {
 	return fmt.Sprintf("%s:%s", domain.JobNameImportOfferDetail, offerId)
 }
 
-func (p *Producer) DispatchImportOfferDetail(ctx context.Context, payload ImportOfferDetailPayload) (bool, error) {
-	encoded, err := json.Marshal(payload)
+func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
+	encoded, err := json.Marshal(ImportOfferDetailPayload{OfferId: offerId})
 	if err != nil {
 		return false, fmt.Errorf("marshal payload: %w", err)
 	}
 
-	task, err := newTask(
+	return p.dispatch(ctx, newTask(
 		domain.JobNameImportOfferDetail,
 		domain.JobQueueImportOfferDetail,
 		string(encoded),
-		importOfferDetailUniqueKey(payload.OfferId),
-	)
-	if err != nil {
-		return false, fmt.Errorf("new task: %w", err)
-	}
-
-	return p.dispatch(ctx, task)
+		importOfferDetailUniqueKey(offerId),
+	))
 }

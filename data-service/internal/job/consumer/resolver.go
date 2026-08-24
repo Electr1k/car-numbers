@@ -18,6 +18,10 @@ func NewResolver() *Resolver {
 	return &Resolver{handlers: make(map[domain.JobName]Handler)}
 }
 
+func (r *Resolver) Register(name domain.JobName, handler Handler) {
+	r.handlers[name] = handler
+}
+
 func (r *Resolver) Resolve(name domain.JobName) (Handler, error) {
 	handler, ok := r.handlers[name]
 	if !ok {

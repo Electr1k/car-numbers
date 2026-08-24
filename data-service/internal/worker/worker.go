@@ -20,7 +20,7 @@ const (
 )
 
 type JobStore interface {
-	GetJob(ctx context.Context, queue domain.JobQueue) (*domain.Job, error)
+	GetJob(ctx context.Context, queues []domain.JobQueue) (*domain.Job, error)
 	MarkJobFailed(ctx context.Context, id uuid.UUID, jobErr error) error
 	DeleteJob(ctx context.Context, id uuid.UUID) error
 }
@@ -32,16 +32,16 @@ type ConsumerResolver interface {
 type Worker struct {
 	store    JobStore
 	resolver ConsumerResolver
-	queue    domain.JobQueue
+	queues   []domain.JobQueue
 	logger   *slog.Logger
 }
 
-func New(store JobStore, resolver ConsumerResolver, queue domain.JobQueue, logger *slog.Logger) *Worker {
+func New(store JobStore, resolver ConsumerResolver, queues []domain.JobQueue, logger *slog.Logger) *Worker {
 	return &Worker{
 		store:    store,
 		resolver: resolver,
-		queue:    queue,
-		logger:   logger.With("queue", queue),
+		queues:   queues,
+		logger:   logger.With("queues", queues),
 	}
 }
 
@@ -62,7 +62,7 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 func (w *Worker) processNext(ctx context.Context) error {
-	domainJob, err := w.store.GetJob(ctx, w.queue)
+	domainJob, err := w.store.GetJob(ctx, w.queues)
 	if errors.Is(err, domain.ErrNoJob) {
 		return nil
 	}
@@ -70,7 +70,7 @@ func (w *Worker) processNext(ctx context.Context) error {
 		return fmt.Errorf("get job: %w", err)
 	}
 
-	logger := w.logger.With("job_id", domainJob.Id, "job", domainJob.Name)
+	logger := w.logger.With("job_id", domainJob.Id, "job", domainJob.Name, "queue", domainJob.Queue)
 	logger.Info("job taken")
 
 	started := time.Now()

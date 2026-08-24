@@ -33,6 +33,14 @@ const (
 	JobQueueImportOfferDetail      JobQueue = "import-offer-detail"
 )
 
+func AllJobQueues() []JobQueue {
+	return []JobQueue{
+		JobQueueDefault,
+		JobQueueImportAutonomeraOffers,
+		JobQueueImportOfferDetail,
+	}
+}
+
 type Job struct {
 	Id         uuid.UUID  `validate:"required"`      // Id - Идентификатор
 	Name       JobName    `validate:"required"`      // Name - Название джобы

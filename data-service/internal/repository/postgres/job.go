@@ -24,9 +24,9 @@ func NewJobRepository(postgres *Postgres) *JobRepository {
 }
 
 const getJobQuery = `
-SELECT id, name, start_after, payload, unique_key, COALESCE(error, '')
+SELECT id, name, queue, start_after, payload, unique_key, COALESCE(error, '')
 FROM jobs
-WHERE queue = $1
+WHERE queue = ANY($1)
   AND start_after <= NOW()
   AND (status = $2 OR (status = $3 AND locked_at <= $4))
 ORDER BY start_after
@@ -58,7 +58,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT (unique_key) WHERE status IN ('pending', 'running') DO NOTHING
 `
 
-func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*domain.Job, error) {
+func (r *JobRepository) GetJob(ctx context.Context, queues []domain.JobQueue) (*domain.Job, error) {
 	tx, err := r.postgres.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin transaction: %w", err)
@@ -68,18 +68,24 @@ func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*dom
 	var (
 		id         uuid.UUID
 		name       string
+		queue      string
 		startAfter time.Time
 		payload    string
 		uniqueKey  string
 		errorText  string
 	)
 
+	queueNames := make([]string, 0, len(queues))
+	for _, q := range queues {
+		queueNames = append(queueNames, string(q))
+	}
+
 	err = tx.QueryRow(ctx, getJobQuery,
-		string(queue),
+		queueNames,
 		string(domain.JobStatusPending),
 		string(domain.JobStatusRunning),
 		time.Now().Add(-stuckJobTimeout),
-	).Scan(&id, &name, &startAfter, &payload, &uniqueKey, &errorText)
+	).Scan(&id, &name, &queue, &startAfter, &payload, &uniqueKey, &errorText)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, domain.ErrNoJob
 	}
@@ -101,7 +107,7 @@ func (r *JobRepository) GetJob(ctx context.Context, queue domain.JobQueue) (*dom
 	job, err := domain.RestoreJob(
 		id,
 		domain.JobName(name),
-		queue,
+		domain.JobQueue(queue),
 		domain.JobStatusRunning,
 		startAfter,
 		payload,

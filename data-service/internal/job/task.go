@@ -2,19 +2,17 @@ package job
 
 import (
 	"data-service/internal/domain"
-	"fmt"
-
-	"github.com/go-playground/validator/v10"
 )
 
+// task - описание задачи, которую продюсер ставит в очередь
 type task struct {
-	name domain.JobName `validate:"required"`
+	name domain.JobName
 
-	queue domain.JobQueue `validate:"required"`
+	queue domain.JobQueue
 
-	payload string `validate:"required"`
+	payload string
 
-	uniqueKey string `validate:"required"`
+	uniqueKey string
 }
 
 func newTask(
@@ -22,17 +20,11 @@ func newTask(
 	queue domain.JobQueue,
 	payload string,
 	uniqueKey string,
-) (*task, error) {
-	t := task{
+) *task {
+	return &task{
 		name:      name,
 		queue:     queue,
 		payload:   payload,
 		uniqueKey: uniqueKey,
 	}
-
-	if err := validator.New().Struct(t); err != nil {
-		return nil, fmt.Errorf("task create error: ", err)
-	}
-
-	return &t, nil
 }

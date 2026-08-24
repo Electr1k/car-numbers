@@ -50,6 +50,9 @@ func run() error {
 	offerRepository := postgres.NewOfferRepository(database)
 	featureRepository := postgres.NewFeatureRepository(database)
 
+	// Продюсер джоб
+	producer := job.NewProducer(jobRepository)
+
 	// Провайдеры
 	autonomeraService := autonomera.NewService(
 		autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log),
@@ -64,34 +67,29 @@ func run() error {
 		featureRepository,
 		log,
 	)
-	importOfferDetailJob := job.NewImportOfferDetailJob(jobRepository, importOfferDetailUseCase)
+	importOfferDetailConsumer := consumer.NewImportOfferDetailConsumer(importOfferDetailUseCase)
 
 	// Импорт офферов из autonomera
 	importAutonomeraUseCase := usecase.NewImportAutonomeraOffersUseCase(
 		autonomeraService,
-		importOfferDetailJob,
+		producer,
 		offerRepository,
 		featureRepository,
 		cfg.AutoNomeraConfig,
 		log.With("provider", domain.ProviderAutonomera),
 	)
-	importAutonomeraOfferJob := job.NewImportAutonomeraJob(jobRepository, importAutonomeraUseCase)
+	importAutonomeraOffersConsumer := consumer.NewImportAutonomeraOffersConsumer(importAutonomeraUseCase)
 
-	jobResolver := consumer.NewResolver()
+	consumerResolver := consumer.NewResolver()
 
-	if err := jobResolver.Register(
+	consumerResolver.Register(
 		domain.JobNameImportAutonomeraOffers,
-		importAutonomeraOfferJob,
-	); err != nil {
-		return fmt.Errorf("register jobs: %w", err)
-	}
-
-	if err := jobResolver.Register(
+		importAutonomeraOffersConsumer,
+	)
+	consumerResolver.Register(
 		domain.JobNameImportOfferDetail,
-		importOfferDetailJob,
-	); err != nil {
-		return fmt.Errorf("register jobs: %w", err)
-	}
+		importOfferDetailConsumer,
+	)
 
-	return worker.New(jobRepository, jobResolver, domain.JobQueueDefault, log).Run(ctx)
+	return worker.New(jobRepository, consumerResolver, domain.AllJobQueues(), log).Run(ctx)
 }

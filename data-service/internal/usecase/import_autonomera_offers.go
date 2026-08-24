@@ -22,8 +22,8 @@ type OfferSaver interface {
 	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error)
 }
 
-type OfferDetailDispatcher interface {
-	DispatchOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error)
+type OfferImportDetailDispatcher interface {
+	DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error)
 }
 
 const (
@@ -94,7 +94,7 @@ var (
 // ImportAutonomeraOffersUseCase - постраничный импорт раздела autonomera777
 type ImportAutonomeraOffersUseCase struct {
 	provider         OfferProvider
-	detailDispatcher OfferDetailDispatcher
+	detailDispatcher OfferImportDetailDispatcher
 	repository       OfferSaver
 	featureStorage   FeatureStorage
 	config           config.AutoNomeraConfig
@@ -103,7 +103,7 @@ type ImportAutonomeraOffersUseCase struct {
 
 func NewImportAutonomeraOffersUseCase(
 	provider OfferProvider,
-	detailDispatcher OfferDetailDispatcher,
+	detailDispatcher OfferImportDetailDispatcher,
 	repository OfferSaver,
 	featureStorage FeatureStorage,
 	config config.AutoNomeraConfig,
@@ -204,7 +204,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 				continue
 			}
 
-			success, err := uc.detailDispatcher.DispatchOfferDetail(ctx, offer.Offer.Id)
+			success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offer.Offer.Id)
 			if err != nil {
 				return fmt.Errorf("dispatch offer details at offset %d: %w", offset, err)
 			}
