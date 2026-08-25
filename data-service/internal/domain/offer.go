@@ -34,7 +34,7 @@ const (
 type Offer struct {
 	Id              uuid.UUID         `validate:"required"`                            // Id - Идентификатор
 	NumberId        uuid.UUID         `validate:"required"`                            // NumberId - Идентификатор номера
-	Provider        Provider          `validate:"required,oneof=autonomera"`           // Provider - Провайдер, в котором найдено предложение
+	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru"` // Provider - Провайдер, в котором найдено предложение
 	ExternalId      string            `validate:"required"`                            // ExternalId - Идентификатор у провайдера
 	Price           *float64          `validate:"omitempty,gt=0"`                      // Price - Цена
 	Status          OfferStatus       `validate:"required,oneof=active sold inactive"` // Status - Статус предложения

@@ -22,6 +22,9 @@ const (
 
 	// FeatureKeyDispatchImportOfferDetail - Вызов импорта детальной информации об оффере (из любого провайдера)
 	FeatureKeyDispatchImportOfferDetail FeatureKey = "dispatch-import-offer-detail"
+
+	// FeatureKeyImportGosnomeruOffers - Импорт предложений из gosnomeru
+	FeatureKeyImportGosnomeruOffers FeatureKey = "import-gosnomeru-offers"
 )
 
 var (
