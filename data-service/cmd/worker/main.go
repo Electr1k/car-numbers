@@ -4,12 +4,14 @@ import (
 	"context"
 	"data-service/config"
 	"data-service/internal/domain"
+	"data-service/internal/feature"
 	"data-service/internal/job"
 	"data-service/internal/job/consumer"
 	"data-service/internal/provider/autonomera"
 	"data-service/internal/provider/resolver"
 	"data-service/internal/repository/postgres"
-	"data-service/internal/usecase"
+	"data-service/internal/usecase/importautonomera"
+	"data-service/internal/usecase/importofferdetail"
 	"data-service/internal/worker"
 	"data-service/pkg/logger"
 	"fmt"
@@ -60,21 +62,24 @@ func run() error {
 	)
 	providerResolver := resolver.NewResolver(autonomeraService)
 
+	// Фича-флаги
+	featureGuard := feature.NewFeature(featureRepository, log)
+
 	// Импорт деталки офферов
-	importOfferDetailUseCase := usecase.NewImportOfferDetailUseCase(
+	importOfferDetailUseCase := importofferdetail.New(
 		providerResolver,
 		offerRepository,
-		featureRepository,
+		featureGuard,
 		log,
 	)
 	importOfferDetailConsumer := consumer.NewImportOfferDetailConsumer(importOfferDetailUseCase)
 
 	// Импорт офферов из autonomera
-	importAutonomeraUseCase := usecase.NewImportAutonomeraOffersUseCase(
+	importAutonomeraUseCase := importautonomera.New(
 		autonomeraService,
 		producer,
 		offerRepository,
-		featureRepository,
+		featureGuard,
 		cfg.AutoNomeraConfig,
 		log.With("provider", domain.ProviderAutonomera),
 	)

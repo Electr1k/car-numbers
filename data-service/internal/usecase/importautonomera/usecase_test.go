@@ -1,4 +1,4 @@
-package usecase
+package importautonomera
 
 import (
 	"context"
@@ -53,36 +53,36 @@ func dispatchAll(_ context.Context, _ uuid.UUID) (bool, error) {
 	return true, nil
 }
 
-type featureFunc func(ctx context.Context, key domain.FeatureKey) (*domain.Feature, error)
+type featureFunc func(ctx context.Context, key domain.FeatureKey) (bool, error)
 
-func (f featureFunc) GetFeatureByKey(ctx context.Context, key domain.FeatureKey) (*domain.Feature, error) {
+func (f featureFunc) Enabled(ctx context.Context, key domain.FeatureKey) (bool, error) {
 	return f(ctx, key)
 }
 
-// featureActive - хранилище, в котором запрошенная фича включена
-func featureActive(_ context.Context, key domain.FeatureKey) (*domain.Feature, error) {
-	return &domain.Feature{Id: uuid.New(), Key: key, Name: string(key), Active: true}, nil
+// featureActive - фича включена
+func featureActive(_ context.Context, _ domain.FeatureKey) (bool, error) {
+	return true, nil
 }
 
 func testConfig() config.AutoNomeraConfig {
 	return config.AutoNomeraConfig{BatchSize: 20}
 }
 
-func newUseCase(p OfferProvider, saver OfferSaver) *ImportAutonomeraOffersUseCase {
+func newUseCase(p offerProvider, saver offerSaver) *UseCase {
 	return newUseCaseWithFeature(p, saver, featureFunc(featureActive))
 }
 
-func newUseCaseWithFeature(p OfferProvider, saver OfferSaver, features FeatureStorage) *ImportAutonomeraOffersUseCase {
+func newUseCaseWithFeature(p offerProvider, saver offerSaver, features feature) *UseCase {
 	return newUseCaseWith(p, saver, dispatcherFunc(dispatchAll), features)
 }
 
 func newUseCaseWith(
-	p OfferProvider,
-	saver OfferSaver,
-	dispatcher OfferImportDetailDispatcher,
-	features FeatureStorage,
-) *ImportAutonomeraOffersUseCase {
-	return NewImportAutonomeraOffersUseCase(p, dispatcher, saver, features, testConfig(),
+	p offerProvider,
+	saver offerSaver,
+	dispatcher detailDispatcher,
+	features feature,
+) *UseCase {
+	return New(p, dispatcher, saver, features, testConfig(),
 		slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
@@ -166,7 +166,7 @@ func TestHandleDispatchesDetailForOffersWithoutDetail(t *testing.T) {
 	})
 
 	uc := newUseCaseWith(p, saver, dispatcher, featureFunc(featureActive))
-	if err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+	if err := uc.Handle(context.Background(), Params{Section: autonomera.SectionActive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -203,7 +203,7 @@ func TestHandleDispatchesStoredOfferId(t *testing.T) {
 	})
 
 	uc := newUseCaseWith(p, saver, dispatcher, featureFunc(featureActive))
-	if err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+	if err := uc.Handle(context.Background(), Params{Section: autonomera.SectionActive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -226,7 +226,7 @@ func TestHandleFailsWhenDetailDispatchFails(t *testing.T) {
 	})
 
 	uc := newUseCaseWith(p, saverFunc(saveAll), dispatcher, featureFunc(featureActive))
-	err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	err := uc.Handle(context.Background(), Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, dispatchFailed) {
 		t.Fatalf("err = %v, want %v", err, dispatchFailed)
 	}
@@ -238,48 +238,31 @@ func TestHandleSkipsWhenFeatureDisabled(t *testing.T) {
 		return provider.FetchResult{}, nil
 	})
 
-	features := featureFunc(func(_ context.Context, key domain.FeatureKey) (*domain.Feature, error) {
-		return &domain.Feature{Id: uuid.New(), Key: key, Name: string(key), Active: false}, nil
+	features := featureFunc(func(_ context.Context, _ domain.FeatureKey) (bool, error) {
+		return false, nil
 	})
 
 	uc := newUseCaseWithFeature(p, saverFunc(saveAll), features)
-	if err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+	if err := uc.Handle(context.Background(), Params{Section: autonomera.SectionActive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-// Отсутствующая в хранилище фича должна трактоваться как выключенная, а не как отказ
-func TestHandleSkipsWhenFeatureNotFound(t *testing.T) {
-	p := providerFunc(func(_ context.Context, _ autonomera.Section, _ int) (provider.FetchResult, error) {
-		t.Fatal("provider must not be called when feature is missing")
-		return provider.FetchResult{}, nil
-	})
-
-	features := featureFunc(func(_ context.Context, _ domain.FeatureKey) (*domain.Feature, error) {
-		return nil, domain.ErrFeatureNotFound
-	})
-
-	uc := newUseCaseWithFeature(p, saverFunc(saveAll), features)
-	if err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-// Ошибка хранилища фич - это отказ, импорт не должен молча запускаться
-func TestHandleFailsWhenFeatureStorageFails(t *testing.T) {
+// Ошибка проверки фичи - это отказ, импорт не должен молча запускаться
+func TestHandleFailsWhenFeatureCheckFails(t *testing.T) {
 	storageErr := errors.New("connection refused")
 
 	p := providerFunc(func(_ context.Context, _ autonomera.Section, _ int) (provider.FetchResult, error) {
-		t.Fatal("provider must not be called when feature storage fails")
+		t.Fatal("provider must not be called when feature check fails")
 		return provider.FetchResult{}, nil
 	})
 
-	features := featureFunc(func(_ context.Context, _ domain.FeatureKey) (*domain.Feature, error) {
-		return nil, storageErr
+	features := featureFunc(func(_ context.Context, _ domain.FeatureKey) (bool, error) {
+		return false, storageErr
 	})
 
 	uc := newUseCaseWithFeature(p, saverFunc(saveAll), features)
-	err := uc.Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	err := uc.Handle(context.Background(), Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, storageErr) {
 		t.Fatalf("err = %v, want %v", err, storageErr)
 	}
@@ -304,7 +287,7 @@ func TestHandleStopsWhenFeedExhausted(t *testing.T) {
 		return saveAll(ctx, items)
 	})
 
-	if err := newUseCase(p, saver).Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+	if err := newUseCase(p, saver).Handle(context.Background(), Params{Section: autonomera.SectionActive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -338,7 +321,7 @@ func TestHandleStopsAtStopDate(t *testing.T) {
 	})
 
 	if err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionActive, StopAfter: 30 * 24 * time.Hour}); err != nil {
+		Handle(context.Background(), Params{Section: autonomera.SectionActive, StopAfter: 30 * 24 * time.Hour}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -362,7 +345,7 @@ func TestHandleIgnoresStopDateForArchive(t *testing.T) {
 
 	// stopAfter = 0 - архив забирается целиком, старые даты не останавливают
 	if err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionArchive}); err != nil {
+		Handle(context.Background(), Params{Section: autonomera.SectionArchive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -379,7 +362,7 @@ func TestHandleStopsOnBrokenOffers(t *testing.T) {
 		return resultWith(t, 14, now, drift...), nil
 	})
 
-	err := newUseCase(p, saverFunc(saveAll)).Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	err := newUseCase(p, saverFunc(saveAll)).Handle(context.Background(), Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, ErrTooManyBrokenOffers) {
 		t.Fatalf("want ErrTooManyBrokenOffers, got %v", err)
 	}
@@ -400,7 +383,7 @@ func TestHandleToleratesDriftOnTinyPage(t *testing.T) {
 	})
 
 	if err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+		Handle(context.Background(), Params{Section: autonomera.SectionActive}); err != nil {
 		t.Fatalf("tiny page must not abort the import, got %v", err)
 	}
 }
@@ -414,7 +397,7 @@ func TestHandleStopsWhenProviderClampsOffset(t *testing.T) {
 		return resultWith(t, 1, now), nil
 	})
 
-	err := newUseCase(p, saverFunc(saveAll)).Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	err := newUseCase(p, saverFunc(saveAll)).Handle(context.Background(), Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, ErrPageLimitExceeded) {
 		t.Fatalf("want ErrPageLimitExceeded, got %v", err)
 	}
@@ -429,7 +412,7 @@ func TestHandlePassesSectionToProvider(t *testing.T) {
 	})
 
 	if err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionArchive}); err != nil {
+		Handle(context.Background(), Params{Section: autonomera.SectionArchive}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -446,7 +429,7 @@ func TestHandleStopsOnCancelledContext(t *testing.T) {
 		return resultWith(t, 20, time.Now()), nil
 	})
 
-	err := newUseCase(p, saverFunc(saveAll)).Handle(ctx, ImportParams{Section: autonomera.SectionActive})
+	err := newUseCase(p, saverFunc(saveAll)).Handle(ctx, Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("want context.Canceled, got %v", err)
 	}
@@ -457,7 +440,7 @@ func TestHandlePropagatesProviderError(t *testing.T) {
 		return provider.FetchResult{}, provider.ErrRateLimitExceeded
 	})
 
-	err := newUseCase(p, saverFunc(saveAll)).Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	err := newUseCase(p, saverFunc(saveAll)).Handle(context.Background(), Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, provider.ErrRateLimitExceeded) {
 		t.Fatalf("want ErrRateLimitExceeded, got %v", err)
 	}
@@ -473,7 +456,7 @@ func TestHandlePropagatesSaverError(t *testing.T) {
 		return nil, saveFailed
 	})
 
-	err := newUseCase(p, saver).Handle(context.Background(), ImportParams{Section: autonomera.SectionActive})
+	err := newUseCase(p, saver).Handle(context.Background(), Params{Section: autonomera.SectionActive})
 	if !errors.Is(err, saveFailed) {
 		t.Fatalf("want saveFailed, got %v", err)
 	}
@@ -495,7 +478,7 @@ func TestHandleToleratesDriftUpToLimit(t *testing.T) {
 
 	// Ровно на пороге импорт продолжается: авария начинается строго выше
 	if err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionActive}); err != nil {
+		Handle(context.Background(), Params{Section: autonomera.SectionActive}); err != nil {
 		t.Fatalf("drift at the limit must not abort the import, got %v", err)
 	}
 }
@@ -512,7 +495,7 @@ func TestHandleStartsFromGivenOffset(t *testing.T) {
 	})
 
 	if err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionActive, StartOffset: 4000}); err != nil {
+		Handle(context.Background(), Params{Section: autonomera.SectionActive, StartOffset: 4000}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -531,7 +514,7 @@ func TestHandleRespectsMaxPages(t *testing.T) {
 	})
 
 	err := newUseCase(p, saverFunc(saveAll)).
-		Handle(context.Background(), ImportParams{Section: autonomera.SectionActive, MaxPages: 3})
+		Handle(context.Background(), Params{Section: autonomera.SectionActive, MaxPages: 3})
 
 	if !errors.Is(err, ErrPageLimitExceeded) {
 		t.Fatalf("want ErrPageLimitExceeded, got %v", err)
@@ -542,7 +525,7 @@ func TestHandleRespectsMaxPages(t *testing.T) {
 }
 
 func TestHandleRejectsNegativeParams(t *testing.T) {
-	cases := map[string]ImportParams{
+	cases := map[string]Params{
 		"отрицательный offset":     {Section: autonomera.SectionActive, StartOffset: -1},
 		"отрицательный max pages":  {Section: autonomera.SectionActive, MaxPages: -1},
 		"отрицательный stop after": {Section: autonomera.SectionActive, StopAfter: -time.Hour},

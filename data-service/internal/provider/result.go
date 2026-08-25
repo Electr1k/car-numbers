@@ -4,6 +4,7 @@ import (
 	"data-service/internal/domain"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // RowError - ошибка разбора оффера
@@ -40,4 +41,21 @@ func (r FetchResult) ErrorMessages() []string {
 	}
 
 	return errs
+}
+
+// OldestPostedAt - самая ранняя дата публикации в батче
+func (r FetchResult) OldestPostedAt() time.Time {
+	var oldest time.Time
+
+	for _, item := range r.Offers {
+		if item.Offer.PostedAt == nil {
+			continue
+		}
+
+		if oldest.IsZero() || item.Offer.PostedAt.Before(oldest) {
+			oldest = *item.Offer.PostedAt
+		}
+	}
+
+	return oldest
 }

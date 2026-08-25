@@ -2,8 +2,8 @@ package resolver
 
 import (
 	"data-service/internal/domain"
+	"data-service/internal/provider"
 	"data-service/internal/provider/autonomera"
-	"data-service/internal/usecase"
 	"fmt"
 )
 
@@ -17,11 +17,12 @@ func NewResolver(autonomeraProvider *autonomera.Service) *Resolver {
 	}
 }
 
-func (r *Resolver) Resolve(provider domain.Provider) (usecase.OfferDetailProvider, error) {
-	switch provider {
+// Resolve - провайдер деталки по имени поставщика оффера
+func (r *Resolver) Resolve(name domain.Provider) (provider.OfferDetailProvider, error) {
+	switch name {
 	case domain.ProviderAutonomera:
 		return r.autonomeraProvider, nil
 	}
 
-	return nil, fmt.Errorf("provider %s is not supported", provider)
+	return nil, fmt.Errorf("provider %s is not supported", name)
 }

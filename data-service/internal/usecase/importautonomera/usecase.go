@@ -1,4 +1,4 @@
-package usecase
+package importautonomera
 
 import (
 	"context"
@@ -14,74 +14,29 @@ import (
 	"github.com/google/uuid"
 )
 
-type OfferProvider interface {
+type offerProvider interface {
 	FetchOffers(ctx context.Context, section autonomera.Section, offset int) (provider.FetchResult, error)
 }
 
-type OfferSaver interface {
+type offerSaver interface {
 	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error)
 }
 
-type OfferImportDetailDispatcher interface {
+type detailDispatcher interface {
 	DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error)
+}
+
+type feature interface {
+	Enabled(ctx context.Context, key domain.FeatureKey) (bool, error)
 }
 
 const (
 	// maxEmptyPages - сколько подряд пустых страниц считать концом выдачи
 	maxEmptyPages = 2
 
-	// defaultMaxPages - потолок страниц, когда он не задан явно
-	defaultMaxPages = 30000
-
 	// maxCountBrokenOffers - максимальное количество битых офферов в батче
 	maxCountBrokenOffers = 5
 )
-
-// ImportParams - входные параметры импорта
-type ImportParams struct {
-	// Section - раздел выдачи, из которого забираем предложения
-	Section autonomera.Section
-
-	// StartOffset - с какой позиции выдачи начинать
-	StartOffset int
-
-	// MaxPages - потолок страниц за прогон
-	MaxPages int
-
-	// StopAfter - не забирать публикации старше этого возраста. 0 - без ограничений
-	StopAfter time.Duration
-}
-
-func (p ImportParams) validate() error {
-	switch {
-	case p.StartOffset < 0:
-		return fmt.Errorf("start offset must not be negative, got %d", p.StartOffset)
-	case p.MaxPages < 0:
-		return fmt.Errorf("max pages must not be negative, got %d", p.MaxPages)
-	case p.StopAfter < 0:
-		return fmt.Errorf("stop after must not be negative, got %s", p.StopAfter)
-	}
-
-	return nil
-}
-
-// pageLimit - потолок страниц с подставленным умолчанием
-func (p ImportParams) pageLimit() int {
-	if p.MaxPages == 0 {
-		return defaultMaxPages
-	}
-
-	return p.MaxPages
-}
-
-// stopDate - нижняя граница импорта по дате публикации
-func (p ImportParams) stopDate() time.Time {
-	if p.StopAfter == 0 {
-		return time.Time{}
-	}
-
-	return time.Now().Add(-p.StopAfter)
-}
 
 var (
 	// ErrTooManyBrokenOffers - превышен лимит неразобранных офферов
@@ -91,36 +46,36 @@ var (
 	ErrPageLimitExceeded = errors.New("page limit exceeded")
 )
 
-// ImportAutonomeraOffersUseCase - постраничный импорт раздела autonomera777
-type ImportAutonomeraOffersUseCase struct {
-	provider         OfferProvider
-	detailDispatcher OfferImportDetailDispatcher
-	repository       OfferSaver
-	featureStorage   FeatureStorage
+// UseCase - постраничный импорт раздела autonomera777
+type UseCase struct {
+	provider         offerProvider
+	detailDispatcher detailDispatcher
+	repository       offerSaver
+	features         feature
 	config           config.AutoNomeraConfig
 	logger           *slog.Logger
 }
 
-func NewImportAutonomeraOffersUseCase(
-	provider OfferProvider,
-	detailDispatcher OfferImportDetailDispatcher,
-	repository OfferSaver,
-	featureStorage FeatureStorage,
+func New(
+	provider offerProvider,
+	detailDispatcher detailDispatcher,
+	repository offerSaver,
+	features feature,
 	config config.AutoNomeraConfig,
 	logger *slog.Logger,
-) *ImportAutonomeraOffersUseCase {
-	return &ImportAutonomeraOffersUseCase{
+) *UseCase {
+	return &UseCase{
 		provider:         provider,
 		detailDispatcher: detailDispatcher,
 		repository:       repository,
-		featureStorage:   featureStorage,
+		features:         features,
 		config:           config,
 		logger:           logger,
 	}
 }
 
 // Handle - собирает предложения поставщика и сохраняет их в базу
-func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params ImportParams) error {
+func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 	if err := params.validate(); err != nil {
 		return err
 	}
@@ -138,7 +93,7 @@ func (uc *ImportAutonomeraOffersUseCase) Handle(ctx context.Context, params Impo
 
 	logger := uc.logger.With("section", params.Section)
 
-	enabled, err := featureEnabled(ctx, uc.featureStorage, domain.FeatureKeyImportAutonomeraOffers, logger)
+	enabled, err := uc.features.Enabled(ctx, domain.FeatureKeyImportAutonomeraOffers)
 	if err != nil {
 		return err
 	}
@@ -237,7 +192,7 @@ func checkStopDate(result provider.FetchResult, stopDate time.Time) bool {
 		return false
 	}
 
-	oldest := oldestPostedAt(result.Offers)
+	oldest := result.OldestPostedAt()
 
 	return !oldest.IsZero() && oldest.Before(stopDate)
 }
@@ -253,6 +208,7 @@ func checkBrokenOffers(result provider.FetchResult) error {
 		ErrTooManyBrokenOffers, countBrokenOffers, result.RowsFound, maxCountBrokenOffers)
 }
 
+// logPage - итог по обработанной странице
 func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult, saved, dispatched int) {
 	attrs := []any{
 		"page", page,
@@ -270,21 +226,4 @@ func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult,
 
 	logger.Warn("page processed with skipped rows",
 		append(attrs, "errors", result.ErrorMessages())...)
-}
-
-// oldestPostedAt возвращает самую раннюю дату публикации в батче
-func oldestPostedAt(offers []domain.OfferWithNumber) time.Time {
-	var oldest time.Time
-
-	for _, item := range offers {
-		if item.Offer.PostedAt == nil {
-			continue
-		}
-
-		if oldest.IsZero() || item.Offer.PostedAt.Before(oldest) {
-			oldest = *item.Offer.PostedAt
-		}
-	}
-
-	return oldest
 }

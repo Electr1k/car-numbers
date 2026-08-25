@@ -3,16 +3,16 @@ package consumer
 import (
 	"context"
 	"data-service/internal/job"
-	"data-service/internal/usecase"
+	"data-service/internal/usecase/importofferdetail"
 	"encoding/json"
 	"fmt"
 )
 
 type ImportOfferDetailConsumer struct {
-	uc *usecase.ImportOfferDetailUseCase
+	uc *importofferdetail.UseCase
 }
 
-func NewImportOfferDetailConsumer(uc *usecase.ImportOfferDetailUseCase) *ImportOfferDetailConsumer {
+func NewImportOfferDetailConsumer(uc *importofferdetail.UseCase) *ImportOfferDetailConsumer {
 	return &ImportOfferDetailConsumer{
 		uc: uc,
 	}

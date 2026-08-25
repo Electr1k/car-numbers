@@ -3,17 +3,17 @@ package consumer
 import (
 	"context"
 	"data-service/internal/job"
-	"data-service/internal/usecase"
+	"data-service/internal/usecase/importautonomera"
 	"encoding/json"
 	"fmt"
 	"time"
 )
 
 type ImportAutonomeraOffersConsumer struct {
-	uc *usecase.ImportAutonomeraOffersUseCase
+	uc *importautonomera.UseCase
 }
 
-func NewImportAutonomeraOffersConsumer(uc *usecase.ImportAutonomeraOffersUseCase) *ImportAutonomeraOffersConsumer {
+func NewImportAutonomeraOffersConsumer(uc *importautonomera.UseCase) *ImportAutonomeraOffersConsumer {
 	return &ImportAutonomeraOffersConsumer{
 		uc: uc,
 	}
@@ -26,7 +26,7 @@ func (c *ImportAutonomeraOffersConsumer) Handle(ctx context.Context, payload str
 		return fmt.Errorf("unmarshal payload: %w", err)
 	}
 
-	return c.uc.Handle(ctx, usecase.ImportParams{
+	return c.uc.Handle(ctx, importautonomera.Params{
 		Section:     decoded.Section,
 		StartOffset: decoded.StartOffset,
 		MaxPages:    decoded.MaxPages,
