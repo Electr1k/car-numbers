@@ -40,3 +40,10 @@ VALUES(
     'dispatch-import-offer-detail',
     'Вызов импорта детальной информации об оффере (из любого провайдера)'
 ) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a03b15-05fa-7724-ba04-fc785194556d',
+    'import-gosnomeru-offers',
+    'Импорт предложений из gosnomeru'
+) ON CONFLICT (key) DO NOTHING;

@@ -15,9 +15,10 @@ type RowError struct {
 
 // FetchResult - результат получения страницы офферов
 type FetchResult struct {
-	Offers    []domain.OfferWithNumber
-	RowsFound int
-	RowErrors []RowError
+	Offers     []domain.OfferWithNumber
+	RowsFound  int
+	RowErrors  []RowError
+	TotalPages int
 }
 
 // BrokenOfferCount - количество офферов, которые не смогли разобрать
@@ -33,7 +34,6 @@ func (r FetchResult) BrokenOfferCount() int {
 }
 
 // ErrorMessages - тексты ошибок разбора, по одному на строку
-// Именно тексты, а не []error: значения нужны только для лога
 func (r FetchResult) ErrorMessages() []string {
 	errs := make([]string, 0, len(r.RowErrors))
 	for _, rowErr := range r.RowErrors {

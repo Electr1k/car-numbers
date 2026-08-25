@@ -57,11 +57,16 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 		return empty, fmt.Errorf("%w: invalid date %q: %w", provider.ErrRowSkipped, externalOffer.Date, err)
 	}
 
+	var price *float64
+	if externalOffer.Price > 0 {
+		price = &externalOffer.Price
+	}
+
 	offer, err := domain.NewOffer(
 		number.Id,
 		domain.ProviderGosnomeru,
 		externalOffer.ID,
-		&externalOffer.Price,
+		price,
 		status,
 		nil,
 		nil,

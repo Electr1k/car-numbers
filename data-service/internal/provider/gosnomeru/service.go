@@ -25,7 +25,7 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 		return provider.FetchResult{}, err
 	}
 
-	var result provider.FetchResult
+	result := provider.FetchResult{TotalPages: response.TotalPages}
 	for index, number := range response.Items {
 		result.RowsFound++
 		offer, err := s.mapper.MapOfferToDomain(number)

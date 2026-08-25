@@ -1,21 +1,19 @@
-package importautonomera
+package importgosnomeru
 
 import (
-	"data-service/internal/provider/autonomera"
 	"fmt"
 	"time"
 )
 
-// defaultMaxPages - потолок страниц, когда он не задан явно
-const defaultMaxPages = 30000
+const (
+	// defaultMaxPages - потолок страниц, когда он не задан явно
+	defaultMaxPages = 10000
+)
 
 // Params - входные параметры импорта
 type Params struct {
-	// Section - раздел выдачи, из которого забираем предложения
-	Section autonomera.Section
-
-	// StartOffset - с какой позиции выдачи начинать
-	StartOffset int
+	// StartPage - с какой страницы начинать
+	StartPage int
 
 	// MaxPages - потолок страниц за прогон
 	MaxPages int
@@ -26,8 +24,8 @@ type Params struct {
 
 func (p Params) validate() error {
 	switch {
-	case p.StartOffset < 0:
-		return fmt.Errorf("start offset must not be negative, got %d", p.StartOffset)
+	case p.StartPage < 0:
+		return fmt.Errorf("start page must not be negative, got %d", p.StartPage)
 	case p.MaxPages < 0:
 		return fmt.Errorf("max pages must not be negative, got %d", p.MaxPages)
 	case p.StopAfter < 0:
@@ -37,7 +35,7 @@ func (p Params) validate() error {
 	return nil
 }
 
-// pageLimit - потолок страниц с подставленным умолчанием
+// pageLimit - сколько страниц берём за прогон, считая от startPage
 func (p Params) pageLimit() int {
 	if p.MaxPages == 0 {
 		return defaultMaxPages
