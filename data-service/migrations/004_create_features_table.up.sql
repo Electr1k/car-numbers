@@ -47,3 +47,10 @@ VALUES(
     'import-gosnomeru-offers',
     'Импорт предложений из gosnomeru'
 ) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+      '01a0401a-7f44-776e-aa63-4130be56acdd',
+      'dispatch-import-gosnomeru-offers',
+      'Вызов импорта предложений из gosnomeru'
+  ) ON CONFLICT (key) DO NOTHING;

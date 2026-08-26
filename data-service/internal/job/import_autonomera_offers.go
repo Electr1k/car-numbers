@@ -20,6 +20,14 @@ func importAutonomeraOffersUniqueKey(section autonomera.Section) string {
 }
 
 func (p *Producer) DispatchImportAutonomeraOffers(ctx context.Context, payload ImportAutonomeraOffersPayload) (bool, error) {
+	enabled, err := p.features.Enabled(ctx, domain.FeatureKeyDispatchImportAutonomeraOffers)
+	if err != nil {
+		return false, err
+	}
+	if !enabled {
+		return false, nil
+	}
+
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return false, fmt.Errorf("marshal payload: %w", err)

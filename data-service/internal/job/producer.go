@@ -11,13 +11,19 @@ type store interface {
 	CreateJob(ctx context.Context, job domain.Job) (bool, error)
 }
 
-type Producer struct {
-	jobStore store
+type feature interface {
+	Enabled(ctx context.Context, key domain.FeatureKey) (bool, error)
 }
 
-func NewProducer(jobStore store) *Producer {
+type Producer struct {
+	jobStore store
+	features feature
+}
+
+func NewProducer(jobStore store, features feature) *Producer {
 	return &Producer{
 		jobStore: jobStore,
+		features: features,
 	}
 }
 

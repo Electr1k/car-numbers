@@ -54,8 +54,11 @@ func run() error {
 	offerRepository := postgres.NewOfferRepository(database)
 	featureRepository := postgres.NewFeatureRepository(database)
 
+	// Фича-флаги
+	featureGuard := feature.NewFeature(featureRepository, log)
+
 	// Продюсер джоб
-	producer := job.NewProducer(jobRepository)
+	producer := job.NewProducer(jobRepository, featureGuard)
 
 	// Провайдеры
 	autonomeraService := autonomera.NewService(
@@ -67,9 +70,6 @@ func run() error {
 		gosnomeru.NewMapper(cfg.GosnomeruConfig.BaseURL),
 	)
 	providerResolver := resolver.NewResolver(autonomeraService, gosnomeruService)
-
-	// Фича-флаги
-	featureGuard := feature.NewFeature(featureRepository, log)
 
 	// Импорт деталки офферов
 	importOfferDetailUseCase := importofferdetail.New(

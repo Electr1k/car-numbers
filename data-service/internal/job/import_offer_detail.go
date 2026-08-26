@@ -18,6 +18,14 @@ func importOfferDetailUniqueKey(offerId uuid.UUID) string {
 }
 
 func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
+	enabled, err := p.features.Enabled(ctx, domain.FeatureKeyDispatchImportOfferDetail)
+	if err != nil {
+		return false, err
+	}
+	if !enabled {
+		return false, nil
+	}
+
 	encoded, err := json.Marshal(ImportOfferDetailPayload{OfferId: offerId})
 	if err != nil {
 		return false, fmt.Errorf("marshal payload: %w", err)

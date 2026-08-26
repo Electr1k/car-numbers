@@ -18,6 +18,14 @@ func importGosnomeruOffersUniqueKey() string {
 }
 
 func (p *Producer) DispatchImportGosnomeruOffers(ctx context.Context, payload ImportGosnomeruOffersPayload) (bool, error) {
+	enabled, err := p.features.Enabled(ctx, domain.FeatureKeyDispatchImportGosnomeruOffers)
+	if err != nil {
+		return false, err
+	}
+	if !enabled {
+		return false, nil
+	}
+
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return false, fmt.Errorf("marshal payload: %w", err)

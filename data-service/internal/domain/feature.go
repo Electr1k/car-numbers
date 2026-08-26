@@ -25,6 +25,9 @@ const (
 
 	// FeatureKeyImportGosnomeruOffers - Импорт предложений из gosnomeru
 	FeatureKeyImportGosnomeruOffers FeatureKey = "import-gosnomeru-offers"
+
+	// FeatureKeyDispatchImportGosnomeruOffers - Вызов импорта предложений из gosnomeru
+	FeatureKeyDispatchImportGosnomeruOffers FeatureKey = "dispatch-import-gosnomeru-offers"
 )
 
 var (
