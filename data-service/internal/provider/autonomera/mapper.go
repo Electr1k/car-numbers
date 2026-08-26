@@ -260,6 +260,9 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 
 		case "Цена авто с номером":
 			price, parseErr = parsePrice(value.Text())
+			if *price <= 0 {
+				price = nil
+			}
 		case "Просмотров":
 			var count int
 			count, parseErr = strconv.Atoi(strings.TrimSpace(value.Text()))
