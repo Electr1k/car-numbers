@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	CategoryNotCar  = 11
-	StatusPublished = "published"
-	StatusDeleted   = "deleted"
-	dateLayout      = "2006-01-02"
+	CategoryNotCar      = 11
+	StatusPublished     = "published"
+	StatusDeleted       = "deleted"
+	AvailabilityRemoved = "removed"
+	dateLayout          = "2006-01-02"
 )
 
 type Mapper struct {
@@ -34,7 +35,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 		return empty, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
 	}
 
-	url := "https://gosnomeru.com/plate/" + externalOffer.ID + "-" + externalOffer.Slug + ".html"
+	url := m.baseURL + "/plate/" + externalOffer.ID + "-" + externalOffer.Slug + ".html"
 
 	numberStr := externalOffer.Number.Letters + externalOffer.Number.Region
 	numberType := domain.NumberTypeCar
@@ -113,172 +114,58 @@ func mapPostedAt(dateStr string) (time.Time, error) {
 	return postedAt, nil
 }
 
-//
-//func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
-//	raw, err := sel.Html()
-//	if err != nil {
-//		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrBrokenOffer, err)
-//	}
-//
-//	number, err := parseNumberFromDetail(sel)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	if offer.Number.Type == domain.NumberTypeMoto {
-//		runes := []rune(number)
-//		// Для мото буквы и цифры при парсинге склиеваются не в том порядке - меняем местами
-//		letters := runes[0:2]
-//		digits := runes[2:6]
-//		reg := runes[6:]
-//
-//		number = string(digits) + string(letters) + string(reg)
-//	}
-//
-//	if number != offer.Number.Number {
-//		return nil, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, number)
-//	}
-//
-//	whereAbouts := parseWhereaboutsFromDetail(sel)
-//	reissueIncluded := parseReissueFromDetailed(sel)
-//
-//	var (
-//		price       *float64
-//		views       *int
-//		postedAt    *time.Time
-//		refreshedAt *time.Time
-//		parseErr    error
-//	)
-//
-//	table := sel.Find(".article__table.user-data-table")
-//	if table.Length() == 0 {
-//		return nil, fmt.Errorf("%w: no user-data table", provider.ErrBrokenOffer)
-//	}
-//	table.Find("div.user-data-table__tr").Each(func(i int, s *goquery.Selection) {
-//		title := strings.TrimSpace(s.Find(".user-data-table__th").Text())
-//		value := s.Find(".user-data-table__td")
-//		switch title {
-//
-//		case "Цена авто с номером":
-//			price, parseErr = parsePrice(value.Text())
-//		case "Просмотров":
-//			var count int
-//			count, parseErr = strconv.Atoi(strings.TrimSpace(value.Text()))
-//			if parseErr == nil {
-//				views = &count
-//			}
-//		case "Дата размещения":
-//			postedAt, parseErr = parseDateFromDetail(value.Text())
-//		case "Дата поднятия":
-//			refreshedAt, parseErr = parseDateFromDetail(value.Text())
-//		}
-//	})
-//
-//	if parseErr != nil {
-//		return nil, parseErr
-//	}
-//
-//	commentText := strings.TrimSpace(sel.Find(".article-comment__content").Text())
-//	var comment *string = nil
-//	if len(commentText) != 0 {
-//		comment = &commentText
-//	}
-//
-//	_, err = offer.Offer.ApplyDetail(
-//		offer.Offer.Status,
-//		price,
-//		whereAbouts,
-//		reissueIncluded,
-//		views,
-//		postedAt,
-//		refreshedAt,
-//		raw,
-//		comment,
-//	)
-//	if err != nil {
-//		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)
-//	}
-//
-//	return offer, nil
-//}
-//
-//func parseNumberFromDetail(sel *goquery.Selection) (string, error) {
-//	var parts []string
-//
-//	// Символы номера лежат в value каждого input.filter-plate-number__input, в порядке DOM
-//	sel.Find(offerDetailNumber).Each(func(i int, s *goquery.Selection) {
-//		if val, exists := s.Attr("value"); exists {
-//			parts = append(parts, val)
-//		}
-//	})
-//
-//	region, exists := sel.Find(offerDetailRegion).Attr("value")
-//	if !exists || len(region) > 3 || len(parts) < 2 {
-//		return "", fmt.Errorf("%w: invalid offer detail number %q region %q",
-//			provider.ErrBrokenOffer, strings.Join(parts, ""), region)
-//	}
-//
-//	return strings.Join(parts, "") + region, nil
-//}
-//
-//func parseWhereaboutsFromDetail(sel *goquery.Selection) *domain.OfferWhereabouts {
-//	onCar := sel.Find(offerDetailOnCar).Nodes
-//	if onCar != nil {
-//		whereAbouts := domain.OfferWhereaboutsOnCar
-//		return &whereAbouts
-//	}
-//
-//	onStorage := sel.Find(offerDetailOnStorage).Nodes
-//	if onStorage != nil {
-//		whereAbouts := domain.OfferWhereaboutsOnStorage
-//		return &whereAbouts
-//	}
-//
-//	return nil
-//}
-//
-//func parseReissueFromDetailed(sel *goquery.Selection) *bool {
-//	reissueInclude := sel.Find(offerDetailReissueInclude).Nodes
-//	if reissueInclude != nil {
-//		t := true
-//		return &t
-//	}
-//
-//	return nil
-//}
-//
-//func parseDateFromDetail(strDate string) (*time.Time, error) {
-//	months := map[string]string{
-//		"января":   "January",
-//		"февраля":  "February",
-//		"марта":    "March",
-//		"апреля":   "April",
-//		"мая":      "May",
-//		"июня":     "June",
-//		"июля":     "July",
-//		"августа":  "August",
-//		"сентября": "September",
-//		"октября":  "October",
-//		"ноября":   "November",
-//		"декабря":  "December",
-//	}
-//
-//	parts := strings.Fields(strDate)
-//	if len(parts) != 3 {
-//		return nil, fmt.Errorf("%w: invalid date format", provider.ErrBrokenOffer)
-//	}
-//
-//	englishMonth := months[parts[1]]
-//	if englishMonth == "" {
-//		return nil, fmt.Errorf("%w: invalid date format", provider.ErrBrokenOffer)
-//	}
-//
-//	englishDate := fmt.Sprintf("%s %s %s", parts[0], englishMonth, parts[2])
-//
-//	parsedTime, err := time.Parse("02 January 2006", englishDate)
-//	if err != nil {
-//		return nil, fmt.Errorf("%w: invalid date format", provider.ErrBrokenOffer)
-//	}
-//
-//	return &parsedTime, nil
-//}
+func (m *Mapper) MapOfferDetailToDomain(response OfferDetail, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
+	raw, err := json.Marshal(response)
+	if err != nil {
+		return nil, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
+	}
+
+	offerNumber := response.Number.Letters + response.Number.Region
+	if offerNumber != offer.Number.Number {
+		return nil, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, offerNumber)
+	}
+
+	status := domain.OfferStatusActive
+	if response.Availability != nil && *response.Availability == AvailabilityRemoved || response.Status == StatusDeleted {
+		status = domain.OfferStatusInactive
+	}
+
+	var price *float64 = nil
+	if response.Price > 0 {
+		price = &response.Price
+	}
+
+	posted, err := time.Parse(dateLayout, response.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid date %q: %w", provider.ErrBrokenOffer, response.CreatedAt, err)
+	}
+	postedAt := &posted
+
+	refreshed, err := time.Parse(dateLayout, response.Date)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid date %q: %w", provider.ErrBrokenOffer, response.Date, err)
+	}
+	refreshedAt := &refreshed
+
+	var comment *string = nil
+	if len(strings.TrimSpace(response.Description)) > 0 {
+		comment = &response.Description
+	}
+
+	_, err = offer.Offer.ApplyDetail(
+		status,
+		price,
+		nil,
+		&response.DealIncluded,
+		&response.ViewCount,
+		postedAt,
+		refreshedAt,
+		string(raw),
+		comment,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: read row json: %w", provider.ErrRowSkipped, err)
+	}
+
+	return offer, nil
+}

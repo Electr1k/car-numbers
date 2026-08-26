@@ -2,7 +2,10 @@ package gosnomeru
 
 import (
 	"context"
+	"data-service/internal/domain"
 	"data-service/internal/provider"
+	"errors"
+	"time"
 )
 
 type Service struct {
@@ -40,21 +43,16 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 	return result, nil
 }
 
-//
-//func (s *Service) FetchOfferDetail(ctx context.Context, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
-//	response, err := s.client.FetchOfferDetailHTML(ctx, offer.Offer.Url)
-//	if errors.Is(err, provider.ErrNotFound) {
-//		offer.Offer.Status = domain.OfferStatusInactive
-//		return offer, nil
-//	}
-//	if err != nil {
-//		return &domain.OfferWithNumber{}, err
-//	}
-//
-//	document, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
-//	if err != nil {
-//		return &domain.OfferWithNumber{}, fmt.Errorf("parse html document: %w", err)
-//	}
-//
-//	return s.mapper.MapOfferDetailToDomain(document.Find(offerDetailSelector), offer)
-//}
+func (s *Service) FetchOfferDetail(ctx context.Context, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
+	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.ExternalId)
+	if errors.Is(err, provider.ErrNotFound) {
+		offer.Offer.Status = domain.OfferStatusInactive
+		return offer, nil
+	}
+	if err != nil {
+		return &domain.OfferWithNumber{}, err
+	}
+
+	time.Sleep(time.Second)
+	return s.mapper.MapOfferDetailToDomain(*response, offer)
+}

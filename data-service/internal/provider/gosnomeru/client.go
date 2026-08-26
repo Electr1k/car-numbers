@@ -15,8 +15,11 @@ import (
 )
 
 const (
-	// getNumbersPath - постраничная выдача номеров
-	getNumbersPath = "/api/v1/plate/search"
+	// getNumbers - постраничная выдача номеров
+	getNumbers = "/api/v1/plate/search"
+
+	// getNumberDetail - Деталка предложения
+	getNumberDetail = "/api/v1/plate/"
 
 	// Порядок выдачи: свежие сверху
 	orderColumn = "-update_time"
@@ -125,37 +128,69 @@ func (c *Client) FetchOffers(ctx context.Context, page int) (*OffersResponse, er
 	return &jsonResponse, nil
 }
 
-//// FetchOfferDetailHTML забирает одну страницу предложений и отдаёт сырой HTML
-//func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, error) {
-//	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-//	if err != nil {
-//		return nil, fmt.Errorf("create request: %w", err)
-//	}
-//
-//	c.logger.Debug("fetching offer detail page", "url", url)
-//
-//	response, err := c.http.Do(request)
-//	if err != nil {
-//		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, url, err)
-//	}
-//	defer response.Body.Close()
-//
-//	if response.StatusCode != http.StatusOK {
-//		return nil, processBadStatus(response, url)
-//	}
-//
-//	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
-//	if err != nil {
-//		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
-//	}
-//
-//	c.logger.Debug("offer detail fetched",
-//		"url", url,
-//		"status_code", response.StatusCode,
-//		"bytes", len(body))
-//
-//	return body, nil
-//}
+type OfferDetail struct {
+	ID           string       `json:"id"`
+	IsSource     bool         `json:"isSource"`
+	Number       OffersNumber `json:"number"`
+	City         string       `json:"city"`
+	RegionName   string       `json:"regionName"`
+	Price        float64      `json:"price"`
+	Date         string       `json:"date"`
+	Status       string       `json:"status"`
+	Availability *string      `json:"availability"`
+	Situation    string       `json:"situation"`
+	Categories   []int        `json:"categories"`
+	Slug         string       `json:"slug"`
+	Style        int          `json:"style"`
+	Role         string       `json:"role"`
+	RegionID     int          `json:"regionId"`
+	CityID       int          `json:"cityId"`
+	Description  string       `json:"description"`
+	SellerName   string       `json:"sellerName"`
+	SellerPhone  *string      `json:"sellerPhone"`
+	NeedCar      bool         `json:"needCar"`
+	DealIncluded bool         `json:"dealIncluded"`
+	ViewCount    int          `json:"viewCount"`
+	CreatedAt    string       `json:"createdAt"`
+}
+
+// FetchOfferDetail забирает деталку предложения
+func (c *Client) FetchOfferDetail(ctx context.Context, externalId string) (*OfferDetail, error) {
+	requestUrl := c.baseURL + getNumberDetail + externalId
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	c.logger.Debug("fetching offer detail page", "url", requestUrl)
+
+	response, err := c.http.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestUrl, err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, processBadStatus(response, requestUrl)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	if err != nil {
+		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+	}
+
+	var jsonResponse OfferDetail
+	if err := json.Unmarshal(body, &jsonResponse); err != nil {
+		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+	}
+
+	c.logger.Debug("offer detail fetched",
+		"url", requestUrl,
+		"status_code", response.StatusCode,
+		"bytes", len(body))
+
+	return &jsonResponse, nil
+}
 
 func (c *Client) buildURL(page int) string {
 	query := url.Values{}
@@ -163,7 +198,7 @@ func (c *Client) buildURL(page int) string {
 	query.Set("per_page", strconv.Itoa(perPage))
 	query.Set("page", strconv.Itoa(page))
 
-	return c.baseURL + getNumbersPath + "?" + query.Encode()
+	return c.baseURL + getNumbers + "?" + query.Encode()
 }
 
 // processBadStatus - Процессинг ошибки по статус коду

@@ -4,16 +4,19 @@ import (
 	"data-service/internal/domain"
 	"data-service/internal/provider"
 	"data-service/internal/provider/autonomera"
+	"data-service/internal/provider/gosnomeru"
 	"fmt"
 )
 
 type Resolver struct {
 	autonomeraProvider *autonomera.Service
+	gosnomeruProvider  *gosnomeru.Service
 }
 
-func NewResolver(autonomeraProvider *autonomera.Service) *Resolver {
+func NewResolver(autonomeraProvider *autonomera.Service, gosnomeruProvider *gosnomeru.Service) *Resolver {
 	return &Resolver{
 		autonomeraProvider: autonomeraProvider,
+		gosnomeruProvider:  gosnomeruProvider,
 	}
 }
 
@@ -22,6 +25,8 @@ func (r *Resolver) Resolve(name domain.Provider) (provider.OfferDetailProvider, 
 	switch name {
 	case domain.ProviderAutonomera:
 		return r.autonomeraProvider, nil
+	case domain.ProviderGosnomeru:
+		return r.gosnomeruProvider, nil
 	}
 
 	return nil, fmt.Errorf("provider %s is not supported", name)

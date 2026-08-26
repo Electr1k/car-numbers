@@ -163,6 +163,8 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 			result = "feed exhausted"
 			return nil
 		}
+
+		time.Sleep(250 * time.Millisecond)
 	}
 
 	return fmt.Errorf("%w: %d pages, stopped at page %d", ErrPageLimitExceeded, pageLimit, page)

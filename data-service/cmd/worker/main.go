@@ -8,6 +8,7 @@ import (
 	"data-service/internal/job"
 	"data-service/internal/job/consumer"
 	"data-service/internal/provider/autonomera"
+	"data-service/internal/provider/gosnomeru"
 	"data-service/internal/provider/resolver"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/usecase/importautonomera"
@@ -60,7 +61,11 @@ func run() error {
 		autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log),
 		autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL),
 	)
-	providerResolver := resolver.NewResolver(autonomeraService)
+	gosnomeruService := gosnomeru.NewService(
+		gosnomeru.NewClient(cfg.GosnomeruConfig.BaseURL, log),
+		gosnomeru.NewMapper(cfg.GosnomeruConfig.BaseURL),
+	)
+	providerResolver := resolver.NewResolver(autonomeraService, gosnomeruService)
 
 	// Фича-флаги
 	featureGuard := feature.NewFeature(featureRepository, log)
