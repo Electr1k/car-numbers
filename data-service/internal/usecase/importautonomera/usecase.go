@@ -192,7 +192,7 @@ func checkStopDate(result provider.FetchResult, stopDate time.Time) bool {
 		return false
 	}
 
-	oldest := result.OldestPostedAt()
+	oldest := result.OldestRefreshedAt()
 
 	return !oldest.IsZero() && oldest.Before(stopDate)
 }

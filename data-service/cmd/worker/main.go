@@ -12,6 +12,7 @@ import (
 	"data-service/internal/provider/resolver"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/usecase/importautonomera"
+	"data-service/internal/usecase/importgosnomeru"
 	"data-service/internal/usecase/importofferdetail"
 	"data-service/internal/worker"
 	"data-service/pkg/logger"
@@ -90,11 +91,26 @@ func run() error {
 	)
 	importAutonomeraOffersConsumer := consumer.NewImportAutonomeraOffersConsumer(importAutonomeraUseCase)
 
+	// Импорт офферов из gosnomeru
+	importGosnomeruUseCase := importgosnomeru.New(
+		gosnomeruService,
+		producer,
+		offerRepository,
+		featureGuard,
+		log.With("provider", domain.ProviderGosnomeru),
+	)
+
+	importGosnomeruOffersConsumer := consumer.NewImportGosnomeruOffersConsumer(importGosnomeruUseCase)
+
 	consumerResolver := consumer.NewResolver()
 
 	consumerResolver.Register(
 		domain.JobNameImportAutonomeraOffers,
 		importAutonomeraOffersConsumer,
+	)
+	consumerResolver.Register(
+		domain.JobNameImportGosnomeruOffers,
+		importGosnomeruOffersConsumer,
 	)
 	consumerResolver.Register(
 		domain.JobNameImportOfferDetail,

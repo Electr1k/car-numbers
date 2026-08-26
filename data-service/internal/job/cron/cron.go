@@ -13,6 +13,7 @@ type Deps struct {
 	Producer   *job.Producer
 	Specs      config.CronConfig
 	AutoNomera config.AutoNomeraConfig
+	Gosnomeru  config.GosnomeruConfig
 	Logger     *slog.Logger
 }
 
@@ -26,6 +27,9 @@ func Register(s *scheduler.Scheduler, d Deps) error {
 			logger:   d.Logger.With("cron", nameImportAutonomeraActiveOffers),
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("register cron %s: %w", nameImportAutonomeraActiveOffers, err)
+	}
 
 	err = register(s, d.Logger,
 		nameImportAutonomeraArchiveOffers,
@@ -37,7 +41,20 @@ func Register(s *scheduler.Scheduler, d Deps) error {
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("register crons: %w", err)
+		return fmt.Errorf("register cron %s: %w", nameImportAutonomeraArchiveOffers, err)
+	}
+
+	err = register(s, d.Logger,
+		nameImportGosnomeruOffers,
+		d.Specs.ImportGosnomeruOffers,
+		&importGosnomeruOffers{
+			producer: d.Producer,
+			depth:    d.Gosnomeru.ImportDepth,
+			logger:   d.Logger.With("cron", nameImportGosnomeruOffers),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("register cron %s: %w", nameImportGosnomeruOffers, err)
 	}
 
 	return nil

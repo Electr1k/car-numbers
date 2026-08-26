@@ -73,7 +73,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 	}
 
 	var (
-		startPage  = params.StartPage
+		startPage  = params.startPage()
 		stopDate   = params.stopDate()
 		pageLimit  = params.pageLimit()
 		page       = startPage
@@ -176,7 +176,7 @@ func checkStopDate(result provider.FetchResult, stopDate time.Time) bool {
 		return false
 	}
 
-	oldest := result.OldestPostedAt()
+	oldest := result.OldestRefreshedAt()
 
 	return !oldest.IsZero() && oldest.Before(stopDate)
 }

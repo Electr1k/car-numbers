@@ -44,6 +44,14 @@ func (p Params) pageLimit() int {
 	return p.MaxPages
 }
 
+func (p Params) startPage() int {
+	if p.StartPage == 0 {
+		return 1
+	}
+
+	return p.StartPage
+}
+
 // stopDate - нижняя граница импорта по дате публикации
 func (p Params) stopDate() time.Time {
 	if p.StopAfter == 0 {

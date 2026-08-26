@@ -43,17 +43,17 @@ func (r FetchResult) ErrorMessages() []string {
 	return errs
 }
 
-// OldestPostedAt - самая ранняя дата публикации в батче
-func (r FetchResult) OldestPostedAt() time.Time {
+// OldestRefreshedAt - самая ранняя дата публикации в батче
+func (r FetchResult) OldestRefreshedAt() time.Time {
 	var oldest time.Time
 
 	for _, item := range r.Offers {
-		if item.Offer.PostedAt == nil {
+		if item.Offer.RefreshedAt == nil {
 			continue
 		}
 
-		if oldest.IsZero() || item.Offer.PostedAt.Before(oldest) {
-			oldest = *item.Offer.PostedAt
+		if oldest.IsZero() || item.Offer.RefreshedAt.Before(oldest) {
+			oldest = *item.Offer.RefreshedAt
 		}
 	}
 

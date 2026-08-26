@@ -14,6 +14,7 @@ type JobName string
 
 const (
 	JobNameImportAutonomeraOffers JobName = "import-autonomera-offers"
+	JobNameImportGosnomeruOffers  JobName = "import-gosnomeru-offers"
 	JobNameImportOfferDetail      JobName = "import-offer-detail"
 )
 
@@ -30,6 +31,7 @@ type JobQueue string
 const (
 	JobQueueDefault                JobQueue = "default"
 	JobQueueImportAutonomeraOffers JobQueue = "import-autonomera-offers"
+	JobQueueImportGosnomeruOffers  JobQueue = "import-gosnomeru-offers"
 	JobQueueImportOfferDetail      JobQueue = "import-offer-detail"
 )
 
@@ -37,6 +39,7 @@ func AllJobQueues() []JobQueue {
 	return []JobQueue{
 		JobQueueDefault,
 		JobQueueImportAutonomeraOffers,
+		JobQueueImportGosnomeruOffers,
 		JobQueueImportOfferDetail,
 	}
 }

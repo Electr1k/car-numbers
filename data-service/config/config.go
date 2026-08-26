@@ -49,6 +49,7 @@ type GosnomeruConfig struct {
 type CronConfig struct {
 	ImportAutonomeraActiveOffers  string `env:"IMPORT_AUTONOMERA_ACTIVE_OFFERS" env-default:"0 * * * *"`
 	ImportAutonomeraArchiveOffers string `env:"IMPORT_AUTONOMERA_ARCHIVE_OFFERS" env-default:"30 * * * *"`
+	ImportGosnomeruOffers         string `env:"IMPORT_GOSNOMERU_OFFERS" env-default:"0 * * * *"`
 }
 
 func MustLoad() *Config {
