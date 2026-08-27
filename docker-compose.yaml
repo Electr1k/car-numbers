@@ -47,19 +47,9 @@ services:
     volumes:
       - ./ML:/app
       - ./ML/models:/app/models
-      - ./ML/catboost_info:/app/catboost_info
-    environment:
-      - DATABASE_HOST=data-db
-      - DATABASE_NAME=${DATABASE_DATABASE:-postgres}
-      - DATABASE_USER=${DATABASE_USER:-postgres}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres1}
-      - DATABASE_PORT=5432
-      - PYTHONPATH=/app
-    env_file: .env
+      - ./ML/data:/app/data:ro
     ports:
       - "8000:8000"
-    depends_on:
-      - data-db
     restart: always
 
   frontend:
