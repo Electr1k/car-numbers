@@ -70,12 +70,12 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	_, err = detailProvider.FetchOfferDetail(ctx, &offer)
+	enriched, err := detailProvider.FetchOfferDetail(ctx, offer)
 	if err != nil {
 		return err
 	}
 
-	err = uc.repository.UpdateOffer(ctx, offer.Offer)
+	err = uc.repository.UpdateOffer(ctx, enriched.Offer)
 	if err != nil {
 		return err
 	}

@@ -12,8 +12,8 @@ import (
 
 type offerProvider interface {
 	FetchLatestOffers(ctx context.Context) (provider.FetchResult, error)
-	FetchOfferDetail(ctx context.Context, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error)
-	FetchOfferDetailByExternalId(ctx context.Context, externalId string) (*domain.OfferWithNumber, error)
+	FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error)
+	FetchOfferDetailByExternalId(ctx context.Context, externalId string) (domain.OfferWithNumber, error)
 }
 
 type offerRepository interface {
@@ -132,7 +132,7 @@ func (uc *UseCase) fetchLastExternalId(ctx context.Context) (int, error) {
 
 // refreshStored - догружает деталку поверх уже сохранённого предложения, не трогая поля из выдачи
 func (uc *UseCase) refreshStored(ctx context.Context, stored domain.OfferWithNumber) error {
-	offer, err := uc.provider.FetchOfferDetail(ctx, &stored)
+	offer, err := uc.provider.FetchOfferDetail(ctx, stored)
 	if err != nil {
 		return fmt.Errorf("fetch offer detail: %w", err)
 	}
@@ -151,7 +151,7 @@ func (uc *UseCase) importNew(ctx context.Context, externalId string) error {
 		return err
 	}
 
-	if _, err := uc.repository.UpdateOrCreate(ctx, *offer); err != nil {
+	if _, err := uc.repository.UpdateOrCreate(ctx, offer); err != nil {
 		return fmt.Errorf("update or create offer: %w", err)
 	}
 

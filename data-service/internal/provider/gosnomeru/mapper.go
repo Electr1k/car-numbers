@@ -28,14 +28,14 @@ func NewMapper(baseURL string) *Mapper {
 
 // MapOfferToDomain - Маппит строку выдачи в домен
 func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNumber, error) {
-	var empty domain.OfferWithNumber
+	var emptyOffer domain.OfferWithNumber
 
 	raw, err := json.Marshal(externalOffer)
 	if err != nil {
-		return empty, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
+		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
 	}
 
-	url := m.baseURL + "/plate/" + externalOffer.ID + "-" + externalOffer.Slug + ".html"
+	url := m.getOfferUrl(externalOffer.ID, externalOffer.Slug)
 
 	numberStr := externalOffer.Number.Letters + externalOffer.Number.Region
 	numberType := domain.NumberTypeCar
@@ -45,17 +45,17 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 
 	number, err := domain.NewNumber(numberStr, numberType)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
+		return emptyOffer, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
 	}
 
 	status, err := mapStatus(externalOffer.Status)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid status %q: %w", provider.ErrRowSkipped, status, err)
+		return emptyOffer, fmt.Errorf("%w: invalid status %q: %w", provider.ErrRowSkipped, status, err)
 	}
 
 	postedAt, err := mapPostedAt(externalOffer.Date)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid date %q: %w", provider.ErrRowSkipped, externalOffer.Date, err)
+		return emptyOffer, fmt.Errorf("%w: invalid date %q: %w", provider.ErrRowSkipped, externalOffer.Date, err)
 	}
 
 	var price *float64
@@ -80,7 +80,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 		nil,
 	)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalOffer.ID, err)
+		return emptyOffer, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalOffer.ID, err)
 	}
 
 	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
@@ -114,15 +114,16 @@ func mapPostedAt(dateStr string) (time.Time, error) {
 	return postedAt, nil
 }
 
-func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
+func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
+	var emptyOffer domain.OfferWithNumber
 
 	newOffer, err := m.MapOfferDetailToDomain(response)
 	if err != nil {
-		return nil, err
+		return emptyOffer, err
 	}
 
 	if newOffer.Number.Number != offer.Number.Number {
-		return nil, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, newOffer.Number.Number)
+		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, newOffer.Number.Number)
 	}
 
 	viewCount := offer.Offer.ViewCount
@@ -141,23 +142,22 @@ func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer *domain.Of
 		newOffer.Offer.Comment,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: read row json: %w", provider.ErrRowSkipped, err)
+		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrRowSkipped, err)
 	}
 
 	return offer, nil
 }
 
 func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithNumber, error) {
-
-	var empty domain.OfferWithNumber
+	var emptyOffer domain.OfferWithNumber
 
 	raw, err := json.Marshal(response)
 	if err != nil {
-		return empty, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
+		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
 	}
 	rawStr := string(raw)
 
-	url := m.baseURL + "/plate/" + response.ID + "-" + response.Slug + ".html"
+	url := m.getOfferUrl(response.ID, response.Slug)
 
 	numberStr := response.Number.Letters + response.Number.Region
 	numberType := domain.NumberTypeCar
@@ -167,7 +167,7 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 
 	number, err := domain.NewNumber(numberStr, numberType)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
+		return emptyOffer, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
 	}
 
 	status := domain.OfferStatusActive
@@ -182,13 +182,13 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 
 	posted, err := time.Parse(dateLayout, response.CreatedAt)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid date %q: %w", provider.ErrBrokenOffer, response.CreatedAt, err)
+		return emptyOffer, fmt.Errorf("%w: invalid date %q: %w", provider.ErrBrokenOffer, response.CreatedAt, err)
 	}
 	postedAt := &posted
 
 	refreshed, err := time.Parse(dateLayout, response.Date)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid date %q: %w", provider.ErrBrokenOffer, response.Date, err)
+		return emptyOffer, fmt.Errorf("%w: invalid date %q: %w", provider.ErrBrokenOffer, response.Date, err)
 	}
 	refreshedAt := &refreshed
 
@@ -214,8 +214,12 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 		comment,
 	)
 	if err != nil {
-		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, response.ID, err)
+		return emptyOffer, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, response.ID, err)
 	}
 
 	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
+}
+
+func (m *Mapper) getOfferUrl(externalId string, slug string) string {
+	return m.baseURL + "/plate/" + externalId + "-" + slug + ".html"
 }

@@ -42,34 +42,36 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 	return result, nil
 }
 
-func (s *Service) FetchOfferDetail(ctx context.Context, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
+func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
 	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.ExternalId)
 	if errors.Is(err, provider.ErrNotFound) {
 		offer.Offer.Status = domain.OfferStatusInactive
 		return offer, nil
 	}
 	if err != nil {
-		return &domain.OfferWithNumber{}, err
+		return domain.OfferWithNumber{}, err
 	}
 
 	return s.mapper.ApplyOfferDetailToDomain(*response, offer)
 }
 
-func (s *Service) FetchOfferDetailByExternalId(ctx context.Context, externalId string) (*domain.OfferWithNumber, error) {
+func (s *Service) FetchOfferDetailByExternalId(ctx context.Context, externalId string) (domain.OfferWithNumber, error) {
+	var emptyOffer domain.OfferWithNumber
+
 	response, err := s.client.FetchOfferDetail(ctx, externalId)
 	if errors.Is(err, provider.ErrNotFound) {
-		return nil, provider.ErrNotFound
+		return emptyOffer, provider.ErrNotFound
 	}
 	if err != nil {
-		return nil, err
+		return emptyOffer, err
 	}
 
 	offer, err := s.mapper.MapOfferDetailToDomain(*response)
 	if err != nil {
-		return nil, err
+		return emptyOffer, err
 	}
 
-	return &offer, nil
+	return offer, nil
 }
 
 func (s *Service) FetchLatestOffers(ctx context.Context) (provider.FetchResult, error) {

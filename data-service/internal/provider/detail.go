@@ -7,5 +7,5 @@ import (
 
 // OfferDetailProvider - поставщик, умеющий догрузить деталку оффера
 type OfferDetailProvider interface {
-	FetchOfferDetail(ctx context.Context, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error)
+	FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error)
 }

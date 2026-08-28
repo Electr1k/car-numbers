@@ -213,15 +213,16 @@ func parsePrice(priceText string) (*float64, error) {
 	return &price, nil
 }
 
-func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.OfferWithNumber) (*domain.OfferWithNumber, error) {
+func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
+	var emptyOffer domain.OfferWithNumber
 	raw, err := sel.Html()
 	if err != nil {
-		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrBrokenOffer, err)
+		return emptyOffer, fmt.Errorf("%w: read row html: %w", provider.ErrBrokenOffer, err)
 	}
 
 	number, err := parseNumberFromDetail(sel)
 	if err != nil {
-		return nil, err
+		return emptyOffer, err
 	}
 
 	if offer.Number.Type == domain.NumberTypeMoto {
@@ -235,7 +236,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 	}
 
 	if number != offer.Number.Number {
-		return nil, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, number)
+		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, number)
 	}
 
 	whereAbouts := parseWhereaboutsFromDetail(sel)
@@ -251,7 +252,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 
 	table := sel.Find(".article__table.user-data-table")
 	if table.Length() == 0 {
-		return nil, fmt.Errorf("%w: no user-data table", provider.ErrBrokenOffer)
+		return emptyOffer, fmt.Errorf("%w: no user-data table", provider.ErrBrokenOffer)
 	}
 	table.Find("div.user-data-table__tr").Each(func(i int, s *goquery.Selection) {
 		title := strings.TrimSpace(s.Find(".user-data-table__th").Text())
@@ -277,7 +278,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 	})
 
 	if parseErr != nil {
-		return nil, parseErr
+		return emptyOffer, parseErr
 	}
 
 	commentText := strings.TrimSpace(sel.Find(".article-comment__content").Text())
@@ -298,7 +299,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer *domain.Of
 		comment,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)
+		return emptyOffer, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)
 	}
 
 	return offer, nil
