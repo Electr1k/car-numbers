@@ -13,6 +13,9 @@ NUMERIC = ('dg_eq_reg', 'log_dnum')
 
 RARE_REGION = 'reg=RARE'
 
+# Порядок групп в frame_keys(); на него опирается центрирование в fit.py
+GROUPS = ('reg', 'dg', 'series', 'dcls', 'scls', 'prov', 'sxr')
+
 
 @dataclass(frozen=True)
 class Vocabulary:

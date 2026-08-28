@@ -93,10 +93,30 @@ def build(data: dataset.Dataset, config: dataset.Config, version: str) -> artifa
         numeric=numeric,
         reference=round(float(reference), 5),
         residuals=quantiles,
+        centering=centering(frame, vocab, weights, numeric),
         metrics=metrics,
         config=config.as_dict() | {'as_of': data.as_of.date().isoformat()},
         vocabulary=vocab.sizes() | {'features': len(names)},
     )
+
+
+def centering(frame: pd.DataFrame, vocab: features.Vocabulary, weights: dict,
+              numeric: dict) -> dict:
+    """Типичный уровень каждой группы признаков — точка отсчёта для раскладки."""
+    weight = frame.weight.to_numpy()
+    total = weight.sum()
+    levels = {}
+    for group, column in zip(features.GROUPS, features.frame_keys(frame, vocab)):
+        if group == 'prov':
+            continue
+        contribution = column.map(lambda key: weights.get(key, 0.0)).to_numpy()
+        levels[group] = round(float((contribution * weight).sum() / total), 5)
+
+    magnitude = np.log1p(frame.digits_value.to_numpy())
+    levels['log_dnum'] = round(
+        float(numeric['log_dnum'] * (magnitude * weight).sum() / total), 5
+    )
+    return levels
 
 
 def gate(model: artifact.Model, previous: artifact.Model | None) -> list[str]:

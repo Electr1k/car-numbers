@@ -66,7 +66,19 @@ def _single(estimate) -> dict:
         'number': estimate.number,
         'price': {'p25': estimate.p25, 'p50': estimate.p50, 'p75': estimate.p75},
         'confidence': estimate.confidence,
-        'factors': [{'name': factor.name, 'weight': factor.weight} for factor in estimate.factors],
+        'breakdown': {
+            'base': estimate.breakdown.base,
+            'items': [
+                {
+                    'code': item.code,
+                    'value': item.value,
+                    'title': item.title,
+                    'multiplier': item.multiplier,
+                    'exact': item.exact,
+                }
+                for item in estimate.breakdown.items
+            ],
+        },
     }
 
 
@@ -81,7 +93,7 @@ def _masked(number: str, estimates: list) -> dict:
         'number': number.strip().upper(),
         'price': {'p25': low, 'p50': median, 'p75': high},
         'confidence': 'low',
-        'factors': [],
+        'breakdown': None,
         'mask': {
             'variants': len(estimates),
             'cheapest': middles[0],
