@@ -1,10 +1,14 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// ErrOfferNotFound - Предложение не найдено
+var ErrOfferNotFound = errors.New("offer not found")
 
 // OfferStatus - состояние предложения у провайдера
 type OfferStatus string

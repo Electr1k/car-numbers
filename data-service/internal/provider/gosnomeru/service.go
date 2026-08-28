@@ -5,7 +5,6 @@ import (
 	"data-service/internal/domain"
 	"data-service/internal/provider"
 	"errors"
-	"time"
 )
 
 type Service struct {
@@ -53,6 +52,43 @@ func (s *Service) FetchOfferDetail(ctx context.Context, offer *domain.OfferWithN
 		return &domain.OfferWithNumber{}, err
 	}
 
-	time.Sleep(time.Second)
-	return s.mapper.MapOfferDetailToDomain(*response, offer)
+	return s.mapper.ApplyOfferDetailToDomain(*response, offer)
+}
+
+func (s *Service) FetchOfferDetailByExternalId(ctx context.Context, externalId string) (*domain.OfferWithNumber, error) {
+	response, err := s.client.FetchOfferDetail(ctx, externalId)
+	if errors.Is(err, provider.ErrNotFound) {
+		return nil, provider.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	offer, err := s.mapper.MapOfferDetailToDomain(*response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &offer, nil
+}
+
+func (s *Service) FetchLatestOffers(ctx context.Context) (provider.FetchResult, error) {
+	response, err := s.client.FetchLatestOffers(ctx)
+	if err != nil {
+		return provider.FetchResult{}, err
+	}
+
+	result := provider.FetchResult{TotalPages: 0}
+	for index, number := range response.Items {
+		result.RowsFound++
+		offer, err := s.mapper.MapOfferToDomain(number)
+		if err != nil {
+			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
+			continue
+		}
+
+		result.Offers = append(result.Offers, offer)
+	}
+
+	return result, err
 }

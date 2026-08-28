@@ -21,6 +21,9 @@ const (
 	// getNumberDetail - Деталка предложения
 	getNumberDetail = "/api/v1/plate/"
 
+	// getLatestNumbers - Последние новые предложения
+	getLatestNumbers = "/api/v1/plate/latest"
+
 	// Порядок выдачи: свежие сверху
 	orderColumn = "-update_time"
 
@@ -33,6 +36,8 @@ const (
 	maxResponseBytes = 8 << 20
 
 	maxErrorPreviewBytes = 512
+
+	latestNumberLimit = 20
 )
 
 // Client - HTTP-клиент к gosnomeru
@@ -190,6 +195,50 @@ func (c *Client) FetchOfferDetail(ctx context.Context, externalId string) (*Offe
 		"bytes", len(body))
 
 	return &jsonResponse, nil
+}
+
+// LatestOffersResponse - Ответ эндпоинта FetchLatestOffers
+type LatestOffersResponse struct {
+	Items []OffersItem `json:"items"`
+}
+
+// FetchLatestOffers забирает последние созданные предложения
+func (c *Client) FetchLatestOffers(ctx context.Context) (*LatestOffersResponse, error) {
+	requestUrl := c.baseURL + getLatestNumbers + "?limit=" + strconv.Itoa(latestNumberLimit)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	c.logger.Debug("fetching latest offers page", "url", requestUrl)
+
+	response, err := c.http.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestUrl, err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, processBadStatus(response, requestUrl)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	if err != nil {
+		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+	}
+
+	var jsonResponse LatestOffersResponse
+	if err := json.Unmarshal(body, &jsonResponse); err != nil {
+		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+	}
+
+	c.logger.Debug("latest offers fetched",
+		"url", requestUrl,
+		"status_code", response.StatusCode,
+		"bytes", len(body))
+
+	return &jsonResponse, nil
+
 }
 
 func (c *Client) buildURL(page int) string {

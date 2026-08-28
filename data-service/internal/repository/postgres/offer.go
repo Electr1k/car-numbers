@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"data-service/internal/domain"
+	"errors"
 	"fmt"
 	"time"
 
@@ -51,6 +52,45 @@ SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, u
 	upserted_number.created_at, upserted_number.updated_at
 FROM upserted_offer, upserted_number;`
 
+// upsertOfferWithDetailQuery - вставка номера и предложения вместе с деталкой одним запросом
+const upsertOfferWithDetailQuery = `
+WITH upserted_number AS (
+	INSERT INTO numbers (id, number, type)
+	VALUES ($1, $2, $3)
+	ON CONFLICT (number, type) DO UPDATE SET
+		updated_at = CURRENT_TIMESTAMP
+	RETURNING id, number, type, created_at, updated_at
+),
+upserted_offer AS (
+	INSERT INTO offers (id, number_id, provider, external_id, price, status, whereabouts, reissue_included,
+		view_count, posted_at, refreshed_at, url, raw, raw_detail, comment)
+	SELECT $4::uuid, upserted_number.id, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+	FROM upserted_number
+	ON CONFLICT (provider, external_id) DO UPDATE SET
+		number_id        = EXCLUDED.number_id,
+		price            = EXCLUDED.price,
+		status           = EXCLUDED.status,
+		whereabouts      = EXCLUDED.whereabouts,
+		reissue_included = EXCLUDED.reissue_included,
+		view_count       = EXCLUDED.view_count,
+		posted_at        = EXCLUDED.posted_at,
+		refreshed_at     = EXCLUDED.refreshed_at,
+		url              = EXCLUDED.url,
+		raw              = EXCLUDED.raw,
+		raw_detail       = EXCLUDED.raw_detail,
+		comment          = EXCLUDED.comment,
+		updated_at       = CURRENT_TIMESTAMP
+	RETURNING id, provider, external_id, price, status, whereabouts, reissue_included, view_count,
+		posted_at, refreshed_at, url, raw, raw_detail, comment, created_at, updated_at
+)
+SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, upserted_offer.price,
+	upserted_offer.status, upserted_offer.whereabouts, upserted_offer.reissue_included, upserted_offer.view_count,
+	upserted_offer.posted_at, upserted_offer.refreshed_at, upserted_offer.url, upserted_offer.raw,
+	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.created_at, upserted_offer.updated_at,
+	upserted_number.id, upserted_number.number, upserted_number.type,
+	upserted_number.created_at, upserted_number.updated_at
+FROM upserted_offer, upserted_number;`
+
 const getOfferByIdQuery = `
 SELECT 
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
@@ -59,6 +99,16 @@ SELECT
 FROM offers
 JOIN numbers ON offers.number_id = numbers.id
 WHERE offers.id = $1
+;`
+
+const getOfferByExternalIdQuery = `
+SELECT
+    offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
+    refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
+    numbers.id, number, type, numbers.created_at, numbers.updated_at
+FROM offers
+JOIN numbers ON offers.number_id = numbers.id
+WHERE offers.provider = $1 AND offers.external_id = $2
 ;`
 
 const getOffersQuery = `
@@ -155,6 +205,54 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 	return saved, nil
 }
 
+// UpdateOrCreate - Сохранение одного предложения вместе с номером и деталкой
+func (r *OfferRepository) UpdateOrCreate(ctx context.Context, item domain.OfferWithNumber) (domain.OfferWithNumber, error) {
+	if item.Number == nil || item.Offer == nil {
+		return domain.OfferWithNumber{}, fmt.Errorf("update or create offer: empty offer or number")
+	}
+
+	tx, err := r.postgres.pool.Begin(ctx)
+	if err != nil {
+		return domain.OfferWithNumber{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	row := tx.QueryRow(ctx, upsertOfferWithDetailQuery,
+		item.Number.Id,
+		item.Number.Number,
+		item.Number.Type,
+		item.Offer.Id,
+		item.Offer.Provider,
+		item.Offer.ExternalId,
+		item.Offer.Price,
+		item.Offer.Status,
+		item.Offer.Whereabouts,
+		item.Offer.ReissueIncluded,
+		item.Offer.ViewCount,
+		item.Offer.PostedAt,
+		item.Offer.RefreshedAt,
+		item.Offer.Url,
+		item.Offer.Raw,
+		item.Offer.RawDetailed,
+		item.Offer.Comment,
+	)
+
+	saved, err := scanOfferWithNumber(row)
+	if err != nil {
+		return domain.OfferWithNumber{}, fmt.Errorf("save offer %s/%s: %w", item.Offer.Provider, item.Offer.ExternalId, err)
+	}
+
+	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithNumber{saved}); err != nil {
+		return domain.OfferWithNumber{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return domain.OfferWithNumber{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return saved, nil
+}
+
 // upsertPriceHistory - Запись наблюдений цены, единственное место записи в price_history
 func (r *OfferRepository) upsertPriceHistory(ctx context.Context, tx pgx.Tx, items []domain.OfferWithNumber) error {
 	if len(items) == 0 {
@@ -193,6 +291,21 @@ func (r *OfferRepository) GetOfferById(ctx context.Context, id uuid.UUID) (domai
 	item, err := scanOfferWithNumber(row)
 	if err != nil {
 		return domain.OfferWithNumber{}, fmt.Errorf("get offer by id %s: %w", id, err)
+	}
+
+	return item, nil
+}
+
+// GetOfferByExternalId - Предложение по идентификатору у провайдера, domain.ErrOfferNotFound если его ещё нет
+func (r *OfferRepository) GetOfferByExternalId(ctx context.Context, provider domain.Provider, externalId string) (domain.OfferWithNumber, error) {
+	row := r.postgres.pool.QueryRow(ctx, getOfferByExternalIdQuery, provider, externalId)
+
+	item, err := scanOfferWithNumber(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.OfferWithNumber{}, domain.ErrOfferNotFound
+	}
+	if err != nil {
+		return domain.OfferWithNumber{}, fmt.Errorf("get offer by external id %s/%s: %w", provider, externalId, err)
 	}
 
 	return item, nil
