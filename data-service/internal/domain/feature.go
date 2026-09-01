@@ -28,6 +28,12 @@ const (
 
 	// FeatureKeyDispatchImportGosnomeruOffers - Вызов импорта предложений из gosnomeru
 	FeatureKeyDispatchImportGosnomeruOffers FeatureKey = "dispatch-import-gosnomeru-offers"
+
+	// FeatureKeyImportAnomeraOffers - Импорт предложений из anomera
+	FeatureKeyImportAnomeraOffers FeatureKey = "import-anomera-offers"
+
+	//FeatureKeyDispatchImportGosnomeruOffers - Вызов импорта предложений из gosnomeru
+	//FeatureKeyDispatchImportGosnomeruOffers FeatureKey = "dispatch-import-gosnomeru-offers"
 )
 
 var (

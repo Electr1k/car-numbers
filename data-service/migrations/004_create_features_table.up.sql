@@ -50,7 +50,21 @@ VALUES(
 
 INSERT INTO features (id, key, name)
 VALUES(
-      '01a0401a-7f44-776e-aa63-4130be56acdd',
-      'dispatch-import-gosnomeru-offers',
-      'Вызов импорта предложений из gosnomeru'
-  ) ON CONFLICT (key) DO NOTHING;
+    '01a0401a-7f44-776e-aa63-4130be56acdd',
+    'dispatch-import-gosnomeru-offers',
+    'Вызов импорта предложений из gosnomeru'
+) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a05a47-6f4d-7474-8e55-d4b2504a097c',
+    'import-anomera-offers',
+    'Импорт предложений из anomera'
+) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a05a47-a247-711c-b58f-522c5c2345c6',
+    'dispatch-import-anomera-offers',
+    'Вызов импорта предложений из anomera'
+) ON CONFLICT (key) DO NOTHING;

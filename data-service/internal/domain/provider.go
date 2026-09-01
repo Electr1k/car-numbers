@@ -8,4 +8,6 @@ const (
 	ProviderAutonomera Provider = "autonomera"
 	// ProviderGosnomeru - gosnomeru.com
 	ProviderGosnomeru Provider = "gosnomeru"
+	// ProviderAnomera - anomera.ru
+	ProviderAnomera Provider = "anomera"
 )

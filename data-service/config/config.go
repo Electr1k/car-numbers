@@ -15,6 +15,7 @@ type Config struct {
 	DatabaseConfig   `env-prefix:"DATABASE_"`
 	AutoNomeraConfig `env-prefix:"AUTONOMERA_"`
 	GosnomeruConfig  `env-prefix:"GOSNOMERU_"`
+	AnomeraConfig    `env-prefix:"ANOMERA_"`
 	CronConfig       `env-prefix:"CRON_"`
 }
 
@@ -43,6 +44,11 @@ type AutoNomeraConfig struct {
 
 type GosnomeruConfig struct {
 	BaseURL     string        `env:"BASE_URL" env-default:"https://gosnomeru.com"`
+	ImportDepth time.Duration `env:"IMPORT_DEPTH" env-default:"72h"`
+}
+
+type AnomeraConfig struct {
+	BaseURL     string        `env:"BASE_URL" env-default:"https://anomera6.ru"`
 	ImportDepth time.Duration `env:"IMPORT_DEPTH" env-default:"72h"`
 }
 

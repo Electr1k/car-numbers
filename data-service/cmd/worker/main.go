@@ -7,6 +7,7 @@ import (
 	"data-service/internal/feature"
 	"data-service/internal/job"
 	"data-service/internal/job/consumer"
+	"data-service/internal/provider/anomera"
 	"data-service/internal/provider/autonomera"
 	"data-service/internal/provider/gosnomeru"
 	"data-service/internal/provider/resolver"
@@ -69,7 +70,11 @@ func run() error {
 		gosnomeru.NewClient(cfg.GosnomeruConfig.BaseURL, log),
 		gosnomeru.NewMapper(cfg.GosnomeruConfig.BaseURL),
 	)
-	providerResolver := resolver.NewResolver(autonomeraService, gosnomeruService)
+	anomeraService := anomera.NewService(
+		anomera.NewClient(cfg.AnomeraConfig.BaseURL, log),
+		anomera.NewMapper(cfg.AnomeraConfig.BaseURL),
+	)
+	providerResolver := resolver.NewResolver(autonomeraService, gosnomeruService, anomeraService)
 
 	// Импорт деталки офферов
 	importOfferDetailUseCase := importofferdetail.New(

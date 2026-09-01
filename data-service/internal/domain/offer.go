@@ -36,21 +36,21 @@ const (
 
 // Offer - Предложение
 type Offer struct {
-	Id              uuid.UUID         `validate:"required"`                            // Id - Идентификатор
-	NumberId        uuid.UUID         `validate:"required"`                            // NumberId - Идентификатор номера
-	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru"` // Provider - Провайдер, в котором найдено предложение
-	ExternalId      string            `validate:"required"`                            // ExternalId - Идентификатор у провайдера
-	Price           *float64          `validate:"omitempty,gt=0"`                      // Price - Цена
-	Status          OfferStatus       `validate:"required,oneof=active sold inactive"` // Status - Статус предложения
-	Whereabouts     *OfferWhereabouts `validate:"omitempty,oneof=on-car on-storage"`   // Whereabouts - Где находится номер (на авто/хранении)
-	ReissueIncluded *bool             `validate:"omitempty"`                           // ReissueIncluded - Переоформление включено в стоимость
-	ViewCount       *int              `validate:"omitempty,gte=0"`                     // ViewCount - Число просмотров у провайдера
-	PostedAt        *time.Time        `validate:"required"`                            // PostedAt - Дата создания предложения у провайдера
-	RefreshedAt     *time.Time        `validate:"required"`                            // RefreshedAt - Дата поднятия/обновления предложения у провайдера
-	Url             string            `validate:"required"`                            // Url - Ссылка на предложение
-	Raw             string            `validate:"required"`                            // Raw - Сырой объект поставщика
-	RawDetailed     *string           `validate:"omitempty"`                           // RawDetailed - Сырой объект поставщика с детальной информацией
-	Comment         *string           `validate:"omitempty"`                           // Comment - Комментарий
+	Id              uuid.UUID         `validate:"required"`                                    // Id - Идентификатор
+	NumberId        uuid.UUID         `validate:"required"`                                    // NumberId - Идентификатор номера
+	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найдено предложение
+	ExternalId      string            `validate:"required"`                                    // ExternalId - Идентификатор у провайдера
+	Price           *float64          `validate:"omitempty,gt=0"`                              // Price - Цена
+	Status          OfferStatus       `validate:"required,oneof=active sold inactive"`         // Status - Статус предложения
+	Whereabouts     *OfferWhereabouts `validate:"omitempty,oneof=on-car on-storage"`           // Whereabouts - Где находится номер (на авто/хранении)
+	ReissueIncluded *bool             `validate:"omitempty"`                                   // ReissueIncluded - Переоформление включено в стоимость
+	ViewCount       *int              `validate:"omitempty,gte=0"`                             // ViewCount - Число просмотров у провайдера
+	PostedAt        *time.Time        `validate:"required"`                                    // PostedAt - Дата создания предложения у провайдера
+	RefreshedAt     *time.Time        `validate:"required"`                                    // RefreshedAt - Дата поднятия/обновления предложения у провайдера
+	Url             string            `validate:"required"`                                    // Url - Ссылка на предложение
+	Raw             string            `validate:"required"`                                    // Raw - Сырой объект поставщика
+	RawDetailed     *string           `validate:"omitempty"`                                   // RawDetailed - Сырой объект поставщика с детальной информацией
+	Comment         *string           `validate:"omitempty"`                                   // Comment - Комментарий
 	CreatedAt       *time.Time
 	UpdatedAt       *time.Time
 }
