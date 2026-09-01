@@ -14,6 +14,7 @@ type Deps struct {
 	Specs      config.CronConfig
 	AutoNomera config.AutoNomeraConfig
 	Gosnomeru  config.GosnomeruConfig
+	Anomera    config.AnomeraConfig
 	Logger     *slog.Logger
 }
 
@@ -55,6 +56,19 @@ func Register(s *scheduler.Scheduler, d Deps) error {
 	)
 	if err != nil {
 		return fmt.Errorf("register cron %s: %w", nameImportGosnomeruOffers, err)
+	}
+
+	err = register(s, d.Logger,
+		nameImportAnomeraOffers,
+		d.Specs.ImportAnomeraOffers,
+		&importAnomeraOffers{
+			producer: d.Producer,
+			depth:    d.Anomera.ImportDepth,
+			logger:   d.Logger.With("cron", nameImportAnomeraOffers),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("register cron %s: %w", nameImportAnomeraOffers, err)
 	}
 
 	return nil
