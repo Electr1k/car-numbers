@@ -30,6 +30,11 @@ const (
 	// Количество объектов на странице
 	perPage = 50
 
+	rateLimitHeader = "X-Ratelimit-Remaining"
+
+	// TODO: из расчета на 8 воркеров = 8 * 1 * 60 = 480 RpM (лимит 500)
+	rateLimitTimeout = time.Second
+
 	// defaultTimeout - таймаут по умолчанию
 	defaultTimeout = 60 * time.Second
 
@@ -55,6 +60,46 @@ func NewClient(baseURL string, logger *slog.Logger) *Client {
 	}
 
 	return client
+}
+
+func (c *Client) request(ctx context.Context, method string, url string) ([]byte, error) {
+	c.logger.Debug("request", "url", url, "method", method)
+
+	// Спим для рейтлимитов
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(rateLimitTimeout):
+	}
+
+	request, err := http.NewRequestWithContext(ctx, method, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	response, err := c.http.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s %s: %w", provider.ErrProviderUnavailable, method, url, err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return nil, processBadStatus(response, url)
+	}
+
+	responseByte, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	if err != nil {
+		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
+	}
+	c.logger.Debug("response",
+		"url", url,
+		"method", method,
+		"status", response.StatusCode,
+		"rate_limit", response.Header.Get(rateLimitHeader),
+		"body", string(responseByte),
+	)
+
+	return responseByte, nil
 }
 
 // OffersResponse - Ответ эндпоинта FetchOffers
@@ -97,38 +142,15 @@ type OffersNumber struct {
 func (c *Client) FetchOffers(ctx context.Context, page int) (*OffersResponse, error) {
 	requestURL := c.buildURL(page)
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	response, err := c.request(ctx, http.MethodGet, requestURL)
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	c.logger.Debug("fetching page", "url", requestURL)
-
-	response, err := c.http.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestURL, err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, processBadStatus(response, requestURL)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
-	if err != nil {
-		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestURL, err)
+		return nil, err
 	}
 
 	var jsonResponse OffersResponse
-	if err := json.Unmarshal(body, &jsonResponse); err != nil {
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
 		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestURL, err)
 	}
-
-	c.logger.Debug("page fetched",
-		"page", page,
-		"per_page", perPage,
-		"status_code", response.StatusCode,
-		"bytes", len(body))
 
 	return &jsonResponse, nil
 }
@@ -162,37 +184,16 @@ type OfferDetail struct {
 // FetchOfferDetail забирает деталку предложения
 func (c *Client) FetchOfferDetail(ctx context.Context, externalId string) (*OfferDetail, error) {
 	requestUrl := c.baseURL + getNumberDetail + externalId
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+
+	response, err := c.request(ctx, http.MethodGet, requestUrl)
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	c.logger.Debug("fetching offer detail page", "url", requestUrl)
-
-	response, err := c.http.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestUrl, err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, processBadStatus(response, requestUrl)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
-	if err != nil {
-		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+		return nil, err
 	}
 
 	var jsonResponse OfferDetail
-	if err := json.Unmarshal(body, &jsonResponse); err != nil {
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
 		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
 	}
-
-	c.logger.Debug("offer detail fetched",
-		"url", requestUrl,
-		"status_code", response.StatusCode,
-		"bytes", len(body))
 
 	return &jsonResponse, nil
 }
@@ -205,37 +206,16 @@ type LatestOffersResponse struct {
 // FetchLatestOffers забирает последние созданные предложения
 func (c *Client) FetchLatestOffers(ctx context.Context) (*LatestOffersResponse, error) {
 	requestUrl := c.baseURL + getLatestNumbers + "?limit=" + strconv.Itoa(latestNumberLimit)
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestUrl, nil)
+
+	response, err := c.request(ctx, http.MethodGet, requestUrl)
 	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	c.logger.Debug("fetching latest offers page", "url", requestUrl)
-
-	response, err := c.http.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestUrl, err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, processBadStatus(response, requestUrl)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
-	if err != nil {
-		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+		return nil, err
 	}
 
 	var jsonResponse LatestOffersResponse
-	if err := json.Unmarshal(body, &jsonResponse); err != nil {
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
 		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
 	}
-
-	c.logger.Debug("latest offers fetched",
-		"url", requestUrl,
-		"status_code", response.StatusCode,
-		"bytes", len(body))
 
 	return &jsonResponse, nil
 

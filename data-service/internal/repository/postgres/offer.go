@@ -346,27 +346,25 @@ func (r *OfferRepository) GetOffers(ctx context.Context, status domain.OfferStat
 
 // GetOfferIdsByProviderAndStatus - возвращает идентификаторы предложений по провайдеру и статусу
 func (r *OfferRepository) GetOfferIdsByProviderAndStatus(ctx context.Context, provider domain.Provider, status domain.OfferStatus) ([]uuid.UUID, error) {
-	offersIds := make([]uuid.UUID, 0)
-
 	rows, err := r.postgres.pool.Query(ctx, getOfferIdsQuery, provider, status)
 	if err != nil {
-		return offersIds, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
+		return nil, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
 	}
 	defer rows.Close()
 
+	var offersIds []uuid.UUID
 	for rows.Next() {
 		var offerId uuid.UUID
 
-		err := rows.Scan(&offerId)
-		if err != nil {
-			return []uuid.UUID{}, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
+		if err := rows.Scan(&offerId); err != nil {
+			return nil, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
 		}
 
 		offersIds = append(offersIds, offerId)
 	}
 
 	if err := rows.Err(); err != nil {
-		return offersIds, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
+		return nil, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
 	}
 
 	return offersIds, nil
