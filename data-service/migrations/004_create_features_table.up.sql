@@ -68,3 +68,10 @@ VALUES(
     'dispatch-import-anomera-offers',
     'Вызов импорта предложений из anomera'
 ) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a06374-7816-735b-ac98-1ca771b03e4f',
+    'sync-active-offers',
+    'Синхронизация активных офферов (из всех провайдеров)'
+) ON CONFLICT (key) DO NOTHING;

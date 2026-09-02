@@ -34,6 +34,9 @@ const (
 
 	// FeatureKeyDispatchImportAnomeraOffers - Вызов импорта предложений из anomera
 	FeatureKeyDispatchImportAnomeraOffers FeatureKey = "dispatch-import-anomera-offers"
+
+	// FeatureKeySyncActiveOffers - Синхронизация активных офферов
+	FeatureKeySyncActiveOffers FeatureKey = "sync-active-offers"
 )
 
 var (

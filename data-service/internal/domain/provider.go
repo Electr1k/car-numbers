@@ -11,3 +11,11 @@ const (
 	// ProviderAnomera - anomera.ru
 	ProviderAnomera Provider = "anomera"
 )
+
+func GetAllProviders() []Provider {
+	return []Provider{
+		// ProviderAutonomera, TODO: пока берем из архива
+		ProviderGosnomeru,
+		ProviderAnomera,
+	}
+}
