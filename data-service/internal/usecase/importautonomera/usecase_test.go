@@ -43,13 +43,13 @@ func withDetail(item domain.OfferWithNumber) domain.OfferWithNumber {
 	return domain.OfferWithNumber{Number: item.Number, Offer: &offer}
 }
 
-type dispatcherFunc func(ctx context.Context, offerId uuid.UUID) (bool, error)
+type dispatcherFunc func(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error)
 
-func (f dispatcherFunc) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
-	return f(ctx, offerId)
+func (f dispatcherFunc) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error) {
+	return f(ctx, offerId, provider)
 }
 
-func dispatchAll(_ context.Context, _ uuid.UUID) (bool, error) {
+func dispatchAll(_ context.Context, _ uuid.UUID, _ domain.Provider) (bool, error) {
 	return true, nil
 }
 
@@ -160,7 +160,7 @@ func TestHandleDispatchesDetailForOffersWithoutDetail(t *testing.T) {
 	})
 
 	var dispatchedIds []uuid.UUID
-	dispatcher := dispatcherFunc(func(_ context.Context, offerId uuid.UUID) (bool, error) {
+	dispatcher := dispatcherFunc(func(_ context.Context, offerId uuid.UUID, _ domain.Provider) (bool, error) {
 		dispatchedIds = append(dispatchedIds, offerId)
 		return true, nil
 	})
@@ -197,8 +197,10 @@ func TestHandleDispatchesStoredOfferId(t *testing.T) {
 	})
 
 	var dispatchedIds []uuid.UUID
-	dispatcher := dispatcherFunc(func(_ context.Context, offerId uuid.UUID) (bool, error) {
+	var dispatchedProviders []domain.Provider
+	dispatcher := dispatcherFunc(func(_ context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error) {
 		dispatchedIds = append(dispatchedIds, offerId)
+		dispatchedProviders = append(dispatchedProviders, provider)
 		return true, nil
 	})
 
@@ -209,6 +211,11 @@ func TestHandleDispatchesStoredOfferId(t *testing.T) {
 
 	if !slices.Equal(dispatchedIds, []uuid.UUID{storedId}) {
 		t.Fatalf("dispatched = %v, want %v", dispatchedIds, []uuid.UUID{storedId})
+	}
+
+	// Провайдер оффера определяет очередь джобы
+	if !slices.Equal(dispatchedProviders, []domain.Provider{domain.ProviderAutonomera}) {
+		t.Fatalf("dispatched providers = %v, want %v", dispatchedProviders, []domain.Provider{domain.ProviderAutonomera})
 	}
 }
 
@@ -221,7 +228,7 @@ func TestHandleFailsWhenDetailDispatchFails(t *testing.T) {
 		return resultWith(t, 2, now), nil
 	})
 
-	dispatcher := dispatcherFunc(func(_ context.Context, _ uuid.UUID) (bool, error) {
+	dispatcher := dispatcherFunc(func(_ context.Context, _ uuid.UUID, _ domain.Provider) (bool, error) {
 		return false, dispatchFailed
 	})
 

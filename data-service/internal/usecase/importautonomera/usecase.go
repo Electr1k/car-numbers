@@ -23,7 +23,7 @@ type offerSaver interface {
 }
 
 type detailDispatcher interface {
-	DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error)
+	DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error)
 }
 
 type feature interface {
@@ -159,7 +159,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 				continue
 			}
 
-			success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offer.Offer.Id)
+			success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offer.Offer.Id, offer.Offer.Provider)
 			if err != nil {
 				return fmt.Errorf("dispatch offer details at offset %d: %w", offset, err)
 			}

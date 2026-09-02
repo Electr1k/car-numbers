@@ -35,7 +35,7 @@ func (p *Producer) DispatchImportAutonomeraOffers(ctx context.Context, payload I
 
 	return p.dispatch(ctx, newTask(
 		domain.JobNameImportAutonomeraOffers,
-		domain.JobQueueImportAutonomeraOffers,
+		domain.JobQueueAutonomera,
 		string(encoded),
 		importAutonomeraOffersUniqueKey(payload.Section),
 	))

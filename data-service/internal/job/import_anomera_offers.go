@@ -33,7 +33,7 @@ func (p *Producer) DispatchImportAnomeraOffers(ctx context.Context, payload Impo
 
 	return p.dispatch(ctx, newTask(
 		domain.JobNameImportAnomeraOffers,
-		domain.JobQueueImportAnomeraOffers,
+		domain.JobQueueAnomera,
 		string(encoded),
 		importAnomeraOffersUniqueKey(),
 	))

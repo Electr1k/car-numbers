@@ -17,7 +17,7 @@ func importOfferDetailUniqueKey(offerId uuid.UUID) string {
 	return fmt.Sprintf("%s:%s", domain.JobNameImportOfferDetail, offerId)
 }
 
-func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID) (bool, error) {
+func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error) {
 	enabled, err := p.features.Enabled(ctx, domain.FeatureKeyDispatchImportOfferDetail)
 	if err != nil {
 		return false, err
@@ -33,7 +33,7 @@ func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.U
 
 	return p.dispatch(ctx, newTask(
 		domain.JobNameImportOfferDetail,
-		domain.JobQueueImportOfferDetail,
+		provider.JobQueue(),
 		string(encoded),
 		importOfferDetailUniqueKey(offerId),
 	))

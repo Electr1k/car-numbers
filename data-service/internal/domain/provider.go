@@ -19,3 +19,17 @@ func GetAllProviders() []Provider {
 		ProviderAnomera,
 	}
 }
+
+// JobQueue - очередь, в которой обрабатываются джобы провайдера
+func (p Provider) JobQueue() JobQueue {
+	switch p {
+	case ProviderAutonomera:
+		return JobQueueAutonomera
+	case ProviderGosnomeru:
+		return JobQueueGosnomeru
+	case ProviderAnomera:
+		return JobQueueAnomera
+	default:
+		return JobQueueDefault
+	}
+}

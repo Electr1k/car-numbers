@@ -31,7 +31,7 @@ func (p *Producer) DispatchSyncActiveOffers(ctx context.Context, provider domain
 
 	return p.dispatch(ctx, newTask(
 		domain.JobNameSyncActiveOffers,
-		domain.JobQueueSyncActiveOffers,
+		provider.JobQueue(),
 		string(encoded),
 		syncActiveOffersUniqueKey(provider),
 	))

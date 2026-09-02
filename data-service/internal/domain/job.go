@@ -31,22 +31,18 @@ const (
 type JobQueue string
 
 const (
-	JobQueueDefault                JobQueue = "default"
-	JobQueueImportAutonomeraOffers JobQueue = "import-autonomera-offers"
-	JobQueueImportGosnomeruOffers  JobQueue = "import-gosnomeru-offers"
-	JobQueueImportAnomeraOffers    JobQueue = "import-anomera-offers"
-	JobQueueImportOfferDetail      JobQueue = "import-offer-detail"
-	JobQueueSyncActiveOffers       JobQueue = "sync-active-offers"
+	JobQueueDefault    JobQueue = "default"
+	JobQueueAutonomera JobQueue = "autonomera"
+	JobQueueGosnomeru  JobQueue = "gosnomeru"
+	JobQueueAnomera    JobQueue = "anomera"
 )
 
 func AllJobQueues() []JobQueue {
 	return []JobQueue{
 		JobQueueDefault,
-		JobQueueImportAutonomeraOffers,
-		JobQueueImportGosnomeruOffers,
-		JobQueueImportAnomeraOffers,
-		JobQueueImportOfferDetail,
-		JobQueueSyncActiveOffers,
+		JobQueueAutonomera,
+		JobQueueGosnomeru,
+		JobQueueAnomera,
 	}
 }
 
