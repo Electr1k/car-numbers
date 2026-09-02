@@ -43,8 +43,11 @@ func New(
 	}
 }
 
-// Handle - синхронизирует активные офферы (часть провайдеров неактивные офферы удаляет)
+// Handle - синхронизирует активные офферы провайдера (часть провайдеров неактивные офферы удаляет)
 func (uc *UseCase) Handle(ctx context.Context, params Params) error {
+	if err := params.validate(); err != nil {
+		return err
+	}
 
 	enabled, err := uc.features.Enabled(ctx, domain.FeatureKeySyncActiveOffers)
 	if err != nil {
@@ -54,41 +57,26 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		return nil
 	}
 
-	providers := params.providers()
+	logger := uc.logger.With("provider", params.Provider)
+	logger.Info("sync started")
 
-	uc.logger.Info("sync started", "providers", providers)
-
-	dispatched := 0
-	for _, provider := range providers {
-		dispatchedOnProvider, err := uc.syncByProvider(ctx, provider)
-		if err != nil {
-			return err
-		}
-		dispatched += dispatchedOnProvider
-	}
-
-	uc.logger.Info("import finished", "dispatched", dispatched)
-
-	return nil
-}
-
-func (uc *UseCase) syncByProvider(ctx context.Context, provider domain.Provider) (int, error) {
-	dispatched := 0
-
-	offers, err := uc.repository.GetOffers(ctx, domain.OfferStatusActive, provider)
+	offers, err := uc.repository.GetOffers(ctx, domain.OfferStatusActive, params.Provider)
 	if err != nil {
-		return dispatched, err
+		return err
 	}
 
+	dispatched := 0
 	for _, offer := range offers {
 		success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offer.Offer.Id)
 		if err != nil {
-			return dispatched, fmt.Errorf("dispatch offer details for offer id %s: %w", offer.Offer.Id, err)
+			return fmt.Errorf("dispatch offer details for offer id %s: %w", offer.Offer.Id, err)
 		}
 		if success {
 			dispatched++
 		}
 	}
 
-	return dispatched, nil
+	logger.Info("sync finished", "offers", len(offers), "dispatched", dispatched)
+
+	return nil
 }

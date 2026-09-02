@@ -71,6 +71,18 @@ func Register(s *scheduler.Scheduler, d Deps) error {
 		return fmt.Errorf("register cron %s: %w", nameImportAnomeraOffers, err)
 	}
 
+	err = register(s, d.Logger,
+		nameSyncActiveOffers,
+		d.Specs.SyncActiveOffers,
+		&syncActiveOffers{
+			producer: d.Producer,
+			logger:   d.Logger.With("cron", nameSyncActiveOffers),
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("register cron %s: %w", nameSyncActiveOffers, err)
+	}
+
 	return nil
 }
 

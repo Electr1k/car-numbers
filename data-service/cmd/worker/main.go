@@ -16,6 +16,7 @@ import (
 	"data-service/internal/usecase/importautonomera"
 	"data-service/internal/usecase/importgosnomeru"
 	"data-service/internal/usecase/importofferdetail"
+	"data-service/internal/usecase/syncactiveoffers"
 	"data-service/internal/worker"
 	"data-service/pkg/logger"
 	"fmt"
@@ -117,6 +118,14 @@ func run() error {
 	)
 	importAnomeraOffersConsumer := consumer.NewImportAnomeraOffersConsumer(importAnomeraOffersUseCase)
 
+	// Синхронизация активных офферов
+	syncActiveOffersUseCase := syncactiveoffers.New(
+		offerRepository,
+		producer,
+		featureGuard,
+		log,
+	)
+	syncActiveOffersConsumer := consumer.NewSyncActiveOffersConsumer(syncActiveOffersUseCase)
 	consumerResolver := consumer.NewResolver()
 
 	consumerResolver.Register(
@@ -134,6 +143,10 @@ func run() error {
 	consumerResolver.Register(
 		domain.JobNameImportOfferDetail,
 		importOfferDetailConsumer,
+	)
+	consumerResolver.Register(
+		domain.JobNameSyncActiveOffers,
+		syncActiveOffersConsumer,
 	)
 
 	return worker.New(jobRepository, consumerResolver, domain.AllJobQueues(), log).Run(ctx)

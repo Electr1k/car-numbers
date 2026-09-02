@@ -57,6 +57,7 @@ type CronConfig struct {
 	ImportAutonomeraArchiveOffers string `env:"IMPORT_AUTONOMERA_ARCHIVE_OFFERS" env-default:"30 * * * *"`
 	ImportGosnomeruOffers         string `env:"IMPORT_GOSNOMERU_OFFERS" env-default:"0 * * * *"`
 	ImportAnomeraOffers           string `env:"IMPORT_ANOMERA_OFFERS" env-default:"0 * * * *"`
+	SyncActiveOffers              string `env:"SYNC_ACTIVE_OFFERS" env-default:"0 3 * * *"`
 }
 
 func MustLoad() *Config {

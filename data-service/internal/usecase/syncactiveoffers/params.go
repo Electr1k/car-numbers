@@ -2,19 +2,20 @@ package syncactiveoffers
 
 import (
 	"data-service/internal/domain"
+	"fmt"
+	"slices"
 )
 
-// Params - входные параметры для синхронизации оффера
+// Params - входные параметры для синхронизации активных офферов
 type Params struct {
-	// Providers - провайдеры, для которых производится синхронизация
-	Providers []domain.Provider
+	// Provider - провайдер, для которого производится синхронизация
+	Provider domain.Provider
 }
 
-// providers - провайдеры, для которых производится синхронизация
-func (p Params) providers() []domain.Provider {
-	if len(p.Providers) == 0 {
-		return domain.GetAllProviders()
+func (p Params) validate() error {
+	if !slices.Contains(domain.GetAllProviders(), p.Provider) {
+		return fmt.Errorf("unknown provider %q", p.Provider)
 	}
 
-	return p.Providers
+	return nil
 }

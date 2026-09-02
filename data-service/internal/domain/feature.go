@@ -37,6 +37,9 @@ const (
 
 	// FeatureKeySyncActiveOffers - Синхронизация активных офферов
 	FeatureKeySyncActiveOffers FeatureKey = "sync-active-offers"
+
+	// FeatureKeyDispatchSyncActiveOffers - Вызов синхронизации активных офферов
+	FeatureKeyDispatchSyncActiveOffers FeatureKey = "dispatch-sync-active-offers"
 )
 
 var (

@@ -75,3 +75,10 @@ VALUES(
     'sync-active-offers',
     'Синхронизация активных офферов (из всех провайдеров)'
 ) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a063a0-9889-714b-b953-f10d26908d09',
+    'dispatch-sync-active-offers',
+    'Вызов синхронизации активных офферов (из всех провайдеров)'
+) ON CONFLICT (key) DO NOTHING;
