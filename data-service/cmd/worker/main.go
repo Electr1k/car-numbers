@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 )
 
@@ -149,5 +150,29 @@ func run() error {
 		syncActiveOffersConsumer,
 	)
 
-	return worker.New(jobRepository, consumerResolver, domain.AllJobQueues(), log).Run(ctx)
+	queues, err := parseQueues(cfg.WorkerConfig.Queues)
+	if err != nil {
+		return err
+	}
+
+	return worker.New(jobRepository, consumerResolver, queues, cfg.WorkerConfig.Concurrency, log).Run(ctx)
+}
+
+// parseQueues - разбор списка очередей из конфига
+func parseQueues(names []string) ([]domain.JobQueue, error) {
+	if len(names) == 0 {
+		return nil, fmt.Errorf("worker queues are not configured")
+	}
+
+	queues := make([]domain.JobQueue, 0, len(names))
+	for _, name := range names {
+		queue, err := domain.ParseJobQueue(strings.TrimSpace(name))
+		if err != nil {
+			return nil, err
+		}
+
+		queues = append(queues, queue)
+	}
+
+	return queues, nil
 }

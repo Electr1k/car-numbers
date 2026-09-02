@@ -17,6 +17,7 @@ type Config struct {
 	GosnomeruConfig  `env-prefix:"GOSNOMERU_"`
 	AnomeraConfig    `env-prefix:"ANOMERA_"`
 	CronConfig       `env-prefix:"CRON_"`
+	WorkerConfig     `env-prefix:"WORKER_"`
 }
 
 type HttpServer struct {
@@ -50,6 +51,11 @@ type GosnomeruConfig struct {
 type AnomeraConfig struct {
 	BaseURL     string        `env:"BASE_URL" env-default:"https://anomera6.ru"`
 	ImportDepth time.Duration `env:"IMPORT_DEPTH" env-default:"72h"`
+}
+
+type WorkerConfig struct {
+	Queues      []string `env:"QUEUES" env-default:"default,autonomera,gosnomeru,anomera"`
+	Concurrency int      `env:"CONCURRENCY" env-default:"1"`
 }
 
 type CronConfig struct {

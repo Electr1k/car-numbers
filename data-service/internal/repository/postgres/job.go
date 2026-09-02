@@ -12,7 +12,7 @@ import (
 )
 
 // stuckJobTimeout - через сколько взятая джоба считается брошенной и уходит в повторный прогон
-const stuckJobTimeout = 2 * time.Hour
+const stuckJobTimeout = 12 * time.Hour
 
 // JobRepository - хранение задач
 type JobRepository struct {

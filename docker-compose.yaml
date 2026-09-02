@@ -1,3 +1,16 @@
+x-data-worker: &data-worker
+  build:
+    context: ./data-service
+    dockerfile: ../docker/data-service/Dockerfile.dev
+  volumes:
+    - ./data-service:/app
+    - ./tmp:/app/tmp
+  depends_on:
+    data-migrate:
+      condition: service_completed_successfully
+  env_file: .env
+  restart: always
+
 services:
   data-migrate:
     build:
@@ -26,19 +39,45 @@ services:
     env_file: .env
     restart: always
 
-  data-worker:
-    build:
-      context: ./data-service
-      dockerfile: ../docker/data-service/Dockerfile.dev
-    volumes:
-      - ./data-service:/app
-      - ./tmp:/app/tmp
-    command: ["air", "-c", ".air.worker.toml"]
-    depends_on:
-      data-migrate:
-        condition: service_completed_successfully
-    env_file: .env
-    restart: always
+  data-worker-autonomera:
+    <<: *data-worker
+    command: ["air", "-c", ".air.worker.toml",
+              "-build.bin", "./tmp/worker-autonomera",
+              "-build.cmd", "go build -o ./tmp/worker-autonomera ./cmd/worker",
+              "-build.log", "build-errors-worker-autonomera.log"]
+    environment:
+      WORKER_QUEUES: autonomera
+      WORKER_CONCURRENCY: ${AUTONOMERA_WORKER_CONCURRENCY:-5}
+
+  data-worker-gosnomeru:
+    <<: *data-worker
+    command: ["air", "-c", ".air.worker.toml",
+              "-build.bin", "./tmp/worker-gosnomeru",
+              "-build.cmd", "go build -o ./tmp/worker-gosnomeru ./cmd/worker",
+              "-build.log", "build-errors-worker-gosnomeru.log"]
+    environment:
+      WORKER_QUEUES: gosnomeru
+      WORKER_CONCURRENCY: ${GOSNOMERU_WORKER_CONCURRENCY:-8}
+
+  data-worker-anomera:
+    <<: *data-worker
+    command: ["air", "-c", ".air.worker.toml",
+              "-build.bin", "./tmp/worker-anomera",
+              "-build.cmd", "go build -o ./tmp/worker-anomera ./cmd/worker",
+              "-build.log", "build-errors-worker-anomera.log"]
+    environment:
+      WORKER_QUEUES: anomera
+      WORKER_CONCURRENCY: ${ANOMERA_WORKER_CONCURRENCY:-5}
+
+  data-worker-default:
+    <<: *data-worker
+    command: ["air", "-c", ".air.worker.toml",
+              "-build.bin", "./tmp/worker-default",
+              "-build.cmd", "go build -o ./tmp/worker-default ./cmd/worker",
+              "-build.log", "build-errors-worker-default.log"]
+    environment:
+      WORKER_QUEUES: default
+      WORKER_CONCURRENCY: ${DEFAULT_WORKER_CONCURRENCY:-1}
 
   ml-api:
     build:

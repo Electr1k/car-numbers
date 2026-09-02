@@ -2,6 +2,8 @@ package domain
 
 import (
 	"errors"
+	"fmt"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +38,16 @@ const (
 	JobQueueGosnomeru  JobQueue = "gosnomeru"
 	JobQueueAnomera    JobQueue = "anomera"
 )
+
+// ParseJobQueue - разбор имени очереди
+func ParseJobQueue(name string) (JobQueue, error) {
+	queue := JobQueue(name)
+	if !slices.Contains(AllJobQueues(), queue) {
+		return "", fmt.Errorf("unknown job queue %q", name)
+	}
+
+	return queue, nil
+}
 
 func AllJobQueues() []JobQueue {
 	return []JobQueue{
