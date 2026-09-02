@@ -119,7 +119,14 @@ SELECT
     numbers.id, number, type, numbers.created_at, numbers.updated_at
 FROM offers
 JOIN numbers ON offers.number_id = numbers.id
-WHERE offers.status = $1 AND offers.provider = $2
+WHERE offers.provider = $1 AND offers.status = $2
+;`
+
+const getOfferIdsQuery = `
+SELECT offers.id
+FROM offers
+WHERE offers.provider = $1 AND offers.status = $2
+ORDER BY posted_at
 ;`
 
 const upsertPriceHistoryQuery = `
@@ -314,7 +321,7 @@ func (r *OfferRepository) GetOfferByExternalId(ctx context.Context, provider dom
 
 // GetOffers - Предложения выбранного провайдера в заданном статусе вместе с их номерами
 func (r *OfferRepository) GetOffers(ctx context.Context, status domain.OfferStatus, provider domain.Provider) ([]domain.OfferWithNumber, error) {
-	rows, err := r.postgres.pool.Query(ctx, getOffersQuery, status, provider)
+	rows, err := r.postgres.pool.Query(ctx, getOffersQuery, provider, status)
 	if err != nil {
 		return nil, fmt.Errorf("get offers (provider=%s, status=%s): %w", provider, status, err)
 	}
@@ -335,6 +342,34 @@ func (r *OfferRepository) GetOffers(ctx context.Context, status domain.OfferStat
 	}
 
 	return offers, nil
+}
+
+// GetOfferIdsByProviderAndStatus - возвращает идентификаторы предложений по провайдеру и статусу
+func (r *OfferRepository) GetOfferIdsByProviderAndStatus(ctx context.Context, provider domain.Provider, status domain.OfferStatus) ([]uuid.UUID, error) {
+	offersIds := make([]uuid.UUID, 0)
+
+	rows, err := r.postgres.pool.Query(ctx, getOfferIdsQuery, provider, status)
+	if err != nil {
+		return offersIds, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var offerId uuid.UUID
+
+		err := rows.Scan(&offerId)
+		if err != nil {
+			return []uuid.UUID{}, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
+		}
+
+		offersIds = append(offersIds, offerId)
+	}
+
+	if err := rows.Err(); err != nil {
+		return offersIds, fmt.Errorf("get offer ids (provider=%s, status=%s): %w", provider, status, err)
+	}
+
+	return offersIds, nil
 }
 
 type rowScanner interface {

@@ -10,7 +10,7 @@ import (
 )
 
 type offerStore interface {
-	GetOffers(ctx context.Context, status domain.OfferStatus, provider domain.Provider) ([]domain.OfferWithNumber, error)
+	GetOfferIdsByProviderAndStatus(ctx context.Context, provider domain.Provider, status domain.OfferStatus) ([]uuid.UUID, error)
 }
 
 type detailDispatcher interface {
@@ -60,23 +60,23 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 	logger := uc.logger.With("provider", params.Provider)
 	logger.Info("sync started")
 
-	offers, err := uc.repository.GetOffers(ctx, domain.OfferStatusActive, params.Provider)
+	offerIds, err := uc.repository.GetOfferIdsByProviderAndStatus(ctx, params.Provider, domain.OfferStatusActive)
 	if err != nil {
 		return err
 	}
 
 	dispatched := 0
-	for _, offer := range offers {
-		success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offer.Offer.Id)
+	for _, offerId := range offerIds {
+		success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offerId)
 		if err != nil {
-			return fmt.Errorf("dispatch offer details for offer id %s: %w", offer.Offer.Id, err)
+			return fmt.Errorf("dispatch offer details for offer id %s: %w", offerId, err)
 		}
 		if success {
 			dispatched++
 		}
 	}
 
-	logger.Info("sync finished", "offers", len(offers), "dispatched", dispatched)
+	logger.Info("sync finished", "offers", len(offerIds), "dispatched", dispatched)
 
 	return nil
 }
