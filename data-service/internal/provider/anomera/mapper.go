@@ -113,6 +113,12 @@ var sectionNumberTypes = map[string]domain.NumberType{
 	trailerURLPrefix: domain.NumberTypeTrailer,
 }
 
+// plateCaptionPattern - номер с регионом в конце подписи картинки вида "Красивый номер на авто О999У* 126"
+var plateCaptionPattern = regexp.MustCompile(`([А-Я\d*]{6})\s*([\d*]{2,3})$`)
+
+// plateImageNumberAttrs - подписи картинки номера: в них номер есть целиком, вместе с маской
+var plateImageNumberAttrs = []string{"title", "alt"}
+
 // plateLetters - обратная транслитерация: в адресах провайдер пишет номер латиницей по этой карте
 var plateLetters = map[rune]rune{
 	'a': 'А', 'b': 'В', 'e': 'Е', 'k': 'К', 'm': 'М', 'h': 'Н',
@@ -465,9 +471,9 @@ func parseStatus(sel *goquery.Selection) (domain.OfferStatus, error) {
 	switch availability {
 	case availabilityInStock:
 		return domain.OfferStatusActive, nil
-	case availabilityOutOfStock, availabilitySoldOut:
+	case availabilitySoldOut:
 		return domain.OfferStatusSold, nil
-	case availabilityDiscontinued:
+	case availabilityOutOfStock, availabilityDiscontinued:
 		return domain.OfferStatusInactive, nil
 	default:
 		return "", fmt.Errorf("%w: unknown availability %q", provider.ErrBrokenOffer, availability)
@@ -571,12 +577,10 @@ func parseDetailNumber(product *goquery.Selection, ref offerRef, negotiable bool
 			return "", "", err
 		}
 
-		// Микроразметки нет - остаётся слаг, но маскированные символы провайдер из него выбрасывает
-		if strings.ContainsRune(product.Find(plateImageSelector).AttrOr("alt", ""), numberMaskChar) {
-			return "", "", fmt.Errorf("%w: masked number is not restorable from %q", provider.ErrRowSkipped, ref.url)
+		title, err = parseDetailNumberFallback(product, ref)
+		if err != nil {
+			return "", "", err
 		}
-
-		title = ref.number
 	}
 
 	numberStr, numberType, err := parseNumber(title)
@@ -590,6 +594,34 @@ func parseDetailNumber(product *goquery.Selection, ref offerRef, negotiable bool
 	}
 
 	return numberStr, numberType, nil
+}
+
+// parseDetailNumberFallback - получение номера из названия к картинке (фоллбек)
+func parseDetailNumberFallback(product *goquery.Selection, ref offerRef) (string, error) {
+	image := product.Find(plateImageSelector).First()
+
+	for _, attr := range plateImageNumberAttrs {
+		if number := parsePlateCaption(image.AttrOr(attr, "")); number != "" {
+			return number, nil
+		}
+	}
+
+	// Остаётся слаг, но маскированные символы провайдер из него выбрасывает
+	if strings.ContainsRune(image.AttrOr("alt", ""), numberMaskChar) {
+		return "", fmt.Errorf("%w: masked number is not restorable from %q", provider.ErrRowSkipped, ref.url)
+	}
+
+	return ref.number, nil
+}
+
+// parsePlateCaption - номер из подписи картинки, пустая строка если номера в ней нет
+func parsePlateCaption(caption string) string {
+	groups := plateCaptionPattern.FindStringSubmatch(strings.ToUpper(strings.TrimSpace(caption)))
+	if groups == nil {
+		return ""
+	}
+
+	return groups[1] + " " + groups[2]
 }
 
 // parseInfoRows - характеристики карточки в виде вопрос-ответ
