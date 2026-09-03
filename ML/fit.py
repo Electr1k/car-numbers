@@ -26,6 +26,18 @@ def fit_weights(frame: pd.DataFrame, vocab: features.Vocabulary, alpha: float):
     return ridge, matrix, names
 
 
+def reference_level(frame: pd.DataFrame, weights: dict) -> float:
+    """Средневзвешенный вклад площадки — то, что подставляется вместо неё при предсказании."""
+    shares = frame.groupby('provider').weight.sum() / frame.weight.sum()
+    return sum(share * weights.get(f'prov={name}', 0.0) for name, share in shares.items())
+
+
+def predict(ridge, matrix, holdout: pd.DataFrame, weights: dict, reference: float) -> np.ndarray:
+    """Предсказание в боевом режиме: площадка заменена на эталонный уровень."""
+    effect = holdout.provider.map(lambda name: weights.get(f'prov={name}', 0.0)).to_numpy()
+    return ridge.predict(matrix) - effect + reference
+
+
 def score(actual: pd.Series, predicted: np.ndarray) -> dict:
     """Метрики качества на отложенной выборке."""
     predicted_price = np.exp(predicted)
@@ -50,8 +62,9 @@ def validate(data: dataset.Dataset, config: dataset.Config, days: int) -> tuple[
 
     vocab = features.build_vocabulary(train, config)
     ridge, _, names = fit_weights(train, vocab, config.alpha)
+    weights = dict(zip(names, ridge.coef_))
     matrix, _ = features.encode(holdout, vocab, names)
-    predicted = ridge.predict(matrix)
+    predicted = predict(ridge, matrix, holdout, weights, reference_level(train, weights))
 
     metrics = score(holdout.price, predicted)
     metrics['days'] = days
@@ -80,8 +93,7 @@ def build(data: dataset.Dataset, config: dataset.Config, version: str) -> artifa
     numeric = {name: weights.pop(name) for name in features.NUMERIC}
 
     # Площадка — свойство витрины, а не номера: при предсказании берём средний уровень
-    shares = frame.groupby('provider').weight.sum() / frame.weight.sum()
-    reference = sum(share * weights.get(f'prov={name}', 0.0) for name, share in shares.items())
+    reference = reference_level(frame, weights)
 
     metrics['effective_sample'] = round(dataset.effective_size(frame.weight.to_numpy()), 1)
     metrics['rows_total'] = int(len(frame))
@@ -144,6 +156,7 @@ def report(data: dataset.Dataset, model: artifact.Model) -> None:
         f' формат {dropped["bad_format"]},'
         f' цена вне диапазона {dropped["price_out_of_range"]}'
     )
+    print(f'  дефляция:    {dropped["deflated"]} строк gosnomeru приведены к цене продавца')
     print(f'  в обучении:  {dropped["kept"]}')
     print(f'эффективный размер выборки: {model.metrics["effective_sample"]:.0f}')
     print(f'признаков:     {model.vocabulary["features"]}  {model.vocabulary}')

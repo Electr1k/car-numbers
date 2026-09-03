@@ -14,6 +14,10 @@ MAX_PRICE = 20_000_000
 # Постоянная времени затухания веса; полураспад получается ~253 дня
 DECAY_DAYS = 365.0
 
+# Сбор gosnomeru поверх цены продавца: фиксированная часть и процент
+GOSNOMERU_FEE = 20_000
+GOSNOMERU_RATE = 0.04
+
 
 @dataclass(frozen=True)
 class Config:
@@ -22,6 +26,8 @@ class Config:
     min_price: int = MIN_PRICE
     max_price: int = MAX_PRICE
     decay_days: float = DECAY_DAYS
+    gosnomeru_fee: int = GOSNOMERU_FEE
+    gosnomeru_rate: float = GOSNOMERU_RATE
     # Пороги эффективного (взвешенного) числа наблюдений для собственного коэффициента
     min_series_weight: float = 25.0
     min_region_weight: float = 40.0
@@ -36,6 +42,8 @@ class Config:
             'min_price': self.min_price,
             'max_price': self.max_price,
             'decay_days': self.decay_days,
+            'gosnomeru_fee': self.gosnomeru_fee,
+            'gosnomeru_rate': self.gosnomeru_rate,
             'min_series_weight': self.min_series_weight,
             'min_region_weight': self.min_region_weight,
             'min_series_region_weight': self.min_series_region_weight,
@@ -74,6 +82,10 @@ def load(path, config: Config | None = None) -> Dataset:
     dropped_format = int((~canonical).sum())
     df = df[canonical]
 
+    df = df.copy()
+    df['price'] = df.price.astype(float)
+    deflated = deflate(df, config)
+
     in_range = df.price.between(config.min_price, config.max_price)
     dropped_price = int((~in_range).sum())
     df = df[in_range].copy()
@@ -102,9 +114,19 @@ def load(path, config: Config | None = None) -> Dataset:
             'not_car': dropped_type,
             'bad_format': dropped_format,
             'price_out_of_range': dropped_price,
+            'deflated': deflated,
             'kept': len(df),
         },
     )
+
+
+def deflate(frame: pd.DataFrame, config: Config) -> int:
+    """Снимает сбор gosnomeru, приводя цены всех площадок к цене продавца"""
+    rows = frame.provider == 'gosnomeru'
+    frame.loc[rows, 'price'] = (
+        (frame.loc[rows, 'price'] - config.gosnomeru_fee) / (1 + config.gosnomeru_rate)
+    )
+    return int(rows.sum())
 
 
 def decay_weights(posted_at: pd.Series, as_of: pd.Timestamp, decay_days: float) -> np.ndarray:

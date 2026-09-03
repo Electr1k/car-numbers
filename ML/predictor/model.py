@@ -12,7 +12,7 @@ MODEL_FILE = 'model.json'
 CURRENT_FILE = 'current.json'
 
 # Границы уровней доверия по предсказанной цене
-HIGH_CONFIDENCE_FROM = 50_000
+MEDIUM_CONFIDENCE_BELOW = 20_000
 LOW_CONFIDENCE_FROM = 2_000_000
 
 # Человекочитаемые названия групп — фронт выводит их как есть.
@@ -191,7 +191,7 @@ def confidence_for(price: float) -> str:
     """Уровень доверия по ценовому сегменту"""
     if price > LOW_CONFIDENCE_FROM:
         return 'low'
-    if price < HIGH_CONFIDENCE_FROM:
+    if price < MEDIUM_CONFIDENCE_BELOW:
         return 'medium'
     return 'high'
 
