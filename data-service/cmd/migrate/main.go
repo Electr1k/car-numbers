@@ -1,24 +1,22 @@
 package main
 
 import (
-	"data-service/config"
+	"context"
+	"data-service/internal/app"
 	"data-service/internal/repository/postgres"
-	"data-service/pkg/logger"
-	"os"
+	"fmt"
 )
 
 func main() {
-	cfg := config.MustLoad()
+	app.Run("migrate", func(_ context.Context, a *app.App) error {
+		path := a.Config.DatabaseConfig.MigrationsPath
 
-	log := logger.New(logger.Config{
-		Level:  cfg.LogConfig.Level,
-		Format: cfg.LogConfig.Format,
+		if err := postgres.Migrate(a.Config.DatabaseConfig.URL, path); err != nil {
+			return fmt.Errorf("apply migrations from %s: %w", path, err)
+		}
+
+		a.Logger.Info("migrations applied", "path", path)
+
+		return nil
 	})
-
-	if err := postgres.Migrate(cfg.DatabaseConfig.URL, cfg.DatabaseConfig.MigrationsPath); err != nil {
-		log.Error("migrations failed", "path", cfg.DatabaseConfig.MigrationsPath, "error", err)
-		os.Exit(1)
-	}
-
-	log.Info("migrations applied", "path", cfg.DatabaseConfig.MigrationsPath)
 }

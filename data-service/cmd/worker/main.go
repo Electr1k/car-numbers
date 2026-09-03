@@ -2,177 +2,42 @@ package main
 
 import (
 	"context"
-	"data-service/config"
+	"data-service/internal/app"
 	"data-service/internal/domain"
 	"data-service/internal/feature"
 	"data-service/internal/job"
 	"data-service/internal/job/consumer"
-	"data-service/internal/provider/anomera"
-	"data-service/internal/provider/autonomera"
-	"data-service/internal/provider/gosnomeru"
 	"data-service/internal/provider/resolver"
 	"data-service/internal/repository/postgres"
-	"data-service/internal/usecase/importanomera"
-	"data-service/internal/usecase/importautonomera"
-	"data-service/internal/usecase/importgosnomeru"
-	"data-service/internal/usecase/importofferdetail"
-	"data-service/internal/usecase/syncactiveoffers"
 	"data-service/internal/worker"
-	"data-service/pkg/logger"
-	"fmt"
-	"log/slog"
-	"os"
-	"os/signal"
-	"strings"
-	"syscall"
 )
 
 func main() {
-	if err := run(); err != nil {
-		slog.Error("worker jobs stopped with error", "error", err)
-		os.Exit(1)
-	}
-}
+	app.Run("worker jobs", func(ctx context.Context, a *app.App) error {
+		jobRepository := postgres.NewJobRepository(a.Database)
+		features := feature.NewFeature(postgres.NewFeatureRepository(a.Database), a.Logger)
 
-func run() error {
-	cfg := config.MustLoad()
+		consumers := consumer.NewResolver()
+		consumer.Register(consumers, consumer.Deps{
+			Producer:   job.NewProducer(jobRepository, features),
+			Providers:  resolver.New(a.Config, a.Logger),
+			Offers:     postgres.NewOfferRepository(a.Database),
+			Features:   features,
+			AutoNomera: a.Config.AutoNomeraConfig,
+			Logger:     a.Logger,
+		})
 
-	log := logger.New(logger.Config{
-		Level:  cfg.LogConfig.Level,
-		Format: cfg.LogConfig.Format,
-	})
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	log.Info("starting worker jobs", "env", cfg.Env)
-
-	database, err := postgres.New(ctx, cfg.DatabaseConfig)
-	if err != nil {
-		return fmt.Errorf("connect to database: %w", err)
-	}
-	defer database.Close()
-
-	// Репозитории
-	jobRepository := postgres.NewJobRepository(database)
-	offerRepository := postgres.NewOfferRepository(database)
-	featureRepository := postgres.NewFeatureRepository(database)
-
-	// Фича-флаги
-	featureGuard := feature.NewFeature(featureRepository, log)
-
-	// Продюсер джоб
-	producer := job.NewProducer(jobRepository, featureGuard)
-
-	// Провайдеры
-	autonomeraService := autonomera.NewService(
-		autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, log),
-		autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL),
-	)
-	gosnomeruService := gosnomeru.NewService(
-		gosnomeru.NewClient(cfg.GosnomeruConfig.BaseURL, log),
-		gosnomeru.NewMapper(cfg.GosnomeruConfig.BaseURL),
-	)
-	anomeraService := anomera.NewService(
-		anomera.NewClient(cfg.AnomeraConfig.BaseURL, log),
-		anomera.NewMapper(cfg.AnomeraConfig.BaseURL),
-	)
-	providerResolver := resolver.NewResolver(autonomeraService, gosnomeruService, anomeraService)
-
-	// Импорт деталки офферов
-	importOfferDetailUseCase := importofferdetail.New(
-		providerResolver,
-		offerRepository,
-		featureGuard,
-		log,
-	)
-	importOfferDetailConsumer := consumer.NewImportOfferDetailConsumer(importOfferDetailUseCase)
-
-	// Импорт офферов из autonomera
-	importAutonomeraUseCase := importautonomera.New(
-		autonomeraService,
-		producer,
-		offerRepository,
-		featureGuard,
-		cfg.AutoNomeraConfig,
-		log.With("provider", domain.ProviderAutonomera),
-	)
-	importAutonomeraOffersConsumer := consumer.NewImportAutonomeraOffersConsumer(importAutonomeraUseCase)
-
-	// Импорт офферов из gosnomeru
-	importGosnomeruUseCase := importgosnomeru.New(
-		gosnomeruService,
-		producer,
-		offerRepository,
-		featureGuard,
-		log.With("provider", domain.ProviderGosnomeru),
-	)
-	importGosnomeruOffersConsumer := consumer.NewImportGosnomeruOffersConsumer(importGosnomeruUseCase)
-
-	// Импорт офферов из anomera
-	importAnomeraOffersUseCase := importanomera.New(
-		anomeraService,
-		producer,
-		offerRepository,
-		featureGuard,
-		log.With("provider", domain.ProviderAnomera),
-	)
-	importAnomeraOffersConsumer := consumer.NewImportAnomeraOffersConsumer(importAnomeraOffersUseCase)
-
-	// Синхронизация активных офферов
-	syncActiveOffersUseCase := syncactiveoffers.New(
-		offerRepository,
-		producer,
-		featureGuard,
-		log,
-	)
-	syncActiveOffersConsumer := consumer.NewSyncActiveOffersConsumer(syncActiveOffersUseCase)
-	consumerResolver := consumer.NewResolver()
-
-	consumerResolver.Register(
-		domain.JobNameImportAutonomeraOffers,
-		importAutonomeraOffersConsumer,
-	)
-	consumerResolver.Register(
-		domain.JobNameImportGosnomeruOffers,
-		importGosnomeruOffersConsumer,
-	)
-	consumerResolver.Register(
-		domain.JobNameImportAnomeraOffers,
-		importAnomeraOffersConsumer,
-	)
-	consumerResolver.Register(
-		domain.JobNameImportOfferDetail,
-		importOfferDetailConsumer,
-	)
-	consumerResolver.Register(
-		domain.JobNameSyncActiveOffers,
-		syncActiveOffersConsumer,
-	)
-
-	queues, err := parseQueues(cfg.WorkerConfig.Queues)
-	if err != nil {
-		return err
-	}
-
-	return worker.New(jobRepository, consumerResolver, queues, cfg.WorkerConfig.Concurrency, log).Run(ctx)
-}
-
-// parseQueues - разбор списка очередей из конфига
-func parseQueues(names []string) ([]domain.JobQueue, error) {
-	if len(names) == 0 {
-		return nil, fmt.Errorf("worker queues are not configured")
-	}
-
-	queues := make([]domain.JobQueue, 0, len(names))
-	for _, name := range names {
-		queue, err := domain.ParseJobQueue(strings.TrimSpace(name))
+		queues, err := domain.ParseJobQueues(a.Config.WorkerConfig.Queues)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		queues = append(queues, queue)
-	}
-
-	return queues, nil
+		return worker.New(
+			jobRepository,
+			consumers,
+			queues,
+			a.Config.WorkerConfig.Concurrency,
+			a.Logger,
+		).Run(ctx)
+	})
 }

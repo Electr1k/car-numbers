@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,6 +48,25 @@ func ParseJobQueue(name string) (JobQueue, error) {
 	}
 
 	return queue, nil
+}
+
+// ParseJobQueues - разбор списка имён очередей
+func ParseJobQueues(names []string) ([]JobQueue, error) {
+	if len(names) == 0 {
+		return nil, errors.New("job queues are not configured")
+	}
+
+	queues := make([]JobQueue, 0, len(names))
+	for _, name := range names {
+		queue, err := ParseJobQueue(strings.TrimSpace(name))
+		if err != nil {
+			return nil, err
+		}
+
+		queues = append(queues, queue)
+	}
+
+	return queues, nil
 }
 
 func AllJobQueues() []JobQueue {
