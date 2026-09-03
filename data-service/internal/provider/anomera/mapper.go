@@ -480,7 +480,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 
 	product := sel.Find(productSelector).First()
 	if product.Length() == 0 {
-		return empty, fmt.Errorf("%w: no product block on detail page", provider.ErrBrokenOffer)
+		return empty, fmt.Errorf("%w: no product block on detail page", provider.ErrNotFound)
 	}
 
 	raw, err := goquery.OuterHtml(product)

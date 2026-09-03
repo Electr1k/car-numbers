@@ -68,5 +68,10 @@ func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNu
 		return domain.OfferWithNumber{}, fmt.Errorf("parse html document: %w", err)
 	}
 
-	return s.mapper.ApplyOfferDetailToDomain(document.Selection, offer)
+	fetchedOffer, err := s.mapper.ApplyOfferDetailToDomain(document.Selection, offer)
+	if errors.Is(err, provider.ErrNotFound) {
+		offer.Offer.Status = domain.OfferStatusInactive
+		return offer, nil
+	}
+	return fetchedOffer, err
 }
