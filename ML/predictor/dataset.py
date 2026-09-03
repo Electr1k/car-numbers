@@ -84,10 +84,15 @@ def load(path, config: Config | None = None) -> Dataset:
 
     df = df.copy()
     df['price'] = df.price.astype(float)
-    deflated = deflate(df, config)
 
+    # Диапазон проверяем дважды, чтобы отличить мусорную цену от отсева самой дефляцией
+    priced = df.price.between(config.min_price, config.max_price)
+    deflated = deflate(df, config)
     in_range = df.price.between(config.min_price, config.max_price)
-    dropped_price = int((~in_range).sum())
+
+    # Дефляция цену только снижает, поэтому она может вернуть в диапазон то, что было выше потолка
+    dropped_price = int((~priced & ~in_range).sum())
+    dropped_by_fee = int((priced & ~in_range).sum())
     df = df[in_range].copy()
 
     df['posted_at'] = pd.to_datetime(df.posted_at, utc=True, format='%Y-%m-%dT%H:%M:%SZ')
@@ -115,6 +120,7 @@ def load(path, config: Config | None = None) -> Dataset:
             'bad_format': dropped_format,
             'price_out_of_range': dropped_price,
             'deflated': deflated,
+            'dropped_by_fee': dropped_by_fee,
             'kept': len(df),
         },
     )

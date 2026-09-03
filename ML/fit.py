@@ -156,7 +156,10 @@ def report(data: dataset.Dataset, model: artifact.Model) -> None:
         f' формат {dropped["bad_format"]},'
         f' цена вне диапазона {dropped["price_out_of_range"]}'
     )
-    print(f'  дефляция:    {dropped["deflated"]} строк gosnomeru приведены к цене продавца')
+    print(
+        f'  дефляция:    {dropped["deflated"]} строк gosnomeru приведены к цене продавца,'
+        f' из них {dropped["dropped_by_fee"]} ушли под нижнюю границу'
+    )
     print(f'  в обучении:  {dropped["kept"]}')
     print(f'эффективный размер выборки: {model.metrics["effective_sample"]:.0f}')
     print(f'признаков:     {model.vocabulary["features"]}  {model.vocabulary}')
