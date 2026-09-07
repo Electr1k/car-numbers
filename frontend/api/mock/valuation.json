@@ -1,0 +1,55 @@
+{
+  "number": "Х515КВ550",
+  "region": {
+    "code": "550",
+    "name": "Московская обл."
+  },
+  "p25": 45477,
+  "p50": 57213,
+  "p75": 72513,
+  "confidence": "high",
+  "breakdown": {
+    "base": 118732,
+    "items": [
+      {
+        "code": "series",
+        "value": "ХКВ",
+        "title": "Серия ХКВ",
+        "multiplier": 0.9607,
+        "exact": true
+      },
+      {
+        "code": "region",
+        "value": "550",
+        "title": "Регион 550",
+        "multiplier": 0.8831,
+        "exact": true
+      },
+      {
+        "code": "digits",
+        "value": "515",
+        "title": "Цифры 515",
+        "multiplier": 0.864,
+        "exact": true
+      },
+      {
+        "code": "letter_class",
+        "value": "OTHER",
+        "title": "Разные буквы",
+        "multiplier": 0.8162,
+        "exact": true
+      },
+      {
+        "code": "digit_class",
+        "value": "ABA",
+        "title": "Зеркальные цифры",
+        "multiplier": 0.8054,
+        "exact": true
+      }
+    ]
+  },
+  "basis": {
+    "model_version": "2026-09-04",
+    "trained_on": "2026-09-04"
+  }
+}

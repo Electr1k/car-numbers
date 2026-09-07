@@ -1,0 +1,82 @@
+/* Дизайн-система Номерографа. Источник — docs/frontend/design-system.md */
+
+:root {
+  /* поверхности */
+  --bg:            #f2f5f8;
+  --surface:       #ffffff;
+  --surface-sunk:  #e8edf2;
+  --border:        #cfd8e2;
+  --border-strong: #a7b4c2;
+
+  /* текст */
+  --text:       #11161d;
+  --text-muted: #47535f;
+  --text-faint: #6d7b89;
+
+  /* акцент — синий из региональной вставки знака */
+  --accent:       #14459b;
+  --accent-hover: #0e3578;
+  --accent-sunk:  #dce5f5;
+
+  /* смысловые: только комплектация, никогда не путаются с акцентом */
+  --good:  #146b41;  --good-bg:  #dcefe4;
+  --warn:  #7d5610;  --warn-bg:  #f5ebd6;
+  --alert: #9d3122;  --alert-bg: #f7e2de;
+
+  /* номерной знак — физический предмет, в тёмной теме не инвертируется */
+  --plate-face: #ffffff;
+  --plate-ink:  #0d0d0d;
+  --plate-edge: #2f2f2f;
+
+  --r-sm: 3px;  --r-md: 6px;  --r-lg: 10px;
+  --sh-1: 0 1px 2px rgba(17, 22, 29, .06);
+  --sh-2: 0 1px 3px rgba(17, 22, 29, .08), 0 6px 16px -8px rgba(17, 22, 29, .16);
+  --sh-3: 0 2px 6px rgba(17, 22, 29, .10), 0 16px 40px -16px rgba(17, 22, 29, .24);
+
+  --font-ui:    'Golos Text', 'Helvetica Neue', Arial, sans-serif;
+  --font-plate: 'PT Sans Narrow', 'Arial Narrow', Arial, sans-serif;
+
+  --content: 1180px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg:            #0d1117;
+    --surface:       #161b22;
+    --surface-sunk:  #1f262f;
+    --border:        #2c343f;
+    --border-strong: #48525f;
+    --text:       #e9eef4;
+    --text-muted: #a9b6c4;
+    --text-faint: #7a8794;
+    --accent:       #75a9f0;
+    --accent-hover: #9dc3f7;
+    --accent-sunk:  #1b2942;
+    --good:  #5fbb8b;  --good-bg:  #153427;
+    --warn:  #d5a851;  --warn-bg:  #33280f;
+    --alert: #e0796a;  --alert-bg: #3a1f19;
+    --sh-1: 0 1px 2px rgba(0, 0, 0, .5);
+    --sh-2: 0 1px 3px rgba(0, 0, 0, .6), 0 6px 16px -8px rgba(0, 0, 0, .8);
+    --sh-3: 0 2px 6px rgba(0, 0, 0, .7), 0 16px 40px -16px rgba(0, 0, 0, .9);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg:            #0d1117;
+  --surface:       #161b22;
+  --surface-sunk:  #1f262f;
+  --border:        #2c343f;
+  --border-strong: #48525f;
+  --text:       #e9eef4;
+  --text-muted: #a9b6c4;
+  --text-faint: #7a8794;
+  --accent:       #75a9f0;
+  --accent-hover: #9dc3f7;
+  --accent-sunk:  #1b2942;
+  --good:  #5fbb8b;  --good-bg:  #153427;
+  --warn:  #d5a851;  --warn-bg:  #33280f;
+  --alert: #e0796a;  --alert-bg: #3a1f19;
+  --sh-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --sh-2: 0 1px 3px rgba(0, 0, 0, .6), 0 6px 16px -8px rgba(0, 0, 0, .8);
+  --sh-3: 0 2px 6px rgba(0, 0, 0, .7), 0 16px 40px -16px rgba(0, 0, 0, .9);
+}

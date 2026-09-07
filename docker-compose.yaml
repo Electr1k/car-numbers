@@ -93,15 +93,22 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../docker/frontend/Dockerfile
+      context: ./frontend/web
     ports:
-      - "3000:80"
+      - "3000:3000"
     volumes:
-      - ./frontend:/usr/share/nginx/html
-    depends_on:
-      - ml-api
-    restart: always
+      # исходники монтируются для горячей перезагрузки
+      - ./frontend/web:/app
+      # node_modules остаются контейнерными, чтобы хостовые не затирали их
+      - /app/node_modules
+      - /app/.nuxt
+      # моки контракта: пока BFF не написан, эндпоинты отдают их
+      - ./frontend/api/mock:/mocks:ro
+    environment:
+      - MOCKS_DIR=/mocks
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+    restart: unless-stopped
 
   data-db:
     image: postgres:15-alpine

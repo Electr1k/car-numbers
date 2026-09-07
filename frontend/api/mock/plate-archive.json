@@ -1,0 +1,103 @@
+{
+  "id": "67c3f205-4249-496d-9ca1-b87c8a2ce050",
+  "number": "А001АМ250",
+  "region": {
+    "code": "250",
+    "name": "Московская обл."
+  },
+  "active_offers": [],
+  "archive_offers": [
+    {
+      "id": "019ff7f5-726d-7bdd-8ff1-364091a1bfe8",
+      "provider": "autonomera",
+      "price": 500000,
+      "status": "inactive",
+      "reissue_included": null,
+      "whereabouts": "on-storage",
+      "views": 246,
+      "comment": null,
+      "posted_at": "2026-05-13T00:00:00Z",
+      "refreshed_at": "2026-08-07T00:00:00Z",
+      "url": "https://autonomera777.ru/standart/393674"
+    },
+    {
+      "id": "01a0498d-990e-7045-868a-25452ac34e73",
+      "provider": "gosnomeru",
+      "price": 540000,
+      "status": "inactive",
+      "reissue_included": true,
+      "whereabouts": null,
+      "views": null,
+      "comment": null,
+      "posted_at": "2026-06-16T00:00:00Z",
+      "refreshed_at": "2026-08-16T00:00:00Z",
+      "url": "https://gosnomeru.com/plate/610129-A001AM250.html"
+    },
+    {
+      "id": "01a04777-10ca-7cb5-9cd4-226af496c413",
+      "provider": "gosnomeru",
+      "price": 630000,
+      "status": "inactive",
+      "reissue_included": true,
+      "whereabouts": null,
+      "views": null,
+      "comment": null,
+      "posted_at": "2025-02-13T00:00:00Z",
+      "refreshed_at": "2025-03-08T00:00:00Z",
+      "url": "https://gosnomeru.com/plate/490419-A001AM250.html"
+    },
+    {
+      "id": "01a0476e-11ea-7ece-b3bd-76f6a35147aa",
+      "provider": "gosnomeru",
+      "price": 630000,
+      "status": "inactive",
+      "reissue_included": true,
+      "whereabouts": null,
+      "views": null,
+      "comment": null,
+      "posted_at": "2025-01-27T00:00:00Z",
+      "refreshed_at": "2025-02-13T00:00:00Z",
+      "url": "https://gosnomeru.com/plate/486627-A001AM250.html"
+    },
+    {
+      "id": "01a04777-0cfd-709c-b80c-40d560e7c3a3",
+      "provider": "gosnomeru",
+      "price": 650000,
+      "status": "inactive",
+      "reissue_included": true,
+      "whereabouts": null,
+      "views": null,
+      "comment": null,
+      "posted_at": "2025-02-13T00:00:00Z",
+      "refreshed_at": "2025-02-13T00:00:00Z",
+      "url": "https://gosnomeru.com/plate/490414-A001AM250.html"
+    },
+    {
+      "id": "43acaed4-696f-4e97-8417-9f044264c51c",
+      "provider": "autonomera",
+      "price": 650000,
+      "status": "inactive",
+      "reissue_included": null,
+      "whereabouts": "on-car",
+      "views": 48,
+      "comment": null,
+      "posted_at": "2026-04-17T00:00:00Z",
+      "refreshed_at": "2026-04-24T00:00:00Z",
+      "url": "https://autonomera777.ru/standart/389639"
+    },
+    {
+      "id": "019ff7fc-7f48-7232-8503-4c06831f6cd3",
+      "provider": "autonomera",
+      "price": 700000,
+      "status": "inactive",
+      "reissue_included": null,
+      "whereabouts": "on-storage",
+      "views": 52,
+      "comment": "☎️+79857194880 whatsapp 📤@VIPHOMEP77",
+      "posted_at": "2026-05-12T00:00:00Z",
+      "refreshed_at": "2026-05-15T00:00:00Z",
+      "url": "https://autonomera777.ru/standart/393541"
+    }
+  ],
+  "similar": []
+}

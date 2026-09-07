@@ -1,0 +1,89 @@
+{
+  "query": {
+    "q": "А*00**77",
+    "region": "77",
+    "sort": "price_asc"
+  },
+  "total": 6,
+  "items": [
+    {
+      "id": "793b4a99-7f1c-46d4-9c66-0fc3c6ce3be0",
+      "number": "О400НМ77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 90000,
+      "type": "car",
+      "reissue_included": false,
+      "offers_count": 1,
+      "updated_at": "2023-01-24T00:00:00Z"
+    },
+    {
+      "id": "a7745888-a5f2-4c65-abb4-f505d67fa2f5",
+      "number": "Е400ОТ77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 150000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 1,
+      "updated_at": "2023-11-18T00:00:00Z"
+    },
+    {
+      "id": "538bba4a-fbbe-4941-829a-75bcba0e6cd2",
+      "number": "У400РК77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 150009,
+      "type": "car",
+      "reissue_included": true,
+      "offers_count": 1,
+      "updated_at": "2025-11-12T00:00:00Z"
+    },
+    {
+      "id": "e1a929ce-fdaa-4735-8a1d-6877ea4f4fdb",
+      "number": "С600ХР77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 160000,
+      "type": "car",
+      "reissue_included": false,
+      "offers_count": 2,
+      "updated_at": "2025-07-27T00:00:00Z"
+    },
+    {
+      "id": "01a05e82-d97a-7d33-99a3-7c1647432510",
+      "number": "В800ТС77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 180000,
+      "type": "car",
+      "reissue_included": false,
+      "offers_count": 1,
+      "updated_at": "2025-08-22T00:00:00Z"
+    },
+    {
+      "id": "31e2ae75-5547-41f6-b70a-667f3abe45e4",
+      "number": "О400УХ77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 180000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 1,
+      "updated_at": "2025-10-11T00:00:00Z"
+    }
+  ],
+  "cursor": null
+}

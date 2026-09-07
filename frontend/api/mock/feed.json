@@ -1,0 +1,122 @@
+{
+  "items": [
+    {
+      "id": "01a04146-73fb-736e-a2b4-c310ef241a23",
+      "number": "Н008ЕВ70",
+      "region": {
+        "code": "70",
+        "name": "Регион 70"
+      },
+      "price": 170000,
+      "type": "car",
+      "reissue_included": true,
+      "offers_count": 1,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "01a03b28-aeea-7d47-912c-626f50610ef7",
+      "number": "О063СР126",
+      "region": {
+        "code": "126",
+        "name": "Ставропольский край"
+      },
+      "price": 10000,
+      "type": "car",
+      "reissue_included": false,
+      "offers_count": 2,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "059b1d0f-47f1-484b-a9a1-db27620f86f4",
+      "number": "М707ХХ77",
+      "region": {
+        "code": "77",
+        "name": "Москва"
+      },
+      "price": 1500000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 2,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "01a04628-5622-7c38-b9bc-48a20c9ac7f4",
+      "number": "Т001УУ193",
+      "region": {
+        "code": "193",
+        "name": "Краснодарский край"
+      },
+      "price": 730000,
+      "type": "car",
+      "reissue_included": true,
+      "offers_count": 1,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "01a07940-1f82-747a-a09f-962031194a74",
+      "number": "О020УВ126",
+      "region": {
+        "code": "126",
+        "name": "Ставропольский край"
+      },
+      "price": 50000,
+      "type": "car",
+      "reissue_included": true,
+      "offers_count": 2,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "60c75a39-4c97-4606-abe6-55de5a038b71",
+      "number": "К035СЕ797",
+      "region": {
+        "code": "797",
+        "name": "Москва"
+      },
+      "price": 50000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 1,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "01a04730-ffa9-7add-9d39-934ae175d5a3",
+      "number": "О700КА96",
+      "region": {
+        "code": "96",
+        "name": "Свердловская обл."
+      },
+      "price": 170000,
+      "type": "car",
+      "reissue_included": false,
+      "offers_count": 1,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "0a115d2b-8cac-4aa8-9da4-43db1d1e74b2",
+      "number": "Х026ХХ150",
+      "region": {
+        "code": "150",
+        "name": "Московская обл."
+      },
+      "price": 400000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 4,
+      "updated_at": "2026-09-07T00:00:00Z"
+    },
+    {
+      "id": "d9fbd673-93d4-46d3-a54f-96998a412b5b",
+      "number": "М931МУ977",
+      "region": {
+        "code": "977",
+        "name": "Москва"
+      },
+      "price": 50000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 2,
+      "updated_at": "2026-09-07T00:00:00Z"
+    }
+  ],
+  "cursor": "ZmVlZDoy"
+}

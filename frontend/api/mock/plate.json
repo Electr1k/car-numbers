@@ -1,0 +1,91 @@
+{
+  "id": "000a2215-235a-40c9-b48f-aa898ca32070",
+  "number": "Х515КВ550",
+  "region": {
+    "code": "550",
+    "name": "Московская обл."
+  },
+  "active_offers": [
+    {
+      "id": "01a05e7e-6752-717c-a299-bef7199d830f",
+      "provider": "anomera",
+      "price": 60000,
+      "status": "active",
+      "reissue_included": false,
+      "whereabouts": null,
+      "views": 5,
+      "comment": "+ переоформление 30ТЫС( через мое авто) , С переоформлением помогу . Связь 89030080205 Владислав Север МО, без лишних записей в ПТС",
+      "posted_at": "2026-07-11T00:00:00Z",
+      "refreshed_at": "2026-07-11T00:00:00Z",
+      "url": "https://anomera6.ru/gos-nomera-v-moskovskoy-oblasti/1000003248-x515kb550.html"
+    },
+    {
+      "id": "01a03b29-504d-7948-980d-9c6c5321097a",
+      "provider": "gosnomeru",
+      "price": 80000,
+      "status": "active",
+      "reissue_included": true,
+      "whereabouts": null,
+      "views": null,
+      "comment": null,
+      "posted_at": "2026-07-11T00:00:00Z",
+      "refreshed_at": "2026-08-06T00:00:00Z",
+      "url": "https://gosnomeru.com/plate/620340-X515KB550.html"
+    },
+    {
+      "id": "45b41e4e-eaa1-44a3-93a2-06b1de9b2667",
+      "provider": "autonomera",
+      "price": 100000,
+      "status": "active",
+      "reissue_included": null,
+      "whereabouts": "on-storage",
+      "views": 35,
+      "comment": "+ переоформление 30ТЫС( через мое авто) , С переоформлением помогу . Связь 89030080205 Владислав Север МО, без лишних записей в ПТС",
+      "posted_at": "2026-07-11T00:00:00Z",
+      "refreshed_at": "2026-09-05T00:00:00Z",
+      "url": "https://autonomera777.ru/standart/402002"
+    }
+  ],
+  "archive_offers": null,
+  "similar": [
+    {
+      "id": "fdfac8a7-c5b7-400e-9d98-00a486edea3c",
+      "number": "В055АА550",
+      "region": {
+        "code": "550",
+        "name": "Московская обл."
+      },
+      "price": 250000,
+      "type": "car",
+      "reissue_included": true,
+      "offers_count": 1,
+      "updated_at": "2024-04-03T00:00:00Z"
+    },
+    {
+      "id": "c34ed249-8d8c-46d0-92e2-9a18c1a40b7b",
+      "number": "А288МВ550",
+      "region": {
+        "code": "550",
+        "name": "Московская обл."
+      },
+      "price": 40000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 2,
+      "updated_at": "2026-06-05T00:00:00Z"
+    },
+    {
+      "id": "a78b0d0b-1ed9-4f50-8687-00bd62a44755",
+      "number": "К040ВР550",
+      "region": {
+        "code": "550",
+        "name": "Московская обл."
+      },
+      "price": 50000,
+      "type": "car",
+      "reissue_included": null,
+      "offers_count": 1,
+      "updated_at": "2025-08-11T00:00:00Z"
+    }
+  ]
+}

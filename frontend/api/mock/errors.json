@@ -1,0 +1,26 @@
+{
+  "moto": {
+    "error": {
+      "code": "moto",
+      "message": "Номер 1234АА77 — мото или прицеп, такие мы не оцениваем."
+    }
+  },
+  "format": {
+    "error": {
+      "code": "format",
+      "message": "Номер вводится как А123ВС777."
+    }
+  },
+  "too_many_masks": {
+    "error": {
+      "code": "too_many_masks",
+      "message": "Слишком много неизвестных знаков — оценка перестаёт нести смысл."
+    }
+  },
+  "valuation_unavailable": {
+    "error": {
+      "code": "valuation_unavailable",
+      "message": "Оценка сейчас недоступна. Объявления показаны."
+    }
+  }
+}
