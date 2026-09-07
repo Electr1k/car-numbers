@@ -73,7 +73,7 @@ const submit = () => {
         autocapitalize="characters"
         spellcheck="false"
         :maxlength="9"
-        placeholder="А123ВС777 или А*2*ВС77"
+        placeholder="А777АА77 или А*7*АА77"
         aria-describedby="q-hint"
         @input="onInput"
       >
@@ -81,7 +81,7 @@ const submit = () => {
     <button type="submit" class="submit">{{ cta ?? 'Найти' }}</button>
 
     <p id="q-hint" class="hint">
-      Неизвестные знаки заменяйте звёздочкой: <code>А*2*ВС77</code>.
+      Неизвестные знаки заменяйте звёздочкой: <code>А*7*АА77</code>.
       Латинская раскладка переводится сама.
     </p>
 

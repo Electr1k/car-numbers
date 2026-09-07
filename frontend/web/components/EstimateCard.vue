@@ -55,9 +55,6 @@ const confidenceNote = computed(() => ({
           </span>
         </li>
       </ul>
-      <p class="src">
-        Модель от {{ estimate.basis.trained_on }}. Это цена запроса, а не цена сделки.
-      </p>
     </details>
   </section>
 
