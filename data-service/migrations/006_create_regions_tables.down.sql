@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS region_codes;
+
+DROP TABLE IF EXISTS regions;
