@@ -20,10 +20,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
     </section>
 
     <section class="feed container">
-      <div class="sect">
-        <h2>Свежие предложения</h2>
-        <span class="note">Площадки чередуются, чтобы одна не занимала ленту</span>
-      </div>
+      <h2 class="sect">Свежие предложения</h2>
 
       <p v-if="pending" class="state">Загружаем предложения…</p>
 
@@ -48,8 +45,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
 .lede { font-size: 18px; color: var(--text-muted); margin: 14px 0 24px; max-width: 620px; }
 
 .feed { padding: 0 24px 56px; }
-.sect { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.note { font-size: 14.5px; color: var(--text-faint); }
+.sect { margin-bottom: 16px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 

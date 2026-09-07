@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <!-- Монограмма из разделителя; штрих утолщён под мелкий кегль -->
+  <style>
+    .ink { stroke: #11161d }
+    .dot { fill: #14459b }
+    @media (prefers-color-scheme: dark) {
+      .ink { stroke: #e9eef4 }
+      .dot { fill: #75a9f0 }
+    }
+  </style>
+  <g class="ink" fill="none" stroke-width="4.8">
+    <rect x="2.4" y="8.4" width="35.2" height="23.2" rx="2.4" />
+    <line x1="25.5" y1="8.4" x2="25.5" y2="31.6" />
+  </g>
+  <circle class="dot" cx="31.6" cy="20" r="3.2" />
+</svg>

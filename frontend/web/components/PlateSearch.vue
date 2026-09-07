@@ -15,7 +15,9 @@ const props = withDefaults(defineProps<{
 const query = ref('')
 const router = useRouter()
 
-const filters = ref<Filters>({ region: '', price_max: '', reissue: '', sort: 'updated_desc', pattern: [] })
+const filters = ref<Filters>({
+  region: '', price_min: '', price_max: '', reissue: '', sort: 'updated_desc', pattern: []
+})
 
 /**
  * Печатать можно только то, что бывает в номере.
@@ -49,6 +51,7 @@ const submit = () => {
     query: {
       q: q || undefined,
       region: f.region || undefined,
+      price_min: f.price_min || undefined,
       price_max: f.price_max || undefined,
       reissue_included: f.reissue || undefined,
       categories: f.pattern.length ? f.pattern.join(',') : undefined,

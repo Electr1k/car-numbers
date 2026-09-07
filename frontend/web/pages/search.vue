@@ -10,13 +10,14 @@ const q = computed(() => String(route.query.q || ''))
 const activePatterns = computed(() => String(route.query.categories || '').split(',').filter(Boolean))
 const region = computed(() => String(route.query.region || ''))
 const reissue = computed(() => String(route.query.reissue_included || ''))
+const priceMin = computed(() => String(route.query.price_min || ''))
 const priceMax = computed(() => String(route.query.price_max || ''))
 const sort = computed(() => String(route.query.sort || 'updated_desc'))
 
 /** Фильтры живут в адресе: выдачу можно переслать ссылкой */
 const filters = computed<Filters>({
   get: () => ({
-    region: region.value, price_max: priceMax.value, reissue: reissue.value,
+    region: region.value, price_min: priceMin.value, price_max: priceMax.value, reissue: reissue.value,
     sort: sort.value, pattern: activePatterns.value
   }),
   set: (f) => router.push({
@@ -24,6 +25,7 @@ const filters = computed<Filters>({
     query: {
       ...route.query,
       region: f.region || undefined,
+      price_min: f.price_min || undefined,
       price_max: f.price_max || undefined,
       reissue_included: f.reissue || undefined,
       categories: f.pattern.length ? f.pattern.join(',') : undefined,
@@ -54,6 +56,7 @@ const togglePattern = (code: string) => {
 const applied = computed(() => {
   const list: { key: string; label: string }[] = []
   if (region.value) list.push({ key: 'region', label: `выбранный регион` })
+  if (priceMin.value) list.push({ key: 'price_min', label: `цена от ${Number(priceMin.value).toLocaleString('ru-RU')} ₽` })
   if (priceMax.value) list.push({ key: 'price_max', label: `цена до ${Number(priceMax.value).toLocaleString('ru-RU')} ₽` })
   if (reissue.value) {
     list.push({ key: 'reissue_included', label: reissue.value === 'true' ? 'с переоформлением' : 'без переоформления' })
