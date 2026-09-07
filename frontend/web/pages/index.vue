@@ -2,7 +2,7 @@
 import type { FeedResponse } from '~/types/api'
 
 const { data: feed, pending, error } = await useFetch<FeedResponse>('/api/v1/feed', {
-  query: { limit: 9 }
+  query: { limit: 16 }
 })
 
 useHead({ title: 'Номерограф — объявления о продаже автономеров' })
@@ -32,7 +32,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
         <div class="grid">
           <NumberCard v-for="card in feed.items" :key="card.number" :card="card" />
         </div>
-        <button v-if="feed.cursor" type="button" class="more">Показать ещё 12</button>
+        <button v-if="feed.cursor" type="button" class="more">Показать ещё 8</button>
       </template>
 
       <p v-else class="state">Предложений пока нет.</p>
@@ -47,7 +47,8 @@ useHead({ title: 'Номерограф — объявления о продаж�
 .feed { padding: 0 24px 56px; }
 .sect { margin-bottom: 16px; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+@media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
 
 .more {
   margin-top: 24px; min-height: 44px; padding: 11px 20px; cursor: pointer;
