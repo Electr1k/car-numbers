@@ -4,10 +4,13 @@ import (
 	"context"
 	"data-service/internal/app"
 	"data-service/internal/feature"
+	httptransport "data-service/internal/http"
+	"data-service/internal/http/handler/region"
 	"data-service/internal/job"
 	"data-service/internal/job/cron"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/scheduler"
+	"data-service/internal/usecase/fetchregions"
 	"fmt"
 
 	"golang.org/x/sync/errgroup"
@@ -30,10 +33,27 @@ func main() {
 			return fmt.Errorf("register crons: %w", err)
 		}
 
+		regionHandler := region.New(fetchregions.New(postgres.NewRegionRepository(a.Database)), a.Logger)
+		router := httptransport.NewRouter(regionHandler)
+		httpServer := httptransport.NewServer(a.Config.HttpServer, router)
+
 		group, groupCtx := errgroup.WithContext(ctx)
 
 		group.Go(func() error {
 			return sched.Run(groupCtx)
+		})
+
+		group.Go(func() error {
+			return httpServer.Run()
+		})
+
+		group.Go(func() error {
+			<-groupCtx.Done()
+
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), a.Config.ShutdownTimeout)
+			defer cancel()
+
+			return httpServer.Shutdown(shutdownCtx)
 		})
 
 		return group.Wait()
