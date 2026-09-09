@@ -35,7 +35,5 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("fetch plate: %w", err)
 	}
 
-	response.WriteJSON(w, http.StatusOK, mapNumber(*res))
-
-	return nil
+	return response.WriteJSON(w, http.StatusOK, mapNumber(*res))
 }

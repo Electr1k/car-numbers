@@ -26,7 +26,5 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("fetch regions: %w", err)
 	}
 
-	response.WriteJSON(w, http.StatusOK, mapRegions(res))
-
-	return nil
+	return response.WriteJSON(w, http.StatusOK, mapRegions(res))
 }
