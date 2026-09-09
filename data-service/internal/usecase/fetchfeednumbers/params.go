@@ -1,12 +1,16 @@
 package fetchfeednumbers
 
 import (
+	"data-service/internal/domain"
 	"fmt"
 )
 
-const maxLimit = 25
+const (
+	minLimit = 1
+	maxLimit = 25
+)
 
-// Params - входные параметры импорта
+// Params - входные параметры выборки свежих номеров
 type Params struct {
 	Limit int
 
@@ -15,12 +19,12 @@ type Params struct {
 
 func (p Params) validate() error {
 	switch {
-	case p.Limit < 0:
-		return fmt.Errorf("limit must not be negative, got %d", p.Limit)
+	case p.Limit < minLimit:
+		return fmt.Errorf("%w: limit must be at least %d, got %d", domain.ErrInvalidArgument, minLimit, p.Limit)
 	case p.Limit > maxLimit:
-		return fmt.Errorf("limit must not be biggest %d, got %d", maxLimit, p.Limit)
+		return fmt.Errorf("%w: limit must not exceed %d, got %d", domain.ErrInvalidArgument, maxLimit, p.Limit)
 	case p.Offset < 0:
-		return fmt.Errorf("offset must not be negative, got %d", p.Offset)
+		return fmt.Errorf("%w: offset must not be negative, got %d", domain.ErrInvalidArgument, p.Offset)
 	}
 
 	return nil

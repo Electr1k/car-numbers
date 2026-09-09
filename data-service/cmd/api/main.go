@@ -37,10 +37,12 @@ func main() {
 			return fmt.Errorf("register crons: %w", err)
 		}
 
-		regionHandler := region.New(fetchregions.New(postgres.NewRegionRepository(a.Database)), a.Logger)
-		feedHandler := feed.New(fetchfeednumbers.New(postgres.NewOfferRepository(a.Database)), a.Logger)
-		plateHandler := plate.New(fetchnumber.New(postgres.NewOfferRepository(a.Database)), a.Logger)
-		router := httptransport.NewRouter(regionHandler, feedHandler, plateHandler)
+		offerRepository := postgres.NewOfferRepository(a.Database)
+
+		regionHandler := region.New(fetchregions.New(postgres.NewRegionRepository(a.Database)))
+		feedHandler := feed.New(fetchfeednumbers.New(offerRepository))
+		plateHandler := plate.New(fetchnumber.New(offerRepository))
+		router := httptransport.NewRouter(a.Logger, regionHandler, feedHandler, plateHandler)
 		httpServer := httptransport.NewServer(a.Config.HttpServer, router)
 
 		group, groupCtx := errgroup.WithContext(ctx)

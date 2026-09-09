@@ -6,8 +6,8 @@ const (
 )
 
 type feedRequest struct {
-	Limit  int `form:"limit" validate:"min=0,max=25"`
-	Offset int `form:"offset" validate:"min=0"`
+	Limit  int `form:"limit"`
+	Offset int `form:"offset"`
 }
 
 func newFeedRequest() feedRequest {
