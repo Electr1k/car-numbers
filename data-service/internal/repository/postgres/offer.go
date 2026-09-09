@@ -182,6 +182,31 @@ LIMIT $2
 OFFSET $3
 `
 
+const getNumberWithOffersById = `
+SELECT 
+	numbers.id as id,
+	number,
+	regions.name,
+	region_codes.code,
+	type,
+	offers.id as offer_id,
+	provider,
+	price,
+	status,
+	reissue_included,
+	whereabouts,
+	view_count,
+	comment,
+	posted_at,
+	refreshed_at,
+	url
+FROM public.numbers
+LEFT JOIN offers ON offers.number_id = numbers.id
+LEFT JOIN region_codes ON numbers.region_code = region_codes.code
+LEFT JOIN regions ON regions.id = region_codes.region_id
+WHERE numbers.id = $1
+`
+
 // SaveBatch - Сохранение батча в одной транзакции и за один поход в базу
 func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
 	if len(items) == 0 {
@@ -474,6 +499,88 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, limit int, offset 
 	}
 
 	return numbers, nil
+}
+
+func (r *OfferRepository) GetNumberWithOffersById(ctx context.Context, id uuid.UUID) (*data.Number, error) {
+	rows, err := r.postgres.pool.Query(ctx, getNumberWithOffersById, id)
+	if err != nil {
+		return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
+	}
+	defer rows.Close()
+
+	offers := make([]data.Offer, 0)
+	hasResult := false
+	var (
+		numberId   uuid.UUID
+		number     string
+		regionName *string
+		regionCode *string
+		numberType string
+	)
+
+	for rows.Next() {
+		var (
+			offerId         *uuid.UUID
+			provider        *string
+			price           *float64
+			status          *string
+			reissueIncluded *bool
+			whereabouts     *string
+			viewCount       *int
+			comment         *string
+			postedAt        *time.Time
+			refreshedAt     *time.Time
+			url             *string
+		)
+
+		if err = rows.Scan(&numberId, &number, &regionName, &regionCode, &numberType, &offerId, &provider, &price, &status,
+			&reissueIncluded, &whereabouts, &viewCount, &comment, &postedAt, &refreshedAt, &url); err != nil {
+			return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
+		}
+
+		hasResult = true
+
+		var whereaboutsVo *domain.OfferWhereabouts = nil
+		if whereabouts != nil {
+			w := domain.OfferWhereabouts(*whereabouts)
+			whereaboutsVo = &w
+		}
+		if viewCount != nil && *viewCount == 0 {
+			viewCount = nil
+		}
+
+		if offerId != nil {
+			offers = append(offers, data.Offer{
+				Id:              *offerId,
+				Provider:        domain.Provider(*provider),
+				Price:           price,
+				Status:          domain.OfferStatus(*status),
+				ReissueIncluded: reissueIncluded,
+				Whereabouts:     whereaboutsVo,
+				ViewCount:       viewCount,
+				Comment:         comment,
+				PostedAt:        postedAt,
+				RefreshedAt:     refreshedAt,
+				Url:             *url,
+			})
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
+	}
+
+	if !hasResult {
+		return nil, domain.ErrNumberNotFound
+	}
+
+	return &data.Number{
+		Id:         numberId,
+		Number:     number,
+		RegionName: regionName,
+		RegionCode: regionCode,
+		Offers:     offers,
+	}, nil
 }
 
 type rowScanner interface {

@@ -6,12 +6,14 @@ import (
 	"data-service/internal/feature"
 	httptransport "data-service/internal/http"
 	"data-service/internal/http/handler/feed"
+	"data-service/internal/http/handler/plate"
 	"data-service/internal/http/handler/region"
 	"data-service/internal/job"
 	"data-service/internal/job/cron"
 	"data-service/internal/repository/postgres"
 	"data-service/internal/scheduler"
 	"data-service/internal/usecase/fetchfeednumbers"
+	"data-service/internal/usecase/fetchnumber"
 	"data-service/internal/usecase/fetchregions"
 	"fmt"
 
@@ -37,7 +39,8 @@ func main() {
 
 		regionHandler := region.New(fetchregions.New(postgres.NewRegionRepository(a.Database)), a.Logger)
 		feedHandler := feed.New(fetchfeednumbers.New(postgres.NewOfferRepository(a.Database)), a.Logger)
-		router := httptransport.NewRouter(regionHandler, feedHandler)
+		plateHandler := plate.New(fetchnumber.New(postgres.NewOfferRepository(a.Database)), a.Logger)
+		router := httptransport.NewRouter(regionHandler, feedHandler, plateHandler)
 		httpServer := httptransport.NewServer(a.Config.HttpServer, router)
 
 		group, groupCtx := errgroup.WithContext(ctx)

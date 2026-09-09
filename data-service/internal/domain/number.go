@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,8 @@ const (
 	// NumberTypeTrailer - Прицеп
 	NumberTypeTrailer NumberType = "trailer"
 )
+
+var ErrNumberNotFound = errors.New("number not found")
 
 // Number - Номер
 type Number struct {
