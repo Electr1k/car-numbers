@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"data-service/internal/domain"
+	"data-service/internal/domain/data"
 	"errors"
 	"fmt"
 	"time"
@@ -153,6 +154,33 @@ raw_detail = $9,
 comment = $10,
 updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
+
+const getFeedNumbers = `
+SELECT 
+	numbers.id,
+	number,
+	regions.name,
+	region_codes.code,
+	MIN(price),
+	type,
+	count(*) as count,
+	MAX(refreshed_at::date) as refreshed_at,
+	MAX(offers.updated_at) as updated_at,
+	CASE
+		WHEN COUNT(CASE WHEN reissue_included = true THEN 1 END) > 0 THEN true
+		WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
+		ELSE null
+	END as reissue_included
+FROM public.numbers
+JOIN offers ON offers.number_id = numbers.id
+LEFT JOIN region_codes ON numbers.region_code = region_codes.code
+LEFT JOIN regions ON regions.id = region_codes.region_id
+WHERE status = $1
+GROUP BY numbers.id, number, regions.name, region_codes.code, type
+ORDER BY refreshed_at DESC, updated_at DESC
+LIMIT $2
+OFFSET $3
+`
 
 // SaveBatch - Сохранение батча в одной транзакции и за один поход в базу
 func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
@@ -370,6 +398,84 @@ func (r *OfferRepository) GetOfferIdsByProviderAndStatus(ctx context.Context, pr
 	return offersIds, nil
 }
 
+func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) error {
+	tx, err := r.postgres.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, updateOfferQuery, offer.Id, offer.Price, offer.Status, offer.Whereabouts,
+		offer.ReissueIncluded, offer.ViewCount, offer.PostedAt, offer.RefreshedAt,
+		offer.RawDetailed, offer.Comment,
+	)
+	if err != nil {
+		return fmt.Errorf("update offer %s: %w", offer.Id, err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("update offer %s: offer not found", offer.Id)
+	}
+
+	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithNumber{{Offer: offer}}); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// GetFeedNumbers - Возвращает свежие номера
+func (r *OfferRepository) GetFeedNumbers(ctx context.Context, limit int, offset int) ([]data.FeedNumber, error) {
+	rows, err := r.postgres.pool.Query(ctx, getFeedNumbers, string(domain.OfferStatusActive), limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("get feed numbers (limit=%d, offset=%d): %w", limit, offset, err)
+	}
+	defer rows.Close()
+
+	numbers := make([]data.FeedNumber, 0, limit)
+	for rows.Next() {
+		var (
+			id              uuid.UUID
+			number          string
+			regionName      *string
+			regionCode      *string
+			price           *float64
+			numberType      string
+			count           int
+			refreshedAt     time.Time
+			updatedAt       time.Time
+			reissueIncluded *bool
+		)
+
+		if err := rows.Scan(&id, &number, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
+			return nil, fmt.Errorf("get feed numbers (limit=%d, offset=%d): %w", limit, offset, err)
+		}
+
+		numbers = append(numbers, data.FeedNumber{
+			Id:              id,
+			Number:          number,
+			RegionName:      regionName,
+			RegionCode:      regionCode,
+			Price:           price,
+			Type:            domain.NumberType(numberType),
+			Count:           count,
+			RefreshedAt:     refreshedAt,
+			UpdatedAt:       updatedAt,
+			ReissueIncluded: reissueIncluded,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("get feed numbers (limit=%d, offset=%d): %w", limit, offset, err)
+	}
+
+	return numbers, nil
+}
+
 type rowScanner interface {
 	Scan(dest ...interface{}) error
 }
@@ -426,34 +532,4 @@ func scanOfferWithNumber(row rowScanner) (domain.OfferWithNumber, error) {
 	}
 
 	return domain.OfferWithNumber{Number: n, Offer: offer}, nil
-}
-
-func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) error {
-	tx, err := r.postgres.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	tag, err := tx.Exec(ctx, updateOfferQuery, offer.Id, offer.Price, offer.Status, offer.Whereabouts,
-		offer.ReissueIncluded, offer.ViewCount, offer.PostedAt, offer.RefreshedAt,
-		offer.RawDetailed, offer.Comment,
-	)
-	if err != nil {
-		return fmt.Errorf("update offer %s: %w", offer.Id, err)
-	}
-
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("update offer %s: offer not found", offer.Id)
-	}
-
-	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithNumber{{Offer: offer}}); err != nil {
-		return err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
-
-	return nil
 }
