@@ -19,11 +19,10 @@ type Handlers struct {
 	Plate  *plate.Handler
 }
 
-func NewRouter(cfg config.HttpServer, logger *slog.Logger, handlers Handlers) chi.Router {
+func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(accessLog(logger))
 	r.Use(recoverer(logger))
 	r.Use(timeout(cfg.RequestTimeout))

@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-func newTestOffer(numberId uuid.UUID, provider Provider, status OfferStatus) (*Offer, error) {
+func newTestOffer(numberID uuid.UUID, provider Provider, status OfferStatus) (*Offer, error) {
 	postedAt := time.Now()
 	price := 1000.0
 
 	return NewOffer(
-		numberId,
+		numberID,
 		provider,
 		"42",
 		&price,
@@ -35,11 +35,11 @@ func TestNewOfferAssignsID(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if offer.Id == uuid.Nil {
+	if offer.ID == uuid.Nil {
 		t.Fatal("expected generated id, got uuid.Nil")
 	}
 
-	if version := offer.Id.Version(); version != 7 {
+	if version := offer.ID.Version(); version != 7 {
 		t.Fatalf("expected UUID version 7, got %d", version)
 	}
 }

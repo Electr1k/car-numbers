@@ -79,12 +79,12 @@ func AllJobQueues() []JobQueue {
 }
 
 type Job struct {
-	Id         uuid.UUID  `validate:"required"`      // Id - Идентификатор
+	ID         uuid.UUID  `validate:"required"`      // ID - Идентификатор
 	Name       JobName    `validate:"required"`      // Name - Название джобы
 	Queue      JobQueue   `validate:"required"`      // Queue - Очередь
 	Status     JobStatus  `validate:"required"`      // JobStatus - Статус исполнения
 	StartAfter time.Time  `validate:"required"`      // StartAfter - Отложенный запуск
-	Payload    string     `validate:"required,json"` // Payload - Json с входными данными
+	Payload    string     `validate:"required,json"` // Payload - JSON с входными данными
 	UniqueKey  string     `validate:"required"`      // UniqueKey - Ключ дедупликации
 	LockedAt   *time.Time // LockedAt - Когда джоба взята воркером
 	Error      string     // Error - Причина последнего падения
@@ -132,7 +132,7 @@ func newJob(
 	errorText string,
 ) (*Job, error) {
 	j := &Job{
-		Id:         id,
+		ID:         id,
 		Name:       name,
 		Queue:      queue,
 		Status:     status,

@@ -15,7 +15,7 @@ type resolver interface {
 }
 
 type offerRepository interface {
-	GetOfferById(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error)
+	GetOfferByID(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error)
 
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }
@@ -60,7 +60,7 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 
 	logger.Info("import detail started")
 
-	offer, err := uc.repository.GetOfferById(ctx, id)
+	offer, err := uc.repository.GetOfferByID(ctx, id)
 	if err != nil {
 		return err
 	}

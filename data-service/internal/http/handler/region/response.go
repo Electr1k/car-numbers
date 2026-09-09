@@ -2,7 +2,7 @@ package region
 
 import (
 	"data-service/internal/domain"
-	"sort"
+	"slices"
 )
 
 type regionsResponse struct {
@@ -22,7 +22,7 @@ func mapRegions(regions []domain.RegionWithCodes) regionsResponse {
 		for _, c := range r.RegionCodes {
 			codes = append(codes, c.Code)
 		}
-		sort.Strings(codes)
+		slices.Sort(codes)
 
 		items = append(items, regionItem{Name: r.Region.Name, Codes: codes})
 	}

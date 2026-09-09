@@ -76,11 +76,11 @@ func TestMapToDomainHappyPath(t *testing.T) {
 	if result.Number.Type != domain.NumberTypeCar {
 		t.Errorf("type = %q", result.Number.Type)
 	}
-	if result.Offer.ExternalId != "12345" {
-		t.Errorf("external id = %q, want 12345", result.Offer.ExternalId)
+	if result.Offer.ExternalID != "12345" {
+		t.Errorf("external id = %q, want 12345", result.Offer.ExternalID)
 	}
-	if result.Offer.Url != "https://autonomera777.ru/standart/а123аа77" {
-		t.Errorf("url = %q", result.Offer.Url)
+	if result.Offer.URL != "https://autonomera777.ru/standart/а123аа77" {
+		t.Errorf("url = %q", result.Offer.URL)
 	}
 	if result.Offer.Price == nil || *result.Offer.Price != 1200000 {
 		t.Errorf("price = %v", result.Offer.Price)
@@ -88,8 +88,8 @@ func TestMapToDomainHappyPath(t *testing.T) {
 	if result.Offer.Status != domain.OfferStatusActive {
 		t.Errorf("status = %q", result.Offer.Status)
 	}
-	if result.Offer.NumberId != result.Number.Id {
-		t.Errorf("offer.NumberId %s != number.Id %s", result.Offer.NumberId, result.Number.Id)
+	if result.Offer.NumberID != result.Number.ID {
+		t.Errorf("offer.NumberID %s != number.ID %s", result.Offer.NumberID, result.Number.ID)
 	}
 	if result.Offer.PostedAt == nil || result.Offer.PostedAt.Format(dateLayout) != "05.08.2026" {
 		t.Errorf("postedAt = %v", result.Offer.PostedAt)

@@ -10,14 +10,14 @@ import (
 )
 
 type ImportOfferDetailPayload struct {
-	OfferId uuid.UUID `json:"offer_id"`
+	OfferID uuid.UUID `json:"offer_id"`
 }
 
-func importOfferDetailUniqueKey(offerId uuid.UUID) string {
-	return fmt.Sprintf("%s:%s", domain.JobNameImportOfferDetail, offerId)
+func importOfferDetailUniqueKey(offerID uuid.UUID) string {
+	return fmt.Sprintf("%s:%s", domain.JobNameImportOfferDetail, offerID)
 }
 
-func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error) {
+func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerID uuid.UUID, provider domain.Provider) (bool, error) {
 	enabled, err := p.features.Enabled(ctx, domain.FeatureKeyDispatchImportOfferDetail)
 	if err != nil {
 		return false, err
@@ -26,7 +26,7 @@ func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.U
 		return false, nil
 	}
 
-	encoded, err := json.Marshal(ImportOfferDetailPayload{OfferId: offerId})
+	encoded, err := json.Marshal(ImportOfferDetailPayload{OfferID: offerID})
 	if err != nil {
 		return false, fmt.Errorf("marshal payload: %w", err)
 	}
@@ -35,6 +35,6 @@ func (p *Producer) DispatchImportOfferDetail(ctx context.Context, offerId uuid.U
 		domain.JobNameImportOfferDetail,
 		provider.JobQueue(),
 		string(encoded),
-		importOfferDetailUniqueKey(offerId),
+		importOfferDetailUniqueKey(offerID),
 	))
 }

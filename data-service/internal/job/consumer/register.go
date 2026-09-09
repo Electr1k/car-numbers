@@ -18,7 +18,7 @@ import (
 
 type OfferRepository interface {
 	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error)
-	GetOfferById(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error)
+	GetOfferByID(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error)
 	GetOfferIdsByProviderAndStatus(ctx context.Context, provider domain.Provider, status domain.OfferStatus) ([]uuid.UUID, error)
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }

@@ -31,7 +31,7 @@ func (r *RegionRepository) GetRegions(ctx context.Context) ([]domain.RegionWithC
 	}
 	defer rows.Close()
 
-	codesByRegionsId := make(map[int]domain.RegionWithCodes)
+	codesByRegionsID := make(map[int]domain.RegionWithCodes)
 	for rows.Next() {
 		var (
 			id   int
@@ -49,16 +49,16 @@ func (r *RegionRepository) GetRegions(ctx context.Context) ([]domain.RegionWithC
 			return nil, fmt.Errorf("get region row: %w", err)
 		}
 
-		if region, ok := codesByRegionsId[id]; ok {
+		if region, ok := codesByRegionsID[id]; ok {
 			region.RegionCodes = append(region.RegionCodes, *domainCode)
-			codesByRegionsId[id] = region
+			codesByRegionsID[id] = region
 		} else {
 			domainRegion, err := domain.RestoreRegion(id, name)
 			if err != nil {
 				return nil, fmt.Errorf("get region row: %w", err)
 			}
 
-			codesByRegionsId[id] = domain.RegionWithCodes{
+			codesByRegionsID[id] = domain.RegionWithCodes{
 				Region:      *domainRegion,
 				RegionCodes: []domain.RegionCode{*domainCode},
 			}
@@ -69,5 +69,5 @@ func (r *RegionRepository) GetRegions(ctx context.Context) ([]domain.RegionWithC
 		return nil, fmt.Errorf("get regions: %w", err)
 	}
 
-	return slices.Collect(maps.Values(codesByRegionsId)), nil
+	return slices.Collect(maps.Values(codesByRegionsID)), nil
 }

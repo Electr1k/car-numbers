@@ -12,7 +12,7 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(cfg config.HttpServer, handler http.Handler) *Server {
+func NewServer(cfg config.HTTPServer, handler http.Handler) *Server {
 	return &Server{
 		httpServer: &http.Server{
 			Addr:         net.JoinHostPort(cfg.Address, cfg.Port),

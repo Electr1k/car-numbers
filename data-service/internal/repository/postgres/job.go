@@ -147,7 +147,7 @@ func (r *JobRepository) DeleteJob(ctx context.Context, id uuid.UUID) error {
 
 func (r *JobRepository) CreateJob(ctx context.Context, job domain.Job) (bool, error) {
 	tag, err := r.postgres.pool.Exec(ctx, createJobQuery,
-		job.Id,
+		job.ID,
 		string(job.Name),
 		string(job.Queue),
 		string(job.Status),

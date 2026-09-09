@@ -8,7 +8,7 @@ import (
 )
 
 type numberResponse struct {
-	Id     uuid.UUID `json:"id"`
+	ID     uuid.UUID `json:"id"`
 	Number string    `json:"number"`
 	Region *region   `json:"region"`
 	Offers []offer   `json:"offers"`
@@ -20,7 +20,7 @@ type region struct {
 }
 
 type offer struct {
-	Id              uuid.UUID `json:"id"`
+	ID              uuid.UUID `json:"id"`
 	Provider        string    `json:"provider"`
 	Price           *float64  `json:"price"`
 	Status          string    `json:"status"`
@@ -30,28 +30,28 @@ type offer struct {
 	Comment         *string   `json:"comment"`
 	PostedAt        time.Time `json:"posted_at"`
 	RefreshedAt     time.Time `json:"refreshed_at"`
-	Url             string    `json:"url"`
+	URL             string    `json:"url"`
 }
 
-// mapFeedNumbers - маппинг свежих номеров в ответ API
+// mapNumber - маппинг номера в ответ API
 func mapNumber(number data.Number) numberResponse {
-	var regionJson *region = nil
+	var regionJSON *region
 	if number.RegionName != nil && number.RegionCode != nil {
-		regionJson = &region{
-			*number.RegionName,
-			*number.RegionCode,
+		regionJSON = &region{
+			Name: *number.RegionName,
+			Code: *number.RegionCode,
 		}
 	}
 
-	offersJson := make([]offer, 0, len(number.Offers))
+	offersJSON := make([]offer, 0, len(number.Offers))
 	for _, offerDomain := range number.Offers {
-		var whereabouts *string = nil
+		var whereabouts *string
 		if offerDomain.Whereabouts != nil {
 			w := string(*offerDomain.Whereabouts)
 			whereabouts = &w
 		}
-		offersJson = append(offersJson, offer{
-			Id:              offerDomain.Id,
+		offersJSON = append(offersJSON, offer{
+			ID:              offerDomain.ID,
 			Provider:        string(offerDomain.Provider),
 			Price:           offerDomain.Price,
 			Status:          string(offerDomain.Status),
@@ -59,16 +59,16 @@ func mapNumber(number data.Number) numberResponse {
 			Whereabouts:     whereabouts,
 			ViewCount:       offerDomain.ViewCount,
 			Comment:         offerDomain.Comment,
-			PostedAt:        *offerDomain.PostedAt,
-			RefreshedAt:     *offerDomain.RefreshedAt,
-			Url:             offerDomain.Url,
+			PostedAt:        offerDomain.PostedAt,
+			RefreshedAt:     offerDomain.RefreshedAt,
+			URL:             offerDomain.URL,
 		})
 	}
 
 	return numberResponse{
-		Id:     number.Id,
+		ID:     number.ID,
 		Number: number.Number,
-		Region: regionJson,
-		Offers: offersJson,
+		Region: regionJSON,
+		Offers: offersJSON,
 	}
 }

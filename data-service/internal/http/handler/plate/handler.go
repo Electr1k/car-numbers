@@ -25,12 +25,12 @@ func New(uc numberFetcher) *Handler {
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
-	plateId, err := uuid.Parse(chi.URLParam(r, "id"))
+	plateID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
 		return fmt.Errorf("%w: id: %v", domain.ErrInvalidArgument, err)
 	}
 
-	res, err := h.uc.Handle(r.Context(), plateId)
+	res, err := h.uc.Handle(r.Context(), plateID)
 	if err != nil {
 		return fmt.Errorf("fetch plate: %w", err)
 	}

@@ -2,14 +2,14 @@ package domain
 
 // Region - Регион
 type Region struct {
-	Id   int    `validate:"required"`       // Id - Идентификатор
+	ID   int    `validate:"required"`       // ID - Идентификатор
 	Name string `validate:"required,min=3"` // Name - Название региона
 }
 
 // RegionCode - код региона
 type RegionCode struct {
 	Code     string `validate:"required"`
-	RegionId int    `validate:"required"`
+	RegionID int    `validate:"required"`
 }
 
 type RegionWithCodes struct {
@@ -30,7 +30,7 @@ func newRegion(
 	name string,
 ) (*Region, error) {
 	n := &Region{
-		Id:   id,
+		ID:   id,
 		Name: name,
 	}
 
@@ -44,18 +44,18 @@ func newRegion(
 // RestoreRegionCode - Восстановление существующего кода региона из хранилища
 func RestoreRegionCode(
 	code string,
-	regionId int,
+	regionID int,
 ) (*RegionCode, error) {
-	return newRegionCode(code, regionId)
+	return newRegionCode(code, regionID)
 }
 
 func newRegionCode(
 	code string,
-	regionId int,
+	regionID int,
 ) (*RegionCode, error) {
 	c := &RegionCode{
 		Code:     code,
-		RegionId: regionId,
+		RegionID: regionID,
 	}
 
 	if err := validate.Struct(c); err != nil {

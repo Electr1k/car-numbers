@@ -25,7 +25,7 @@ var ErrNumberNotFound = errors.New("number not found")
 
 // Number - Номер
 type Number struct {
-	Id        uuid.UUID  `validate:"required"`                        // Id - Идентификатор
+	ID        uuid.UUID  `validate:"required"`                        // ID - Идентификатор
 	Number    string     `validate:"required,min=8,max=9"`            // Number - Номер
 	Type      NumberType `validate:"required,oneof=car moto trailer"` // Type - Тип номера
 	CreatedAt *time.Time
@@ -61,7 +61,7 @@ func newNumber(
 	updatedAt *time.Time,
 ) (*Number, error) {
 	n := &Number{
-		Id:        id,
+		ID:        id,
 		Number:    number,
 		Type:      numberType,
 		CreatedAt: createdAt,

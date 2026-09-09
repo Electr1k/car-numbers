@@ -43,7 +43,7 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 }
 
 func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
-	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.ExternalId)
+	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.ExternalID)
 	if errors.Is(err, provider.ErrNotFound) {
 		offer.Offer.Status = domain.OfferStatusInactive
 		return offer, nil
@@ -55,10 +55,10 @@ func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNu
 	return s.mapper.ApplyOfferDetailToDomain(*response, offer)
 }
 
-func (s *Service) FetchOfferDetailByExternalId(ctx context.Context, externalId string) (domain.OfferWithNumber, error) {
+func (s *Service) FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithNumber, error) {
 	var emptyOffer domain.OfferWithNumber
 
-	response, err := s.client.FetchOfferDetail(ctx, externalId)
+	response, err := s.client.FetchOfferDetail(ctx, externalID)
 	if errors.Is(err, provider.ErrNotFound) {
 		return emptyOffer, provider.ErrNotFound
 	}

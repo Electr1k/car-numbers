@@ -39,12 +39,12 @@ func main() {
 
 		offerRepository := postgres.NewOfferRepository(a.Database)
 
-		router := httptransport.NewRouter(a.Config.HttpServer, a.Logger, httptransport.Handlers{
+		router := httptransport.NewRouter(a.Config.HTTPServer, a.Logger, httptransport.Handlers{
 			Region: region.New(fetchregions.New(postgres.NewRegionRepository(a.Database))),
 			Feed:   feed.New(fetchfeednumbers.New(offerRepository)),
 			Plate:  plate.New(fetchnumber.New(offerRepository)),
 		})
-		httpServer := httptransport.NewServer(a.Config.HttpServer, router)
+		httpServer := httptransport.NewServer(a.Config.HTTPServer, router)
 
 		group, groupCtx := errgroup.WithContext(ctx)
 

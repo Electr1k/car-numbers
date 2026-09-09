@@ -14,11 +14,11 @@ func TestNewPriceHistoryAssignsID(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if history.Id == uuid.Nil {
+	if history.ID == uuid.Nil {
 		t.Fatal("expected generated id, got uuid.Nil")
 	}
 
-	if version := history.Id.Version(); version != 7 {
+	if version := history.ID.Version(); version != 7 {
 		t.Fatalf("expected UUID version 7, got %d", version)
 	}
 }
@@ -52,9 +52,9 @@ func TestNewPriceHistoryRequiresIDs(t *testing.T) {
 
 // Номер наблюдения - снимок номера предложения на этот момент
 func TestNewPriceHistoryFromOfferCopiesOfferState(t *testing.T) {
-	numberId := uuid.New()
+	numberID := uuid.New()
 
-	offer, err := newTestOffer(numberId, ProviderAutonomera, OfferStatusActive)
+	offer, err := newTestOffer(numberID, ProviderAutonomera, OfferStatusActive)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -64,12 +64,12 @@ func TestNewPriceHistoryFromOfferCopiesOfferState(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if history.OfferId != offer.Id {
-		t.Fatalf("offer id = %s, want %s", history.OfferId, offer.Id)
+	if history.OfferID != offer.ID {
+		t.Fatalf("offer id = %s, want %s", history.OfferID, offer.ID)
 	}
 
-	if history.NumberId != numberId {
-		t.Fatalf("number id = %s, want %s", history.NumberId, numberId)
+	if history.NumberID != numberID {
+		t.Fatalf("number id = %s, want %s", history.NumberID, numberID)
 	}
 
 	if history.Price != offer.Price {

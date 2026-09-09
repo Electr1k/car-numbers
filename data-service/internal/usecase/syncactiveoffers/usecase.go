@@ -14,7 +14,7 @@ type offerStore interface {
 }
 
 type detailDispatcher interface {
-	DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error)
+	DispatchImportOfferDetail(ctx context.Context, offerID uuid.UUID, provider domain.Provider) (bool, error)
 }
 
 type feature interface {
@@ -66,10 +66,10 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 	}
 
 	dispatched := 0
-	for _, offerId := range offerIds {
-		success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offerId, params.Provider)
+	for _, offerID := range offerIds {
+		success, err := uc.detailDispatcher.DispatchImportOfferDetail(ctx, offerID, params.Provider)
 		if err != nil {
-			return fmt.Errorf("dispatch offer details for offer id %s: %w", offerId, err)
+			return fmt.Errorf("dispatch offer details for offer id %s: %w", offerID, err)
 		}
 		if success {
 			dispatched++

@@ -43,10 +43,10 @@ func withDetail(item domain.OfferWithNumber) domain.OfferWithNumber {
 	return domain.OfferWithNumber{Number: item.Number, Offer: &offer}
 }
 
-type dispatcherFunc func(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error)
+type dispatcherFunc func(ctx context.Context, offerID uuid.UUID, provider domain.Provider) (bool, error)
 
-func (f dispatcherFunc) DispatchImportOfferDetail(ctx context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error) {
-	return f(ctx, offerId, provider)
+func (f dispatcherFunc) DispatchImportOfferDetail(ctx context.Context, offerID uuid.UUID, provider domain.Provider) (bool, error) {
+	return f(ctx, offerID, provider)
 }
 
 func dispatchAll(_ context.Context, _ uuid.UUID, _ domain.Provider) (bool, error) {
@@ -101,7 +101,7 @@ func resultWith(t *testing.T, count int, postedAt time.Time, rowErrs ...error) p
 		price := 1000.0
 
 		offer, err := domain.NewOffer(
-			number.Id,
+			number.ID,
 			domain.ProviderAutonomera,
 			"42",
 			&price,
@@ -153,15 +153,15 @@ func TestHandleDispatchesDetailForOffersWithoutDetail(t *testing.T) {
 			}
 
 			stored = append(stored, item)
-			wantIds = append(wantIds, item.Offer.Id)
+			wantIds = append(wantIds, item.Offer.ID)
 		}
 
 		return stored, nil
 	})
 
 	var dispatchedIds []uuid.UUID
-	dispatcher := dispatcherFunc(func(_ context.Context, offerId uuid.UUID, _ domain.Provider) (bool, error) {
-		dispatchedIds = append(dispatchedIds, offerId)
+	dispatcher := dispatcherFunc(func(_ context.Context, offerID uuid.UUID, _ domain.Provider) (bool, error) {
+		dispatchedIds = append(dispatchedIds, offerID)
 		return true, nil
 	})
 
@@ -176,9 +176,9 @@ func TestHandleDispatchesDetailForOffersWithoutDetail(t *testing.T) {
 }
 
 // Диспатчим по идентификатору из базы, а не по сгенерированному маппером
-func TestHandleDispatchesStoredOfferId(t *testing.T) {
+func TestHandleDispatchesStoredOfferID(t *testing.T) {
 	now := time.Now()
-	storedId := uuid.New()
+	storedID := uuid.New()
 
 	p := providerFunc(func(_ context.Context, _ autonomera.Section, offset int) (provider.FetchResult, error) {
 		if offset > 0 {
@@ -191,15 +191,15 @@ func TestHandleDispatchesStoredOfferId(t *testing.T) {
 	saver := saverFunc(func(_ context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
 		// Оффер уже существовал: в базе у него свой идентификатор от первой вставки
 		offer := *items[0].Offer
-		offer.Id = storedId
+		offer.ID = storedID
 
 		return []domain.OfferWithNumber{{Number: items[0].Number, Offer: &offer}}, nil
 	})
 
 	var dispatchedIds []uuid.UUID
 	var dispatchedProviders []domain.Provider
-	dispatcher := dispatcherFunc(func(_ context.Context, offerId uuid.UUID, provider domain.Provider) (bool, error) {
-		dispatchedIds = append(dispatchedIds, offerId)
+	dispatcher := dispatcherFunc(func(_ context.Context, offerID uuid.UUID, provider domain.Provider) (bool, error) {
+		dispatchedIds = append(dispatchedIds, offerID)
 		dispatchedProviders = append(dispatchedProviders, provider)
 		return true, nil
 	})
@@ -209,8 +209,8 @@ func TestHandleDispatchesStoredOfferId(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if !slices.Equal(dispatchedIds, []uuid.UUID{storedId}) {
-		t.Fatalf("dispatched = %v, want %v", dispatchedIds, []uuid.UUID{storedId})
+	if !slices.Equal(dispatchedIds, []uuid.UUID{storedID}) {
+		t.Fatalf("dispatched = %v, want %v", dispatchedIds, []uuid.UUID{storedID})
 	}
 
 	// Провайдер оффера определяет очередь джобы

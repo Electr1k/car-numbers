@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	Env              string `env:"ENV" env-default:"development"`
-	HttpServer       `env-prefix:"HTTP_"`
+	HTTPServer       `env-prefix:"HTTP_"`
 	LogConfig        `env-prefix:"LOG_"`
 	DatabaseConfig   `env-prefix:"DATABASE_"`
 	AutoNomeraConfig `env-prefix:"AUTONOMERA_"`
@@ -20,7 +20,7 @@ type Config struct {
 	WorkerConfig     `env-prefix:"WORKER_"`
 }
 
-type HttpServer struct {
+type HTTPServer struct {
 	Address         string        `env:"ADDRESS" env-default:""`
 	Port            string        `env:"PORT" env-default:"8080"`
 	Timeout         time.Duration `env:"TIMEOUT" env-default:"5s"`

@@ -9,13 +9,13 @@ import (
 )
 
 type errorWrapper struct {
-	Error errorApi `json:"error"`
+	Error errorAPI `json:"error"`
 }
 
-type errorApi struct {
+type errorAPI struct {
 	Code      string `json:"code"`
 	Message   string `json:"message"`
-	RequestId string `json:"request_id,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
 }
 
 // WriteJSON - пишет тело ответа в JSON
@@ -38,9 +38,9 @@ func WriteJSON(w http.ResponseWriter, status int, v any) error {
 
 // WriteError - пишет ошибку в едином формате {"error": {...}}
 func WriteError(w http.ResponseWriter, r *http.Request, status int, code string, message string) error {
-	return WriteJSON(w, status, errorWrapper{Error: errorApi{
+	return WriteJSON(w, status, errorWrapper{Error: errorAPI{
 		Code:      code,
 		Message:   message,
-		RequestId: middleware.GetReqID(r.Context()),
+		RequestID: middleware.GetReqID(r.Context()),
 	}})
 }

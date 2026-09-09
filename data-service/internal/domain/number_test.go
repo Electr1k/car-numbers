@@ -12,11 +12,11 @@ func TestNewNumberAssignsID(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if first.Id == uuid.Nil {
+	if first.ID == uuid.Nil {
 		t.Fatal("expected generated id, got uuid.Nil")
 	}
 
-	if version := first.Id.Version(); version != 7 {
+	if version := first.ID.Version(); version != 7 {
 		t.Fatalf("expected UUID version 7, got %d", version)
 	}
 
@@ -25,7 +25,7 @@ func TestNewNumberAssignsID(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if first.Id == second.Id {
+	if first.ID == second.ID {
 		t.Fatal("expected distinct ids for distinct numbers")
 	}
 }
@@ -60,7 +60,7 @@ func TestRestoreNumberRequiresID(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if restored.Id != id {
-		t.Fatalf("got id %s, want %s", restored.Id, id)
+	if restored.ID != id {
+		t.Fatalf("got id %s, want %s", restored.ID, id)
 	}
 }

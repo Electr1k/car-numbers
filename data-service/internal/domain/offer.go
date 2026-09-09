@@ -36,10 +36,10 @@ const (
 
 // Offer - Предложение
 type Offer struct {
-	Id              uuid.UUID         `validate:"required"`                                    // Id - Идентификатор
-	NumberId        uuid.UUID         `validate:"required"`                                    // NumberId - Идентификатор номера
+	ID              uuid.UUID         `validate:"required"`                                    // ID - Идентификатор
+	NumberID        uuid.UUID         `validate:"required"`                                    // NumberID - Идентификатор номера
 	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найдено предложение
-	ExternalId      string            `validate:"required"`                                    // ExternalId - Идентификатор у провайдера
+	ExternalID      string            `validate:"required"`                                    // ExternalID - Идентификатор у провайдера
 	Price           *float64          `validate:"omitempty,gt=0"`                              // Price - Цена
 	Status          OfferStatus       `validate:"required,oneof=active sold inactive"`         // Status - Статус предложения
 	Whereabouts     *OfferWhereabouts `validate:"omitempty,oneof=on-car on-storage"`           // Whereabouts - Где находится номер (на авто/хранении)
@@ -47,7 +47,7 @@ type Offer struct {
 	ViewCount       *int              `validate:"omitempty,gte=0"`                             // ViewCount - Число просмотров у провайдера
 	PostedAt        *time.Time        `validate:"required"`                                    // PostedAt - Дата создания предложения у провайдера
 	RefreshedAt     *time.Time        `validate:"required"`                                    // RefreshedAt - Дата поднятия/обновления предложения у провайдера
-	Url             string            `validate:"required"`                                    // Url - Ссылка на предложение
+	URL             string            `validate:"required"`                                    // URL - Ссылка на предложение
 	Raw             string            `validate:"required"`                                    // Raw - Сырой объект поставщика
 	RawDetailed     *string           `validate:"omitempty"`                                   // RawDetailed - Сырой объект поставщика с детальной информацией
 	Comment         *string           `validate:"omitempty"`                                   // Comment - Комментарий
@@ -90,9 +90,9 @@ func (o *Offer) ApplyDetail(
 
 // NewOffer - Создание предложения, которого ещё не существовало
 func NewOffer(
-	numberId uuid.UUID,
+	numberID uuid.UUID,
 	provider Provider,
-	externalId string,
+	externalID string,
 	price *float64,
 	status OfferStatus,
 	whereabouts *OfferWhereabouts,
@@ -112,9 +112,9 @@ func NewOffer(
 
 	return newOffer(
 		id,
-		numberId,
+		numberID,
 		provider,
-		externalId,
+		externalID,
 		price,
 		status,
 		whereabouts,
@@ -134,9 +134,9 @@ func NewOffer(
 // RestoreOffer - Восстановление существующего предложения из хранилища
 func RestoreOffer(
 	id uuid.UUID,
-	numberId uuid.UUID,
+	numberID uuid.UUID,
 	provider Provider,
-	externalId string,
+	externalID string,
 	price *float64,
 	status OfferStatus,
 	whereabouts *OfferWhereabouts,
@@ -153,9 +153,9 @@ func RestoreOffer(
 ) (*Offer, error) {
 	return newOffer(
 		id,
-		numberId,
+		numberID,
 		provider,
-		externalId,
+		externalID,
 		price,
 		status,
 		whereabouts,
@@ -174,9 +174,9 @@ func RestoreOffer(
 
 func newOffer(
 	id uuid.UUID,
-	numberId uuid.UUID,
+	numberID uuid.UUID,
 	provider Provider,
-	externalId string,
+	externalID string,
 	price *float64,
 	status OfferStatus,
 	whereabouts *OfferWhereabouts,
@@ -192,10 +192,10 @@ func newOffer(
 	updatedAt *time.Time,
 ) (*Offer, error) {
 	offer := &Offer{
-		Id:              id,
-		NumberId:        numberId,
+		ID:              id,
+		NumberID:        numberID,
 		Provider:        provider,
-		ExternalId:      externalId,
+		ExternalID:      externalID,
 		Price:           price,
 		Status:          status,
 		Whereabouts:     whereabouts,
@@ -203,7 +203,7 @@ func newOffer(
 		ViewCount:       viewCount,
 		PostedAt:        postedAt,
 		RefreshedAt:     refreshedAt,
-		Url:             url,
+		URL:             url,
 		Raw:             raw,
 		RawDetailed:     rawDetailed,
 		Comment:         comment,

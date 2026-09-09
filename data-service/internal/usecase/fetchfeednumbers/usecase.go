@@ -9,7 +9,7 @@ type numberStore interface {
 	GetFeedNumbers(ctx context.Context, limit int, offset int) ([]data.FeedNumber, error)
 }
 
-// UseCase - возвращает свежих номеров
+// UseCase - возвращает свежие номера
 type UseCase struct {
 	repository numberStore
 }

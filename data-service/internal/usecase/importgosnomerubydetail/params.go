@@ -5,19 +5,19 @@ import (
 )
 
 type Params struct {
-	// StartId - стартовый id поставщика
-	StartId int
+	// StartID - стартовый id поставщика
+	StartID int
 
-	// EndId - конечный id поставщика
-	EndId int
+	// EndID - конечный id поставщика
+	EndID int
 }
 
 func (p Params) validate() error {
 	switch {
-	case p.StartId < 0:
-		return fmt.Errorf("start id must not be negative, got %d", p.StartId)
-	case p.EndId < 0:
-		return fmt.Errorf("end id must not be negative, got %d", p.EndId)
+	case p.StartID < 0:
+		return fmt.Errorf("start id must not be negative, got %d", p.StartID)
+	case p.EndID < 0:
+		return fmt.Errorf("end id must not be negative, got %d", p.EndID)
 	}
 
 	return nil

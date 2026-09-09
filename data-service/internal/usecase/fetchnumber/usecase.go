@@ -8,10 +8,10 @@ import (
 )
 
 type numberStore interface {
-	GetNumberWithOffersById(ctx context.Context, id uuid.UUID) (*data.Number, error)
+	GetNumberWithOffersByID(ctx context.Context, id uuid.UUID) (*data.Number, error)
 }
 
-// UseCase - возвращает свежих номеров
+// UseCase - возвращает номер с предложениями
 type UseCase struct {
 	repository numberStore
 }
@@ -24,8 +24,7 @@ func New(
 	}
 }
 
-// Handle - возвращает список свежих номеров
+// Handle - возвращает номер с предложениями по идентификатору
 func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) (*data.Number, error) {
-
-	return uc.repository.GetNumberWithOffersById(ctx, id)
+	return uc.repository.GetNumberWithOffersByID(ctx, id)
 }

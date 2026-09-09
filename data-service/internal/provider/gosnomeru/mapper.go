@@ -35,7 +35,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrBrokenOffer, err)
 	}
 
-	url := m.getOfferUrl(externalOffer.ID, externalOffer.Slug)
+	url := m.getOfferURL(externalOffer.ID, externalOffer.Slug)
 
 	numberStr := externalOffer.Number.Letters + externalOffer.Number.Region
 	numberType := domain.NumberTypeCar
@@ -64,7 +64,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 	}
 
 	offer, err := domain.NewOffer(
-		number.Id,
+		number.ID,
 		domain.ProviderGosnomeru,
 		externalOffer.ID,
 		price,
@@ -157,7 +157,7 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 	}
 	rawStr := string(raw)
 
-	url := m.getOfferUrl(response.ID, response.Slug)
+	url := m.getOfferURL(response.ID, response.Slug)
 
 	numberStr := response.Number.Letters + response.Number.Region
 	numberType := domain.NumberTypeCar
@@ -175,7 +175,7 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 		status = domain.OfferStatusInactive
 	}
 
-	var price *float64 = nil
+	var price *float64
 	if response.Price > 0 {
 		price = &response.Price
 	}
@@ -192,13 +192,13 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 	}
 	refreshedAt := &refreshed
 
-	var comment *string = nil
+	var comment *string
 	if len(strings.TrimSpace(response.Description)) > 0 {
 		comment = &response.Description
 	}
 
 	offer, err := domain.NewOffer(
-		number.Id,
+		number.ID,
 		domain.ProviderGosnomeru,
 		response.ID,
 		price,
@@ -220,6 +220,6 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
 }
 
-func (m *Mapper) getOfferUrl(externalId string, slug string) string {
-	return m.baseURL + "/plate/" + externalId + "-" + slug + ".html"
+func (m *Mapper) getOfferURL(externalID string, slug string) string {
+	return m.baseURL + "/plate/" + externalID + "-" + slug + ".html"
 }

@@ -13,14 +13,14 @@ type feedNumberResponse struct {
 }
 
 type feedNumberItem struct {
-	Id              uuid.UUID         `json:"id"`
+	ID              uuid.UUID         `json:"id"`
 	Number          string            `json:"number"`
 	Region          *feedRegion       `json:"region"`
 	Price           *float64          `json:"price"`
 	Type            domain.NumberType `json:"type"`
 	Count           int               `json:"count"`
 	RefreshedAt     time.Time         `json:"refreshed_at"`
-	UpdatedAt       time.Time         `json:"updatedAt"`
+	UpdatedAt       time.Time         `json:"updated_at"`
 	ReissueIncluded *bool             `json:"reissue_included"`
 }
 
@@ -33,16 +33,16 @@ type feedRegion struct {
 func mapFeedNumbers(numbers []data.FeedNumber) feedNumberResponse {
 	items := make([]feedNumberItem, 0, len(numbers))
 	for _, number := range numbers {
-		var region *feedRegion = nil
+		var region *feedRegion
 		if number.RegionName != nil && number.RegionCode != nil {
 			region = &feedRegion{
-				*number.RegionName,
-				*number.RegionCode,
+				Name: *number.RegionName,
+				Code: *number.RegionCode,
 			}
 		}
 
 		items = append(items, feedNumberItem{
-			Id:              number.Id,
+			ID:              number.ID,
 			Number:          number.Number,
 			Region:          region,
 			Price:           number.Price,

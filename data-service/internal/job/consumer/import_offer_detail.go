@@ -25,5 +25,5 @@ func (c *ImportOfferDetailConsumer) Handle(ctx context.Context, payload string) 
 		return fmt.Errorf("unmarshal payload: %w", err)
 	}
 
-	return c.uc.Handle(ctx, decoded.OfferId)
+	return c.uc.Handle(ctx, decoded.OfferID)
 }

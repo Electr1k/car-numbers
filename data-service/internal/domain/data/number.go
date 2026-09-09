@@ -9,24 +9,24 @@ import (
 
 // Number - номер для выдачи
 type Number struct {
-	Id         uuid.UUID `validate:"required"`             // Id - Идентификатор
-	Number     string    `validate:"required,min=8,max=9"` // Number - Номер
+	ID         uuid.UUID // ID - Идентификатор
+	Number     string    // Number - Номер
 	RegionName *string   // RegionName - Название региона
 	RegionCode *string   // RegionCode - Код региона
-	Offers     []Offer   // Offers - номера в номере
+	Offers     []Offer   // Offers - предложения по номеру
 }
 
 // Offer - оффер в номере
 type Offer struct {
-	Id              uuid.UUID          `validate:"required"`
-	Provider        domain.Provider    `validate:"required"`
-	Price           *float64           `validate:"required"`
-	Status          domain.OfferStatus `validate:"required"`
+	ID              uuid.UUID
+	Provider        domain.Provider
+	Price           *float64
+	Status          domain.OfferStatus
 	ReissueIncluded *bool
 	Whereabouts     *domain.OfferWhereabouts
 	ViewCount       *int
 	Comment         *string
-	PostedAt        *time.Time
-	RefreshedAt     *time.Time
-	Url             string
+	PostedAt        time.Time
+	RefreshedAt     time.Time
+	URL             string
 }

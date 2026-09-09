@@ -117,7 +117,7 @@ func (w *Worker) processNext(ctx context.Context, workerLogger *slog.Logger) (bo
 		return false, fmt.Errorf("get job: %w", err)
 	}
 
-	logger := workerLogger.With("job_id", domainJob.Id, "job", domainJob.Name, "queue", domainJob.Queue)
+	logger := workerLogger.With("job_id", domainJob.ID, "job", domainJob.Name, "queue", domainJob.Queue)
 	logger.Info("job taken")
 
 	started := time.Now()
@@ -134,7 +134,7 @@ func (w *Worker) processNext(ctx context.Context, workerLogger *slog.Logger) (bo
 	if handleErr != nil {
 		logger.Error("job failed", "error", handleErr, "duration", time.Since(started))
 
-		if err := w.store.MarkJobFailed(finishCtx, domainJob.Id, handleErr); err != nil {
+		if err := w.store.MarkJobFailed(finishCtx, domainJob.ID, handleErr); err != nil {
 			return true, fmt.Errorf("mark job failed: %w", err)
 		}
 
@@ -143,7 +143,7 @@ func (w *Worker) processNext(ctx context.Context, workerLogger *slog.Logger) (bo
 
 	logger.Info("job finished", "duration", time.Since(started))
 
-	if err := w.store.DeleteJob(finishCtx, domainJob.Id); err != nil {
+	if err := w.store.DeleteJob(finishCtx, domainJob.ID); err != nil {
 		return true, fmt.Errorf("delete job: %w", err)
 	}
 

@@ -58,7 +58,7 @@ func (s *Service) FetchOffers(ctx context.Context, section Section, offset int) 
 }
 
 func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
-	response, err := s.client.FetchOfferDetailHTML(ctx, offer.Offer.Url)
+	response, err := s.client.FetchOfferDetailHTML(ctx, offer.Offer.URL)
 	if errors.Is(err, provider.ErrNotFound) {
 		offer.Offer.Status = domain.OfferStatusInactive
 		return offer, nil

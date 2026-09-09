@@ -227,7 +227,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithNumbe
 	}
 
 	offer, err := domain.NewOffer(
-		number.Id,
+		number.ID,
 		domain.ProviderAnomera,
 		ref.externalID,
 		price,
@@ -547,7 +547,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 	}
 
 	offer, err := domain.NewOffer(
-		number.Id,
+		number.ID,
 		domain.ProviderAnomera,
 		ref.externalID,
 		price,

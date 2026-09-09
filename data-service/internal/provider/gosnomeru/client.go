@@ -182,17 +182,17 @@ type OfferDetail struct {
 }
 
 // FetchOfferDetail забирает деталку предложения
-func (c *Client) FetchOfferDetail(ctx context.Context, externalId string) (*OfferDetail, error) {
-	requestUrl := c.baseURL + getNumberDetail + externalId
+func (c *Client) FetchOfferDetail(ctx context.Context, externalID string) (*OfferDetail, error) {
+	requestURL := c.baseURL + getNumberDetail + externalID
 
-	response, err := c.request(ctx, http.MethodGet, requestUrl)
+	response, err := c.request(ctx, http.MethodGet, requestURL)
 	if err != nil {
 		return nil, err
 	}
 
 	var jsonResponse OfferDetail
 	if err := json.Unmarshal(response, &jsonResponse); err != nil {
-		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestURL, err)
 	}
 
 	return &jsonResponse, nil
@@ -205,16 +205,16 @@ type LatestOffersResponse struct {
 
 // FetchLatestOffers забирает последние созданные предложения
 func (c *Client) FetchLatestOffers(ctx context.Context) (*LatestOffersResponse, error) {
-	requestUrl := c.baseURL + getLatestNumbers + "?limit=" + strconv.Itoa(latestNumberLimit)
+	requestURL := c.baseURL + getLatestNumbers + "?limit=" + strconv.Itoa(latestNumberLimit)
 
-	response, err := c.request(ctx, http.MethodGet, requestUrl)
+	response, err := c.request(ctx, http.MethodGet, requestURL)
 	if err != nil {
 		return nil, err
 	}
 
 	var jsonResponse LatestOffersResponse
 	if err := json.Unmarshal(response, &jsonResponse); err != nil {
-		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestUrl, err)
+		return nil, fmt.Errorf("%w: parse json from %s: %w", provider.ErrInvalidResponse, requestURL, err)
 	}
 
 	return &jsonResponse, nil

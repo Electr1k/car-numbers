@@ -48,7 +48,7 @@ var (
 
 // Feature - Фичи (функционал)
 type Feature struct {
-	Id        uuid.UUID  `validate:"required"` // Id - Идентификатор
+	ID        uuid.UUID  `validate:"required"` // ID - Идентификатор
 	Key       FeatureKey `validate:"required"` // Key - Ключ фичи
 	Name      string     `validate:"required"` // Name - Название фичи
 	Active    bool       // Active - Флаг активности фичи
@@ -77,7 +77,7 @@ func newFeature(
 	updatedAt *time.Time,
 ) (*Feature, error) {
 	f := &Feature{
-		Id:        id,
+		ID:        id,
 		Key:       key,
 		Name:      name,
 		Active:    active,

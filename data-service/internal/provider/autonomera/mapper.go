@@ -101,7 +101,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferSta
 	}
 
 	offer, err := domain.NewOffer(
-		number.Id,
+		number.ID,
 		domain.ProviderAutonomera,
 		externalID,
 		price,
@@ -282,7 +282,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 	}
 
 	commentText := strings.TrimSpace(sel.Find(".article-comment__content").Text())
-	var comment *string = nil
+	var comment *string
 	if len(commentText) != 0 {
 		comment = &commentText
 	}

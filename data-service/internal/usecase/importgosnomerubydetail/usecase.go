@@ -13,11 +13,11 @@ import (
 type offerProvider interface {
 	FetchLatestOffers(ctx context.Context) (provider.FetchResult, error)
 	FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error)
-	FetchOfferDetailByExternalId(ctx context.Context, externalId string) (domain.OfferWithNumber, error)
+	FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithNumber, error)
 }
 
 type offerRepository interface {
-	GetOfferByExternalId(ctx context.Context, provider domain.Provider, externalId string) (domain.OfferWithNumber, error)
+	GetOfferByExternalID(ctx context.Context, provider domain.Provider, externalID string) (domain.OfferWithNumber, error)
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 	UpdateOrCreate(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error)
 }
@@ -63,36 +63,36 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		return nil
 	}
 
-	startId := params.StartId
-	endId := params.EndId
+	startID := params.StartID
+	endID := params.EndID
 
-	if endId == 0 {
+	if endID == 0 {
 		var err error
-		endId, err = uc.fetchLastExternalId(ctx)
+		endID, err = uc.fetchLastExternalID(ctx)
 		if err != nil {
 			return err
 		}
 	}
 
-	uc.logger.Info("start import offers by enumeration id", "startId", startId, "endId", endId)
+	uc.logger.Info("start import offers by enumeration id", "startID", startID, "endID", endID)
 
-	for ; startId <= endId; startId++ {
+	for ; startID <= endID; startID++ {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
 
-		externalId := strconv.Itoa(startId)
+		externalID := strconv.Itoa(startID)
 
 		// Проверка существования оффера в БД
-		stored, err := uc.repository.GetOfferByExternalId(ctx, domain.ProviderGosnomeru, externalId)
+		stored, err := uc.repository.GetOfferByExternalID(ctx, domain.ProviderGosnomeru, externalID)
 		if err != nil && !errors.Is(err, domain.ErrOfferNotFound) {
-			return fmt.Errorf("get offer by external id %s: %w", externalId, err)
+			return fmt.Errorf("get offer by external id %s: %w", externalID, err)
 		}
 
 		if errors.Is(err, domain.ErrOfferNotFound) {
-			err = uc.importNew(ctx, externalId)
+			err = uc.importNew(ctx, externalID)
 		} else {
 			err = uc.refreshStored(ctx, stored)
 		}
@@ -100,19 +100,19 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		if err != nil {
 			msg := "failed to process offer"
 			if errors.Is(err, provider.ErrNotFound) || errors.Is(err, provider.ErrRowSkipped) {
-				uc.logger.Debug(msg, "err", err, "external_id", externalId)
+				uc.logger.Debug(msg, "err", err, "external_id", externalID)
 			} else {
-				uc.logger.Error(msg, "err", err, "external_id", externalId)
+				uc.logger.Error(msg, "err", err, "external_id", externalID)
 			}
 		}
 	}
-	uc.logger.Info("end import offers by enumeration id", "endId", endId)
+	uc.logger.Info("end import offers by enumeration id", "endID", endID)
 
 	return nil
 }
 
-// fetchLastExternalId - возвращает последний Id провайдера
-func (uc *UseCase) fetchLastExternalId(ctx context.Context) (int, error) {
+// fetchLastExternalID - возвращает последний ID провайдера
+func (uc *UseCase) fetchLastExternalID(ctx context.Context) (int, error) {
 	latestOffers, err := uc.provider.FetchLatestOffers(ctx)
 	if err != nil {
 		return 0, fmt.Errorf("fetch latest offers: %w", err)
@@ -122,12 +122,12 @@ func (uc *UseCase) fetchLastExternalId(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("last offer not found")
 	}
 
-	endId, err := strconv.Atoi(latestOffers.Offers[0].Offer.ExternalId)
+	endID, err := strconv.Atoi(latestOffers.Offers[0].Offer.ExternalID)
 	if err != nil {
 		return 0, fmt.Errorf("invalid external offer id: %w", err)
 	}
 
-	return endId, nil
+	return endID, nil
 }
 
 // refreshStored - догружает деталку поверх уже сохранённого предложения, не трогая поля из выдачи
@@ -145,8 +145,8 @@ func (uc *UseCase) refreshStored(ctx context.Context, stored domain.OfferWithNum
 }
 
 // importNew - сохраняет предложение, которого ещё нет в базе, целиком из деталки
-func (uc *UseCase) importNew(ctx context.Context, externalId string) error {
-	offer, err := uc.provider.FetchOfferDetailByExternalId(ctx, externalId)
+func (uc *UseCase) importNew(ctx context.Context, externalID string) error {
+	offer, err := uc.provider.FetchOfferDetailByExternalID(ctx, externalID)
 	if err != nil {
 		return err
 	}
