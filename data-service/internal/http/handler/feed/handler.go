@@ -23,19 +23,19 @@ func New(uc *fetchfeednumbers.UseCase, logger *slog.Logger) *Handler {
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	req := newFeedRequest()
 	if err := request.DecodeQuery(r, &req); err != nil {
-		response.WriteError(w, http.StatusBadRequest, "Некорректные параметры запроса")
+		response.WriteError(w, http.StatusBadRequest, "validation_error", "Некорректные параметры запроса")
 		return
 	}
 
 	if err := request.Validate(req); err != nil {
-		response.WriteError(w, http.StatusBadRequest, err.Error())
+		response.WriteError(w, http.StatusBadRequest, "validation_error", err.Error())
 		return
 	}
 
 	res, err := h.uc.Handle(r.Context(), fetchfeednumbers.Params{Limit: req.Limit, Offset: req.Offset})
 	if err != nil {
 		h.logger.Error("fetch feed offers usecase failed", "error", err)
-		response.WriteError(w, http.StatusBadGateway, "Произошла ошибка")
+		response.WriteError(w, http.StatusBadGateway, "unexpected_error", "Произошла ошибка")
 		return
 	}
 
