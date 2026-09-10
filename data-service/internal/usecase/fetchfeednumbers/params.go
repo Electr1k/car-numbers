@@ -14,7 +14,7 @@ const (
 type Params struct {
 	Limit int
 
-	Offset int
+	Cursor *string
 }
 
 func (p Params) validate() error {
@@ -23,8 +23,6 @@ func (p Params) validate() error {
 		return fmt.Errorf("%w: limit must be at least %d, got %d", domain.ErrInvalidArgument, minLimit, p.Limit)
 	case p.Limit > maxLimit:
 		return fmt.Errorf("%w: limit must not exceed %d, got %d", domain.ErrInvalidArgument, maxLimit, p.Limit)
-	case p.Offset < 0:
-		return fmt.Errorf("%w: offset must not be negative, got %d", domain.ErrInvalidArgument, p.Offset)
 	}
 
 	return nil

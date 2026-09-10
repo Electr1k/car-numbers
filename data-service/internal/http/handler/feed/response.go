@@ -9,7 +9,8 @@ import (
 )
 
 type feedNumberResponse struct {
-	Items []feedNumberItem `json:"items"`
+	Items      []feedNumberItem `json:"items"`
+	NextCursor *string          `json:"next_cursor"`
 }
 
 type feedNumberItem struct {
@@ -30,7 +31,7 @@ type feedRegion struct {
 }
 
 // mapFeedNumbers - маппинг свежих номеров в ответ API
-func mapFeedNumbers(numbers []data.FeedNumber) feedNumberResponse {
+func mapFeedNumbers(numbers []data.FeedNumber, cursor *string) feedNumberResponse {
 	items := make([]feedNumberItem, 0, len(numbers))
 	for _, number := range numbers {
 		var region *feedRegion
@@ -54,5 +55,5 @@ func mapFeedNumbers(numbers []data.FeedNumber) feedNumberResponse {
 		})
 	}
 
-	return feedNumberResponse{Items: items}
+	return feedNumberResponse{Items: items, NextCursor: cursor}
 }

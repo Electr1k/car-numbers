@@ -177,9 +177,9 @@ LEFT JOIN region_codes ON numbers.region_code = region_codes.code
 LEFT JOIN regions ON regions.id = region_codes.region_id
 WHERE status = $1
 GROUP BY numbers.id, number, regions.name, region_codes.code, type
-ORDER BY refreshed_at DESC, updated_at DESC
-LIMIT $2
-OFFSET $3
+HAVING (MAX(refreshed_at::date), MAX(offers.updated_at), numbers.id) < ($2, $3, $4)
+ORDER BY refreshed_at DESC, updated_at DESC, id DESC
+LIMIT $5
 `
 
 const getNumberWithOffersByID = `
@@ -454,15 +454,32 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 }
 
 // GetFeedNumbers - Возвращает свежие номера
-func (r *OfferRepository) GetFeedNumbers(ctx context.Context, limit int, offset int) ([]data.FeedNumber, error) {
-	rows, err := r.postgres.pool.Query(ctx, getFeedNumbers, string(domain.OfferStatusActive), limit, offset)
+func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor data.FeedCursor, limit int) ([]data.FeedNumber, bool, error) {
+	rows, err := r.postgres.pool.Query(
+		ctx,
+		getFeedNumbers,
+		string(domain.OfferStatusActive),
+		cursor.RefreshedAt,
+		cursor.UpdatedAt,
+		cursor.ID,
+		limit+1,
+	)
+
 	if err != nil {
-		return nil, fmt.Errorf("get feed numbers (limit=%d, offset=%d): %w", limit, offset, err)
+		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
+			limit,
+			cursor.RefreshedAt,
+			cursor.UpdatedAt,
+			cursor.ID,
+			err,
+		)
 	}
 	defer rows.Close()
 
 	numbers := make([]data.FeedNumber, 0, limit)
+	index := 0
 	for rows.Next() {
+		index++
 		var (
 			id              uuid.UUID
 			number          string
@@ -477,28 +494,31 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, limit int, offset 
 		)
 
 		if err := rows.Scan(&id, &number, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
-			return nil, fmt.Errorf("get feed numbers (limit=%d, offset=%d): %w", limit, offset, err)
+			return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w", limit, cursor.RefreshedAt, cursor.UpdatedAt, cursor.ID, err)
 		}
 
-		numbers = append(numbers, data.FeedNumber{
-			ID:              id,
-			Number:          number,
-			RegionName:      regionName,
-			RegionCode:      regionCode,
-			Price:           price,
-			Type:            domain.NumberType(numberType),
-			Count:           count,
-			RefreshedAt:     refreshedAt,
-			UpdatedAt:       updatedAt,
-			ReissueIncluded: reissueIncluded,
-		})
+		if index <= limit {
+			numbers = append(numbers, data.FeedNumber{
+				ID:              id,
+				Number:          number,
+				RegionName:      regionName,
+				RegionCode:      regionCode,
+				Price:           price,
+				Type:            domain.NumberType(numberType),
+				Count:           count,
+				RefreshedAt:     refreshedAt,
+				UpdatedAt:       updatedAt,
+				ReissueIncluded: reissueIncluded,
+			})
+		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("get feed numbers (limit=%d, offset=%d): %w", limit, offset, err)
+		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w", limit, cursor.RefreshedAt, cursor.UpdatedAt, cursor.ID, err)
 	}
+	hasNext := index > limit
 
-	return numbers, nil
+	return numbers, hasNext, nil
 }
 
 func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.UUID) (*data.Number, error) {
