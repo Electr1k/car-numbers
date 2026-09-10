@@ -2,13 +2,11 @@ package fetchfeednumbers
 
 import (
 	"context"
-	"data-service/internal/domain"
 	"data-service/internal/domain/data"
-	"fmt"
 )
 
 type numberStore interface {
-	GetFeedNumbers(ctx context.Context, cursor data.FeedCursor, limit int) ([]data.FeedNumber, bool, error)
+	GetFeedNumbers(ctx context.Context, cursor *data.FeedCursor, limit int) ([]data.FeedNumber, bool, error)
 }
 
 // UseCase - возвращает свежие номера
@@ -31,29 +29,23 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) (Result, error) {
 		return Result{}, err
 	}
 
-	var cursor data.FeedCursor
-	if params.Cursor == nil {
-		cursor = data.GetEmptyFeedCursor()
-	} else {
-		c, err := data.DecodeFeedCursor(*params.Cursor)
-		if err != nil {
-			return Result{}, fmt.Errorf("%w: err: %s", domain.ErrInvalidArgument, err.Error())
-		}
-		cursor = *c
-	}
-
-	numbers, hasNext, err := uc.repository.GetFeedNumbers(ctx, cursor, params.Limit)
-
+	numbers, hasNext, err := uc.repository.GetFeedNumbers(ctx, params.Cursor, params.Limit)
 	if err != nil {
 		return Result{}, err
 	}
 
 	if !hasNext {
-		return Result{Numbers: numbers, Cursor: nil}, err
+		return Result{Numbers: numbers}, nil
 	}
 
-	lastNumber := numbers[params.Limit-1]
-	newCursor := data.EncodeFeedCursor(lastNumber.RefreshedAt, lastNumber.UpdatedAt, lastNumber.ID)
+	last := numbers[len(numbers)-1]
 
-	return Result{Numbers: numbers, Cursor: &newCursor}, nil
+	return Result{
+		Numbers: numbers,
+		NextCursor: &data.FeedCursor{
+			RefreshedAt: last.RefreshedAt,
+			UpdatedAt:   last.UpdatedAt,
+			ID:          last.ID,
+		},
+	}, nil
 }

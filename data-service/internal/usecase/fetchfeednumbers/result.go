@@ -6,6 +6,6 @@ import (
 
 // Result - результат выборки свежих номеров
 type Result struct {
-	Numbers []data.FeedNumber
-	Cursor  *string
+	Numbers    []data.FeedNumber
+	NextCursor *data.FeedCursor
 }

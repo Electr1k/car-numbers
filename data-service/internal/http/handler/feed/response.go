@@ -31,7 +31,7 @@ type feedRegion struct {
 }
 
 // mapFeedNumbers - маппинг свежих номеров в ответ API
-func mapFeedNumbers(numbers []data.FeedNumber, cursor *string) feedNumberResponse {
+func mapFeedNumbers(numbers []data.FeedNumber, nextCursor *string) feedNumberResponse {
 	items := make([]feedNumberItem, 0, len(numbers))
 	for _, number := range numbers {
 		var region *feedRegion
@@ -55,5 +55,5 @@ func mapFeedNumbers(numbers []data.FeedNumber, cursor *string) feedNumberRespons
 		})
 	}
 
-	return feedNumberResponse{Items: items, NextCursor: cursor}
+	return feedNumberResponse{Items: items, NextCursor: nextCursor}
 }

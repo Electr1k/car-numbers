@@ -177,7 +177,7 @@ LEFT JOIN region_codes ON numbers.region_code = region_codes.code
 LEFT JOIN regions ON regions.id = region_codes.region_id
 WHERE status = $1
 GROUP BY numbers.id, number, regions.name, region_codes.code, type
-HAVING (MAX(refreshed_at::date), MAX(offers.updated_at), numbers.id) < ($2, $3, $4)
+HAVING $2::date IS NULL OR (MAX(refreshed_at::date), MAX(offers.updated_at), numbers.id) < ($2::date, $3::timestamptz, $4::uuid)
 ORDER BY refreshed_at DESC, updated_at DESC, id DESC
 LIMIT $5
 `
@@ -454,32 +454,39 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 }
 
 // GetFeedNumbers - Возвращает свежие номера
-func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor data.FeedCursor, limit int) ([]data.FeedNumber, bool, error) {
+func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedCursor, limit int) ([]data.FeedNumber, bool, error) {
+
+	var (
+		afterRefreshedAt *time.Time
+		afterUpdatedAt   *time.Time
+		afterID          *uuid.UUID
+	)
+	if cursor != nil {
+		afterRefreshedAt, afterUpdatedAt, afterID = &cursor.RefreshedAt, &cursor.UpdatedAt, &cursor.ID
+	}
+
 	rows, err := r.postgres.pool.Query(
 		ctx,
 		getFeedNumbers,
 		string(domain.OfferStatusActive),
-		cursor.RefreshedAt,
-		cursor.UpdatedAt,
-		cursor.ID,
+		afterRefreshedAt,
+		afterUpdatedAt,
+		afterID,
 		limit+1,
 	)
-
 	if err != nil {
 		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
 			limit,
-			cursor.RefreshedAt,
-			cursor.UpdatedAt,
-			cursor.ID,
+			afterRefreshedAt,
+			afterUpdatedAt,
+			afterID,
 			err,
 		)
 	}
 	defer rows.Close()
 
-	numbers := make([]data.FeedNumber, 0, limit)
-	index := 0
+	numbers := make([]data.FeedNumber, 0, limit+1)
 	for rows.Next() {
-		index++
 		var (
 			id              uuid.UUID
 			number          string
@@ -494,29 +501,43 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor data.FeedCu
 		)
 
 		if err := rows.Scan(&id, &number, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
-			return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w", limit, cursor.RefreshedAt, cursor.UpdatedAt, cursor.ID, err)
+			return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
+				limit,
+				afterRefreshedAt,
+				afterUpdatedAt,
+				afterID,
+				err,
+			)
 		}
 
-		if index <= limit {
-			numbers = append(numbers, data.FeedNumber{
-				ID:              id,
-				Number:          number,
-				RegionName:      regionName,
-				RegionCode:      regionCode,
-				Price:           price,
-				Type:            domain.NumberType(numberType),
-				Count:           count,
-				RefreshedAt:     refreshedAt,
-				UpdatedAt:       updatedAt,
-				ReissueIncluded: reissueIncluded,
-			})
-		}
+		numbers = append(numbers, data.FeedNumber{
+			ID:              id,
+			Number:          number,
+			RegionName:      regionName,
+			RegionCode:      regionCode,
+			Price:           price,
+			Type:            domain.NumberType(numberType),
+			Count:           count,
+			RefreshedAt:     refreshedAt,
+			UpdatedAt:       updatedAt,
+			ReissueIncluded: reissueIncluded,
+		})
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w", limit, cursor.RefreshedAt, cursor.UpdatedAt, cursor.ID, err)
+		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
+			limit,
+			afterRefreshedAt,
+			afterUpdatedAt,
+			afterID,
+			err,
+		)
 	}
-	hasNext := index > limit
+
+	hasNext := len(numbers) > limit
+	if hasNext {
+		numbers = numbers[:limit]
+	}
 
 	return numbers, hasNext, nil
 }

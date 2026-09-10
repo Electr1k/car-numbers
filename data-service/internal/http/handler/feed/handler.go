@@ -28,10 +28,28 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%w: query: %v", domain.ErrInvalidArgument, err)
 	}
 
-	res, err := h.uc.Handle(r.Context(), fetchfeednumbers.Params{Limit: req.Limit, Cursor: req.Cursor})
+	params := fetchfeednumbers.Params{Limit: req.Limit}
+	if req.Cursor != "" {
+		cursor, err := decodeCursor(req.Cursor)
+		if err != nil {
+			return fmt.Errorf("%w: %v", domain.ErrInvalidArgument, err)
+		}
+		params.Cursor = &cursor
+	}
+
+	res, err := h.uc.Handle(r.Context(), params)
 	if err != nil {
 		return fmt.Errorf("fetch feed numbers: %w", err)
 	}
 
-	return response.WriteJSON(w, http.StatusOK, mapFeedNumbers(res.Numbers, res.Cursor))
+	var nextCursor *string
+	if res.NextCursor != nil {
+		encoded, err := encodeCursor(*res.NextCursor)
+		if err != nil {
+			return err
+		}
+		nextCursor = &encoded
+	}
+
+	return response.WriteJSON(w, http.StatusOK, mapFeedNumbers(res.Numbers, nextCursor))
 }

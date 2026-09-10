@@ -2,6 +2,7 @@ package fetchfeednumbers
 
 import (
 	"data-service/internal/domain"
+	"data-service/internal/domain/data"
 	"fmt"
 )
 
@@ -14,7 +15,7 @@ const (
 type Params struct {
 	Limit int
 
-	Cursor *string
+	Cursor *data.FeedCursor
 }
 
 func (p Params) validate() error {
