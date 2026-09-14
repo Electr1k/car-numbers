@@ -1,0 +1,27 @@
+services:
+  core-api:
+    build:
+      context: .
+      dockerfile: ../docker/core-service/Dockerfile.dev
+    ports:
+      - "${CORE_HTTP_FORWARD_PORT:-8081}:${HTTP_PORT:-8080}"
+    volumes:
+      - .:/app
+    env_file: .env
+    restart: always
+    depends_on:
+      - core-db
+
+  core-db:
+    image: postgres:15-alpine
+    ports:
+      - ${DATABASE_PORT:-5433}:5432
+    environment:
+      - POSTGRES_USER=${DATABASE_USER:-postgres}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres1}
+      - POSTGRES_DB=${DATABASE_DATABASE:-postgres}
+    volumes:
+      - core-pgdata:/var/lib/postgresql/data
+
+volumes:
+  core-pgdata:
