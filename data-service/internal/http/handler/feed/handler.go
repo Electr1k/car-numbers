@@ -28,7 +28,15 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%w: query: %v", domain.ErrInvalidArgument, err)
 	}
 
-	params := fetchfeednumbers.Params{Limit: req.Limit}
+	params := fetchfeednumbers.Params{
+		Query:           req.Query,
+		RegionId:        req.RegionId,
+		PriceFrom:       req.PriceFrom,
+		PriceTo:         req.PriceTo,
+		ReissueIncluded: req.ReissueIncluded,
+		CategoryIds:     req.CategoryIds,
+		Limit:           req.Limit,
+	}
 	if req.Cursor != "" {
 		cursor, err := decodeCursor(req.Cursor)
 		if err != nil {

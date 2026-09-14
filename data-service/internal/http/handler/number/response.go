@@ -1,4 +1,4 @@
-package plate
+package number
 
 import (
 	"data-service/internal/domain/data"

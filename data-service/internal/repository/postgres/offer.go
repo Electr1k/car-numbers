@@ -4,8 +4,10 @@ import (
 	"context"
 	"data-service/internal/domain"
 	"data-service/internal/domain/data"
+	"data-service/internal/repository"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -176,10 +178,19 @@ JOIN offers ON offers.number_id = numbers.id
 LEFT JOIN region_codes ON numbers.region_code = region_codes.code
 LEFT JOIN regions ON regions.id = region_codes.region_id
 WHERE status = $1
-GROUP BY numbers.id, number, regions.name, region_codes.code, type
-HAVING $2::date IS NULL OR (MAX(refreshed_at::date), MAX(offers.updated_at), numbers.id) < ($2::date, $3::timestamptz, $4::uuid)
+GROUP BY numbers.id, number, regions.id, regions.name, region_codes.code, type
+HAVING ($2::date IS NULL OR (MAX(refreshed_at::date), MAX(offers.updated_at), numbers.id) < ($2::date, $3::timestamptz, $4::uuid))
+AND ($5::TEXT IS NULL OR number LIKE $5::TEXT)
+AND ($6::BIGINT IS NULL OR regions.id = $6::BIGINT)
+AND ($7::FLOAT IS NULL OR MIN(price) >= $7::FLOAT)
+AND ($8::FLOAT IS NULL OR MIN(price) <= $8::FLOAT)
+AND ($9::BOOLEAN IS NULL OR 
+	CASE WHEN COUNT(CASE WHEN reissue_included = true THEN 1 END) > 0 THEN true 
+		WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
+		ELSE null
+	END = $9::BOOLEAN)
 ORDER BY refreshed_at DESC, updated_at DESC, id DESC
-LIMIT $5
+LIMIT $10
 `
 
 const getNumberWithOffersByID = `
@@ -454,15 +465,21 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 }
 
 // GetFeedNumbers - Возвращает свежие номера
-func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedCursor, limit int) ([]data.FeedNumber, bool, error) {
+func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.GetNumbersParams) ([]data.FeedNumber, bool, error) {
+
+	var query *string
+	if params.Query != nil && len(*params.Query) > 0 {
+		str := strings.ReplaceAll(*params.Query, "*", "_") + "%"
+		query = &str
+	}
 
 	var (
 		afterRefreshedAt *time.Time
 		afterUpdatedAt   *time.Time
 		afterID          *uuid.UUID
 	)
-	if cursor != nil {
-		afterRefreshedAt, afterUpdatedAt, afterID = &cursor.RefreshedAt, &cursor.UpdatedAt, &cursor.ID
+	if params.Cursor != nil {
+		afterRefreshedAt, afterUpdatedAt, afterID = &params.Cursor.RefreshedAt, &params.Cursor.UpdatedAt, &params.Cursor.ID
 	}
 
 	rows, err := r.postgres.pool.Query(
@@ -472,11 +489,16 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedC
 		afterRefreshedAt,
 		afterUpdatedAt,
 		afterID,
-		limit+1,
+		query,
+		params.RegionId,
+		params.PriceFrom,
+		params.PriceTo,
+		params.ReissueIncluded,
+		params.Limit+1,
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
-			limit,
+			params.Limit,
 			afterRefreshedAt,
 			afterUpdatedAt,
 			afterID,
@@ -485,7 +507,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedC
 	}
 	defer rows.Close()
 
-	numbers := make([]data.FeedNumber, 0, limit+1)
+	numbers := make([]data.FeedNumber, 0, params.Limit+1)
 	for rows.Next() {
 		var (
 			id              uuid.UUID
@@ -502,7 +524,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedC
 
 		if err := rows.Scan(&id, &number, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
 			return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
-				limit,
+				params.Limit,
 				afterRefreshedAt,
 				afterUpdatedAt,
 				afterID,
@@ -526,7 +548,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedC
 
 	if err := rows.Err(); err != nil {
 		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
-			limit,
+			params.Limit,
 			afterRefreshedAt,
 			afterUpdatedAt,
 			afterID,
@@ -534,9 +556,9 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, cursor *data.FeedC
 		)
 	}
 
-	hasNext := len(numbers) > limit
+	hasNext := len(numbers) > params.Limit
 	if hasNext {
-		numbers = numbers[:limit]
+		numbers = numbers[:params.Limit]
 	}
 
 	return numbers, hasNext, nil

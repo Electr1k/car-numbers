@@ -3,7 +3,7 @@ package http
 import (
 	"data-service/config"
 	"data-service/internal/http/handler/feed"
-	"data-service/internal/http/handler/plate"
+	"data-service/internal/http/handler/number"
 	"data-service/internal/http/handler/region"
 	"data-service/internal/http/response"
 	"log/slog"
@@ -16,7 +16,7 @@ import (
 type Handlers struct {
 	Region *region.Handler
 	Feed   *feed.Handler
-	Plate  *plate.Handler
+	Number *number.Handler
 }
 
 func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) chi.Router {
@@ -29,8 +29,8 @@ func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) ch
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/regions", response.Wrap(logger, handlers.Region.Handle))
-		r.Get("/feed", response.Wrap(logger, handlers.Feed.Handle))
-		r.Get("/plate/{id}", response.Wrap(logger, handlers.Plate.Handle))
+		r.Get("/numbers", response.Wrap(logger, handlers.Feed.Handle))
+		r.Get("/numbers/{id}", response.Wrap(logger, handlers.Number.Handle))
 	})
 
 	return r

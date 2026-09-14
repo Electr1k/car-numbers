@@ -1,4 +1,4 @@
-package plate
+package number
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 
 	res, err := h.uc.Handle(r.Context(), plateID)
 	if err != nil {
-		return fmt.Errorf("fetch plate: %w", err)
+		return fmt.Errorf("fetch number: %w", err)
 	}
 
 	return response.WriteJSON(w, http.StatusOK, mapNumber(*res))

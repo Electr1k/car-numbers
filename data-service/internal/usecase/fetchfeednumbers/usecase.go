@@ -3,10 +3,11 @@ package fetchfeednumbers
 import (
 	"context"
 	"data-service/internal/domain/data"
+	"data-service/internal/repository"
 )
 
 type numberStore interface {
-	GetFeedNumbers(ctx context.Context, cursor *data.FeedCursor, limit int) ([]data.FeedNumber, bool, error)
+	GetFeedNumbers(ctx context.Context, params repository.GetNumbersParams) ([]data.FeedNumber, bool, error)
 }
 
 // UseCase - возвращает свежие номера
@@ -29,7 +30,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) (Result, error) {
 		return Result{}, err
 	}
 
-	numbers, hasNext, err := uc.repository.GetFeedNumbers(ctx, params.Cursor, params.Limit)
+	numbers, hasNext, err := uc.repository.GetFeedNumbers(ctx, repository.GetNumbersParams(params))
 	if err != nil {
 		return Result{}, err
 	}
