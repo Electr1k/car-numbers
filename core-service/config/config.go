@@ -13,6 +13,12 @@ type Config struct {
 	HTTPServer     `env-prefix:"HTTP_"`
 	LogConfig      `env-prefix:"LOG_"`
 	DatabaseConfig `env-prefix:"DATABASE_"`
+	PlateConfig    `env-prefix:"PLATE_"`
+}
+
+type PlateConfig struct {
+	URL     string        `env:"URL" env-required:"true"`
+	Timeout time.Duration `env:"TIMEOUT" env-default:"10s"`
 }
 
 type HTTPServer struct {

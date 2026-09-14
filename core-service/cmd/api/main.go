@@ -3,21 +3,20 @@ package main
 import (
 	"context"
 	"core-service/internal/app"
-	"fmt"
+	httptransport "core-service/internal/http"
+	platehandler "core-service/internal/http/handler/plate"
+	"core-service/internal/service/plate"
+	"core-service/internal/usecase/fetchplates"
 )
 
 func main() {
 	app.Run("api", func(ctx context.Context, a *app.App) error {
+		plateClient := plate.NewClient(a.Config.PlateConfig, a.Logger)
+		router := httptransport.NewRouter(a.Config.HTTPServer, a.Logger, httptransport.Handlers{
+			Plate: platehandler.New(fetchplates.New(plateClient)),
+		})
+		httpServer := httptransport.NewServer(a.Config.HTTPServer, router)
 
-		//router := httptransport.NewRouter(a.Config.HTTPServer, a.Logger, httptransport.Handlers{
-		//	Region: region.New(fetchregions.New(postgres.NewRegionRepository(a.Database))),
-		//	Feed:   feed.New(fetchfeednumbers.New(offerRepository)),
-		//	Number: number.New(fetchnumber.New(offerRepository)),
-		//})
-		//httpServer := httptransport.NewServer(a.Config.HTTPServer, router)
-		fmt.Println("api start")
-		return nil
-		//return httpServer.Run()
+		return httpServer.Run(ctx)
 	})
-
 }

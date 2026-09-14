@@ -3,6 +3,9 @@ module core-service
 go 1.27.1
 
 require (
+	github.com/go-chi/chi/v5 v5.3.2
+	github.com/go-playground/form/v4 v4.3.1
+	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/joho/godotenv v1.5.1

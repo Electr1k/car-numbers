@@ -11,6 +11,9 @@ services:
     restart: always
     depends_on:
       - core-db
+    networks:
+      - default
+      - shared-network
 
   core-db:
     image: postgres:15-alpine
@@ -18,10 +21,15 @@ services:
       - ${DATABASE_PORT:-5433}:5432
     environment:
       - POSTGRES_USER=${DATABASE_USER:-postgres}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres1}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres}
       - POSTGRES_DB=${DATABASE_DATABASE:-postgres}
     volumes:
       - core-pgdata:/var/lib/postgresql/data
 
 volumes:
   core-pgdata:
+
+networks:
+  shared-network:
+    external: true
+    name: shared-network

@@ -38,6 +38,9 @@ services:
         condition: service_completed_successfully
     env_file: .env
     restart: always
+    networks:
+      - default
+      - shared-network
 
   data-worker-autonomera:
     <<: *data-worker
@@ -90,6 +93,8 @@ services:
     ports:
       - "8000:8000"
     restart: always
+    networks:
+      - shared-network
 
   frontend:
     build:
@@ -120,3 +125,8 @@ services:
       - POSTGRES_DB=${DATABASE_DATABASE:-postgres}
     volumes:
       - ./pgdata:/var/lib/postgresql/data
+
+networks:
+  shared-network:
+    external: true
+    name: shared-network
