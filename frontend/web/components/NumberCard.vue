@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import type { NumberCard } from '~/types/api'
+import type { PlateItem } from '~/types/api'
 
-const props = defineProps<{ card: NumberCard }>()
+const props = defineProps<{ card: PlateItem }>()
 
 const money = (v: number) => v.toLocaleString('ru-RU').replace(/ /g, ' ') + ' ₽'
 const updated = computed(() =>
   new Date(props.card.updated_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }))
 
-const many = computed(() => props.card.offers_count > 1)
+const many = computed(() => props.card.count > 1)
 
 /* У многоофферной карточки подпись говорит о комплектации той цены, что показана */
 const hint = computed(() =>
@@ -19,20 +19,23 @@ const hint = computed(() =>
     <div class="head">
       <PlateNumber :number="card.number" size="md" />
       <p class="price">
-        <span v-if="many" class="from">от</span>{{ money(card.price) }}
+        <template v-if="card.price !== null">
+          <span v-if="many" class="from">от</span>{{ money(card.price) }}
+        </template>
+        <template v-else>Цена не указана</template>
       </p>
     </div>
 
     <div class="sub">
       <BundleTag :reissue="card.reissue_included" />
-      <span>{{ card.region.name }}</span>
+      <span v-if="card.region">{{ card.region.name }}</span>
     </div>
 
     <p v-if="hint" class="hint">{{ hint }}</p>
 
     <div class="foot">
       <span class="meta">
-        <template v-if="many">{{ card.offers_count }} предложения · </template>
+        <template v-if="many">{{ card.count }} предложения · </template>
         обновлено {{ updated }}
       </span>
       <NuxtLink :to="`/plates/${card.id}`" class="go">

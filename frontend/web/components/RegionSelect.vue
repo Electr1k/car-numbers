@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { RegionGroup } from '~/types/api'
+import type { RegionItem } from '~/types/api'
 
 /** Нативный select не даёт покрасить коды в сером, поэтому список свой */
 const props = withDefaults(defineProps<{
-  items: RegionGroup[]
+  items: RegionItem[]
   /** порог, после которого в списке появляется поле поиска */
   searchFrom?: number
 }>(), { searchFrom: 10 })
 
 const model = defineModel<string>({ required: true })
 
-const ANY = { value: '', name: 'Любой', codes: [] as number[] }
+const ANY = { value: '', name: 'Любой', codes: [] as string[] }
 
 const open = ref(false)
 const filter = ref('')

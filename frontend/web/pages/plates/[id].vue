@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { Plate, Valuation } from '~/types/api'
+import type { PlateDetail, PlatesResponse, Valuation } from '~/types/api'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 
-const { data: plate, error } = await useFetch<Plate>(() => `/api/v1/plates/${id.value}`)
+const { data: plate, error } = await useFetch<PlateDetail>(() => `/api/v1/plates/${id.value}`)
 
 /**
  * Оценка живёт отдельным эндпоинтом, поэтому запрашивается вторым запросом.
@@ -14,6 +14,15 @@ const { data: valuation } = await useFetch<Valuation>('/api/v1/valuation', {
   query: computed(() => ({ number: plate.value?.number ?? '' })),
   default: () => null
 })
+
+/* Похожие в продаже core-service не отдаёт — добираем выдачей по региону */
+const { data: similar } = await useFetch<PlatesResponse>('/api/v1/search', {
+  query: computed(() => ({ region: plate.value?.region?.code ?? '', limit: 4 })),
+  default: () => ({ items: [], next_cursor: null })
+})
+
+const similarItems = computed(() =>
+  (similar.value?.items ?? []).filter(c => c.id !== id.value).slice(0, 3))
 
 const archive = computed(() => plate.value?.archive_offers ?? [])
 const hasActive = computed(() => (plate.value?.active_offers?.length ?? 0) > 0)
@@ -35,7 +44,7 @@ const archiveIsStale = computed(() => {
   return at ? (Date.now() - new Date(at).getTime()) / 31_557_600_000 >= 1 : false
 })
 
-const restriction = computed(() => plate.value
+const restriction = computed(() => plate.value?.region
   ? `Номер с кодом ${plate.value.region.code} можно поставить только на автомобиль, зарегистрированный в этом регионе.`
   : '')
 
@@ -54,8 +63,10 @@ useHead(() => ({
       <nav class="crumb" aria-label="Хлебные крошки">
         <NuxtLink to="/">Поиск</NuxtLink>
         <span aria-hidden="true">→</span>
-        <span>{{ plate.region.name }}</span>
-        <span aria-hidden="true">→</span>
+        <template v-if="plate.region">
+          <span>{{ plate.region.name }}</span>
+          <span aria-hidden="true">→</span>
+        </template>
         <span class="cur">{{ plate.number }}</span>
       </nav>
 
@@ -88,7 +99,7 @@ useHead(() => ({
             <div v-if="lastSeen" class="arch">
               <p class="arch-lbl">Продавался раньше</p>
               <p class="arch-val">
-                {{ monthYear(lastSeen.posted_at) }} — {{ money(lastSeen.price) }}
+                {{ monthYear(lastSeen.posted_at) }}<template v-if="lastSeen.price !== null"> — {{ money(lastSeen.price) }}</template>
               </p>
               <p class="arch-meta">
                 Всего объявлений в архиве: {{ archive.length }}
@@ -100,19 +111,19 @@ useHead(() => ({
             </div>
           </template>
 
-          <div v-if="plate.similar.length" class="similar">
+          <div v-if="similarItems.length" class="similar">
             <div class="sect">
               <h2>Похожие в продаже</h2>
-              <NuxtLink :to="`/search?region=${plate.region.code}`">
+              <NuxtLink v-if="plate.region" :to="`/search?region=${plate.region.code}`">
                 Все в регионе {{ plate.region.code }} →
               </NuxtLink>
             </div>
             <div class="grid">
-              <NumberCard v-for="c in plate.similar" :key="c.id" :card="c" />
+              <NumberCard v-for="c in similarItems" :key="c.id" :card="c" />
             </div>
           </div>
 
-          <aside class="restrict">
+          <aside v-if="restriction" class="restrict">
             {{ restriction }}
             <NuxtLink to="/reissue">Как это устроено</NuxtLink>
           </aside>

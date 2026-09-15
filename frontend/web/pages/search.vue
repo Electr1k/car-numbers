@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SearchResponse } from '~/types/api'
+import type { PlateItem, PlatesResponse } from '~/types/api'
 import { PATTERN_LIST } from '@shared/patterns'
 import type { Filters } from '~/components/SearchFilters.vue'
 
@@ -34,9 +34,38 @@ const filters = computed<Filters>({
   })
 })
 
-const { data: res, pending, error, refresh } = await useFetch<SearchResponse>('/api/v1/search', {
-  query: computed(() => ({ ...route.query, limit: 24 }))
+const PAGE = 24
+
+const { data: res, pending, error, refresh } = await useFetch<PlatesResponse>('/api/v1/search', {
+  query: computed(() => ({ ...route.query, limit: PAGE }))
 })
+
+/* Догруженные страницы живут отдельно: первая приходит из useFetch и сбрасывает их при смене фильтров */
+const loaded = ref<PlateItem[]>([])
+const cursor = ref<string | null>(null)
+const loadingMore = ref(false)
+
+watch(res, (r) => {
+  loaded.value = []
+  cursor.value = r?.next_cursor ?? null
+}, { immediate: true })
+
+const items = computed(() => [...(res.value?.items ?? []), ...loaded.value])
+
+const loadMore = async () => {
+  if (!cursor.value || loadingMore.value) return
+
+  loadingMore.value = true
+  try {
+    const next = await $fetch<PlatesResponse>('/api/v1/search', {
+      query: { ...route.query, limit: PAGE, cursor: cursor.value }
+    })
+    loaded.value = [...loaded.value, ...next.items]
+    cursor.value = next.next_cursor
+  } finally {
+    loadingMore.value = false
+  }
+}
 
 /** Правка одного параметра, остальные сохраняются */
 const setParam = (key: string, value: string | null) => {
@@ -83,7 +112,7 @@ const plural = (n: number) => {
 
 const heading = computed(() => {
   if (!res.value) return 'Поиск'
-  const n = res.value.total
+  const n = items.value.length
   return `${n} ${plural(n)}` + (q.value ? ` по маске ${q.value}` : '')
 })
 
@@ -108,11 +137,13 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
       <button type="button" class="btn-primary" @click="refresh()">Повторить</button>
     </div>
 
-    <template v-else-if="res?.items.length">
+    <template v-else-if="items.length">
       <div class="grid">
-        <NumberCard v-for="c in res.items" :key="c.number" :card="c" />
+        <NumberCard v-for="c in items" :key="c.id" :card="c" />
       </div>
-      <button v-if="res.cursor" type="button" class="more">Показать ещё 24</button>
+      <button v-if="cursor" type="button" class="more" :disabled="loadingMore" @click="loadMore">
+        {{ loadingMore ? 'Загружаем…' : `Показать ещё ${PAGE}` }}
+      </button>
     </template>
 
     <div v-else class="empty">
@@ -163,6 +194,7 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
 }
 .more { margin-top: 24px; background: var(--surface); color: var(--text); border: 1px solid var(--border-strong); }
 .more:hover { border-color: var(--text-muted); }
+.more:disabled { opacity: .6; cursor: default; }
 .btn-primary { background: var(--accent); color: #fff; border: 0; }
 .btn-primary:hover { background: var(--accent-hover); color: #fff; text-decoration: none; }
 

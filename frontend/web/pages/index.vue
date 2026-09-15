@@ -1,9 +1,32 @@
 <script setup lang="ts">
-import type { FeedResponse } from '~/types/api'
+import type { PlateItem, PlatesResponse } from '~/types/api'
 
-const { data: feed, pending, error } = await useFetch<FeedResponse>('/api/v1/feed', {
-  query: { limit: 16 }
+const PAGE = 16
+
+const { data: feed, pending, error } = await useFetch<PlatesResponse>('/api/v1/feed', {
+  query: { limit: PAGE }
 })
+
+const loaded = ref<PlateItem[]>([])
+const cursor = ref<string | null>(feed.value?.next_cursor ?? null)
+const loadingMore = ref(false)
+
+const items = computed(() => [...(feed.value?.items ?? []), ...loaded.value])
+
+const loadMore = async () => {
+  if (!cursor.value || loadingMore.value) return
+
+  loadingMore.value = true
+  try {
+    const next = await $fetch<PlatesResponse>('/api/v1/feed', {
+      query: { limit: PAGE, cursor: cursor.value }
+    })
+    loaded.value = [...loaded.value, ...next.items]
+    cursor.value = next.next_cursor
+  } finally {
+    loadingMore.value = false
+  }
+}
 
 useHead({ title: 'Номерограф — объявления о продаже автономеров' })
 </script>
@@ -28,11 +51,13 @@ useHead({ title: 'Номерограф — объявления о продаж�
         Не удалось загрузить предложения. Обновите страницу или попробуйте позже.
       </p>
 
-      <template v-else-if="feed?.items?.length">
+      <template v-else-if="items.length">
         <div class="grid">
-          <NumberCard v-for="card in feed.items" :key="card.number" :card="card" />
+          <NumberCard v-for="card in items" :key="card.id" :card="card" />
         </div>
-        <button v-if="feed.cursor" type="button" class="more">Показать ещё 8</button>
+        <button v-if="cursor" type="button" class="more" :disabled="loadingMore" @click="loadMore">
+          {{ loadingMore ? 'Загружаем…' : `Показать ещё ${PAGE}` }}
+        </button>
       </template>
 
       <p v-else class="state">Предложений пока нет.</p>
@@ -57,6 +82,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
   font-size: 16px; font-weight: 600;
 }
 .more:hover { border-color: var(--text-muted); }
+.more:disabled { opacity: .6; cursor: default; }
 
 .state { padding: 28px 0; color: var(--text-muted); }
 .state.error { color: var(--alert); }

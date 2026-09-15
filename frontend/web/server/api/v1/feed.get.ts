@@ -1,9 +1,11 @@
-import type { FeedResponse } from '~/types/api'
-import { readMock } from '~~/server/utils/mocks'
+import type { PlatesResponse } from '~/types/api'
+import { coreFetch } from '~~/server/utils/core'
 
 export default defineEventHandler(async (event) => {
-  const { limit } = getQuery(event)
-  const feed = await readMock<FeedResponse>('feed.json')
-  const n = Number(limit) || feed.items.length
-  return { ...feed, items: feed.items.slice(0, n) }
+  const { limit, cursor } = getQuery(event)
+
+  return coreFetch<PlatesResponse>('/api/v1/plates', {
+    limit: Number(limit) || undefined,
+    cursor: String(cursor || '') || undefined
+  })
 })

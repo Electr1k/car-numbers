@@ -10,9 +10,9 @@ const short = (v: number) =>
 
 /* Точка p50 внутри полосы: положение отражает, где медиана лежит между p25 и p75 */
 const dotAt = computed(() => {
-  const e = props.estimate
-  if (!e || e.p75 === e.p25) return 50
-  return Math.min(92, Math.max(8, ((e.p50 - e.p25) / (e.p75 - e.p25)) * 100))
+  const p = props.estimate?.price
+  if (!p || p.p75 === p.p25) return 50
+  return Math.min(92, Math.max(8, ((p.p50 - p.p25) / (p.p75 - p.p25)) * 100))
 })
 
 const confidenceNote = computed(() => ({
@@ -26,23 +26,18 @@ const confidenceNote = computed(() => ({
   <section v-if="estimate" class="est" aria-labelledby="est-h">
     <div>
       <h2 id="est-h" class="lbl">За похожие номера просят</h2>
-      <p class="p50">{{ money(estimate.p50) }}</p>
+      <p class="p50">{{ money(estimate.price.p50) }}</p>
     </div>
 
     <div class="track" role="img"
-         :aria-label="`Половина похожих номеров стоит от ${money(estimate.p25)} до ${money(estimate.p75)}`">
+         :aria-label="`Половина похожих номеров стоит от ${money(estimate.price.p25)} до ${money(estimate.price.p75)}`">
       <span class="span" />
       <span class="dot" :style="{ left: dotAt + '%' }" />
-      <span class="tk lo">{{ short(estimate.p25) }}</span>
-      <span class="tk hi">{{ short(estimate.p75) }}</span>
+      <span class="tk lo">{{ short(estimate.price.p25) }}</span>
+      <span class="tk hi">{{ short(estimate.price.p75) }}</span>
     </div>
 
     <p v-if="confidenceNote" class="warn">{{ confidenceNote }}</p>
-
-    <div v-if="estimate.mask" class="mask">
-      Неизвестные знаки раскрыты перебором: {{ estimate.mask.variants }} вариантов,
-      от {{ money(estimate.mask.cheapest) }} до {{ money(estimate.mask.dearest) }}.
-    </div>
 
     <details v-if="estimate.breakdown" class="why">
       <summary>Из чего сложилась цена</summary>
@@ -83,7 +78,6 @@ const confidenceNote = computed(() => ({
 .tk.hi { right: 22%; transform: translateX(50%); }
 
 .warn { font-size: 14.5px; color: var(--warn); background: var(--warn-bg); padding: 10px 12px; border-radius: var(--r-sm); }
-.mask { font-size: 14.5px; color: var(--text-muted); background: var(--surface-sunk); padding: 10px 12px; border-radius: var(--r-sm); }
 
 .why { border-top: 1px solid var(--border); padding-top: 12px; }
 .why summary { font-size: 15px; font-weight: 600; color: var(--accent); cursor: pointer; min-height: 44px; display: flex; align-items: center; }

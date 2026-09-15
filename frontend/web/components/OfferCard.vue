@@ -15,7 +15,7 @@ const site = { gosnomeru: 'gosnomeru.com', autonomera: 'autonomera777.ru', anome
 <template>
   <article class="offer">
     <div class="top">
-      <p class="price">{{ money(offer.price) }}</p>
+      <p class="price">{{ offer.price === null ? 'Цена не указана' : money(offer.price) }}</p>
       <span class="src">{{ site[offer.provider] }}</span>
     </div>
 
@@ -33,8 +33,8 @@ const site = { gosnomeru: 'gosnomeru.com', autonomera: 'autonomera777.ru', anome
         <dt>Где номер</dt><dd>{{ where }}</dd>
       </template>
 
-      <template v-if="offer.views">
-        <dt>Просмотров</dt><dd>{{ offer.views }}</dd>
+      <template v-if="offer.view_count">
+        <dt>Просмотров</dt><dd>{{ offer.view_count }}</dd>
       </template>
     </dl>
 

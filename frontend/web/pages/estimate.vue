@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { FeedResponse } from '~/types/api'
+import type { PlatesResponse } from '~/types/api'
 
 /* Примеры берём из ленты, чтобы ссылки вели на живые номера, а не на выдумку */
-const { data: feed } = await useFetch<FeedResponse>('/api/v1/feed', { query: { limit: 3 } })
+const { data: feed } = await useFetch<PlatesResponse>('/api/v1/feed', { query: { limit: 3 } })
 
 useHead({
   title: 'Оценка номера — Номерограф',

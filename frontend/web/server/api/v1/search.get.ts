@@ -1,55 +1,32 @@
-import type { NumberCard } from '~/types/api'
-import { readMock } from '~~/server/utils/mocks'
-import { matchesMask, normalize } from '~~/server/utils/plate'
-import { PATTERNS, type PatternCode } from '@shared/patterns'
+import type { PlatesResponse, RegionsResponse } from '~/types/api'
+import { coreFetch } from '~~/server/utils/core'
+import { normalize } from '~~/server/utils/plate'
 
-const SORTS = {
-  price_asc:    (a: NumberCard, b: NumberCard) => a.price - b.price,
-  price_desc:   (a: NumberCard, b: NumberCard) => b.price - a.price,
-  updated_desc: (a: NumberCard, b: NumberCard) => b.updated_at.localeCompare(a.updated_at)
+/** core-service фильтрует по идентификатору региона, а в адресе страницы живут коды */
+const resolveRegionId = async (codes: string[]): Promise<number | undefined> => {
+  if (!codes.length) return undefined
+
+  const { items } = await coreFetch<RegionsResponse>('/api/v1/regions')
+  return items.find(r => r.codes.some(c => codes.includes(c)))?.id
 }
 
-/** `true` / `false` / `null` — последнее означает «площадка не сказала» */
-const parseReissue = (raw: string): boolean | null | undefined => {
+const parseReissue = (raw: string): boolean | undefined => {
   if (raw === 'true') return true
   if (raw === 'false') return false
-  if (raw === 'null') return null
   return undefined
 }
 
 export default defineEventHandler(async (event) => {
   const p = getQuery(event)
-  const pool = (await readMock<{ items: NumberCard[] }>('search-pool.json')).items
+  const codes = String(p.region || '').split(',').filter(Boolean)
 
-  const q = p.q ? normalize(String(p.q)) : ''
-  const regions = String(p.region || '').split(',').filter(Boolean)
-  const reissue = parseReissue(String(p.reissue_included ?? ''))
-  const categories = String(p.categories || '').split(',').filter(Boolean) as PatternCode[]
-  const min = Number(p.price_min) || 0
-  const max = Number(p.price_max) || Infinity
-  const sort = String(p.sort || 'updated_desc') as keyof typeof SORTS
-  const limit = Math.min(Number(p.limit) || 24, 48)
-
-  const items = pool
-    .filter(c => !q || matchesMask(c.number, q))
-    .filter(c => !regions.length || regions.includes(c.region.code))
-    .filter(c => reissue === undefined || c.reissue_included === reissue)
-    .filter(c => c.price >= min && c.price <= max)
-    .filter(c => categories.every(code => PATTERNS[code]?.(c.number) ?? true))
-    .sort(SORTS[sort] ?? SORTS.updated_desc)
-
-  return {
-    query: {
-      q: q || null,
-      region: regions.join(',') || null,
-      reissue_included: reissue === undefined ? null : reissue,
-      categories,
-      price_min: min || null,
-      price_max: Number.isFinite(max) ? max : null,
-      sort
-    },
-    total: items.length,
-    items: items.slice(0, limit),
-    cursor: items.length > limit ? 'cG9vbDoy' : null
-  }
+  return coreFetch<PlatesResponse>('/api/v1/plates', {
+    query: p.q ? normalize(String(p.q)) : undefined,
+    region_id: await resolveRegionId(codes),
+    price_from: Number(p.price_min) || undefined,
+    price_to: Number(p.price_max) || undefined,
+    reissue_included: parseReissue(String(p.reissue_included ?? '')),
+    limit: Math.min(Number(p.limit) || 24, 48),
+    cursor: String(p.cursor || '') || undefined
+  })
 })

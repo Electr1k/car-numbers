@@ -107,13 +107,14 @@ services:
       # node_modules остаются контейнерными, чтобы хостовые не затирали их
       - /app/node_modules
       - /app/.nuxt
-      # моки контракта: пока BFF не написан, эндпоинты отдают их
-      - ./frontend/api/mock:/mocks:ro
     environment:
-      - MOCKS_DIR=/mocks
+      - CORE_URL=http://core-api:8080
       - NUXT_HOST=0.0.0.0
       - NUXT_PORT=3000
     restart: unless-stopped
+    networks:
+      - default
+      - shared-network
 
   data-db:
     image: postgres:15-alpine

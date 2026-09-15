@@ -35,9 +35,8 @@ export default defineNuxtConfig({
     }
   },
 
-  // Каталог моков монтируется в контейнер; путь можно переопределить переменной
   runtimeConfig: {
-    mocksDir: process.env.MOCKS_DIR || '../api/mock'
+    coreUrl: process.env.CORE_URL || 'http://localhost:8081'
   },
 
   nitro: { compressPublicAssets: true }

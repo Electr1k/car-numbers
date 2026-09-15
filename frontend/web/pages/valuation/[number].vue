@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { NumberCard, Valuation } from '~/types/api'
+import type { PlatesResponse, Valuation } from '~/types/api'
 
 const route = useRoute()
 const number = computed(() => String(route.params.number).toUpperCase())
@@ -9,9 +9,9 @@ const { data: valuation, error } = await useFetch<Valuation>('/api/v1/valuation'
 })
 
 /* Оценка есть для любой комбинации, но в продаже её обычно нет — предлагаем похожие */
-const { data: similar } = await useFetch<{ items: NumberCard[] }>('/api/v1/search', {
-  query: computed(() => ({ region: valuation.value?.region.code, limit: 3 })),
-  default: () => ({ items: [] })
+const { data: similar } = await useFetch<PlatesResponse>('/api/v1/search', {
+  query: computed(() => ({ region: valuation.value?.region?.code ?? '', limit: 3 })),
+  default: () => ({ items: [], next_cursor: null })
 })
 
 const refusal = computed(() => {
@@ -61,7 +61,7 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
           <div v-if="similar?.items.length" class="similar">
             <div class="sect">
               <h2>Похожие в продаже</h2>
-              <NuxtLink :to="`/search?region=${valuation.region.code}`">
+              <NuxtLink v-if="valuation.region" :to="`/search?region=${valuation.region.code}`">
                 Все в регионе {{ valuation.region.code }} →
               </NuxtLink>
             </div>
@@ -70,7 +70,7 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
             </div>
           </div>
 
-          <aside class="restrict">
+          <aside v-if="valuation.region" class="restrict">
             Номер с кодом {{ valuation.region.code }} можно поставить только на автомобиль,
             зарегистрированный в этом регионе.
             <NuxtLink to="/reissue">Как это устроено</NuxtLink>
