@@ -163,6 +163,44 @@ func (c *Client) FetchRegions(ctx context.Context) (*FetchRegionsResponse, error
 	return &jsonResponse, nil
 }
 
+type FetchPlateByIDResponse struct {
+	ID     uuid.UUID             `json:"id"`
+	Number string                `json:"number"`
+	Region *FetchPlatesRegion    `json:"region"`
+	Offers []FetchPlateByIDOffer `json:"offers"`
+}
+
+type FetchPlateByIDOffer struct {
+	ID              uuid.UUID `json:"id"`
+	Provider        string    `json:"provider"`
+	Price           *float64  `json:"price"`
+	Status          string    `json:"status"`
+	ReissueIncluded *bool     `json:"reissue_included"`
+	Whereabouts     *string   `json:"whereabouts"`
+	ViewCount       *int      `json:"view_count"`
+	Comment         *string   `json:"comment"`
+	RefreshedAt     time.Time `json:"refreshed_at"`
+	PostedAt        time.Time `json:"posted_at"`
+	URL             string    `json:"url"`
+}
+
+// FetchPlateByID возвращает деталку номера
+func (c *Client) FetchPlateByID(ctx context.Context, id uuid.UUID) (*FetchPlateByIDResponse, error) {
+	requestURL := c.baseURL + fetchPlates + "/" + id.String()
+
+	response, err := c.request(ctx, http.MethodGet, requestURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonResponse FetchPlateByIDResponse
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
+		return nil, fmt.Errorf("parse json from %s: %w", requestURL, err)
+	}
+
+	return &jsonResponse, nil
+}
+
 func (c *Client) buildFetchPlatesURL(params FetchPlatesParams) string {
 	query := url.Values{}
 

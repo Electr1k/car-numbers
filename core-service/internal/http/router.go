@@ -28,6 +28,7 @@ func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) ch
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/plates", response.Wrap(logger, handlers.Plate.FetchPlates))
+		r.Get("/plates/{id}", response.Wrap(logger, handlers.Plate.FetchPlateByID))
 		r.Get("/regions", response.Wrap(logger, handlers.Regions.FetchRegions))
 	})
 

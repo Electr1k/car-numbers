@@ -5,21 +5,36 @@ import (
 	"core-service/internal/http/request"
 	"core-service/internal/http/response"
 	"core-service/internal/service"
+	"core-service/internal/usecase/fetchplate"
 	"core-service/internal/usecase/fetchplates"
 	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type platesFetcher interface {
 	Handle(ctx context.Context, params fetchplates.Params) (*fetchplates.Result, error)
 }
 
-type Handler struct {
-	fetchPlatesUC platesFetcher
+type plateByIDFetcher interface {
+	Handle(ctx context.Context, id uuid.UUID) (*fetchplate.Result, error)
 }
 
-func New(fetchPlatesUC platesFetcher) *Handler {
-	return &Handler{fetchPlatesUC: fetchPlatesUC}
+type Handler struct {
+	fetchPlatesUC    platesFetcher
+	fetchPlateByIDUC plateByIDFetcher
+}
+
+func New(
+	fetchPlatesUC platesFetcher,
+	fetchPlateByIDUC plateByIDFetcher,
+) *Handler {
+	return &Handler{
+		fetchPlatesUC:    fetchPlatesUC,
+		fetchPlateByIDUC: fetchPlateByIDUC,
+	}
 }
 
 func (h *Handler) FetchPlates(w http.ResponseWriter, r *http.Request) error {
@@ -45,4 +60,19 @@ func (h *Handler) FetchPlates(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return response.WriteJSON(w, http.StatusOK, mapFetchPlatesResponse(*res))
+}
+
+func (h *Handler) FetchPlateByID(w http.ResponseWriter, r *http.Request) error {
+	idFromPath := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idFromPath)
+	if err != nil {
+		return fmt.Errorf("%w: parse uuid %s: %v", service.ErrBadRequest, idFromPath, err)
+	}
+
+	res, err := h.fetchPlateByIDUC.Handle(r.Context(), id)
+	if err != nil {
+		return fmt.Errorf("fetch plate by id: %w", err)
+	}
+
+	return response.WriteJSON(w, http.StatusOK, mapFetchPlateByIDResponse(*res))
 }
