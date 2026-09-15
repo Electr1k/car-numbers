@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	fetchPlates = "/api/v1/numbers"
+	fetchPlates  = "/api/v1/numbers"
+	fetchRegions = "/api/v1/regions"
 
 	maxResponseSize     = 8 << 20
 	maxIdleConns        = 100
@@ -128,6 +129,33 @@ func (c *Client) FetchPlates(ctx context.Context, params FetchPlatesParams) (*Fe
 	}
 
 	var jsonResponse FetchPlatesResponse
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
+		return nil, fmt.Errorf("parse json from %s: %w", requestURL, err)
+	}
+
+	return &jsonResponse, nil
+}
+
+type FetchRegionsResponse struct {
+	Items []FetchRegionsItem `json:"items"`
+}
+
+type FetchRegionsItem struct {
+	ID    int      `json:"id"`
+	Name  string   `json:"name"`
+	Codes []string `json:"codes"`
+}
+
+// FetchRegions возвращает список регионов с кодами
+func (c *Client) FetchRegions(ctx context.Context) (*FetchRegionsResponse, error) {
+	requestURL := c.baseURL + fetchRegions
+
+	response, err := c.request(ctx, http.MethodGet, requestURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonResponse FetchRegionsResponse
 	if err := json.Unmarshal(response, &jsonResponse); err != nil {
 		return nil, fmt.Errorf("parse json from %s: %w", requestURL, err)
 	}

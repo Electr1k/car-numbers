@@ -10,6 +10,7 @@ type regionsResponse struct {
 }
 
 type regionItem struct {
+	ID    int      `json:"id"`
 	Name  string   `json:"name"`
 	Codes []string `json:"codes"`
 }
@@ -24,7 +25,7 @@ func mapRegions(regions []domain.RegionWithCodes) regionsResponse {
 		}
 		slices.Sort(codes)
 
-		items = append(items, regionItem{Name: r.Region.Name, Codes: codes})
+		items = append(items, regionItem{ID: r.Region.ID, Name: r.Region.Name, Codes: codes})
 	}
 
 	return regionsResponse{Items: items}

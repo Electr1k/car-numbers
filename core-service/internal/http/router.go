@@ -3,6 +3,7 @@ package http
 import (
 	"core-service/config"
 	"core-service/internal/http/handler/plate"
+	"core-service/internal/http/handler/region"
 	"core-service/internal/http/response"
 	"log/slog"
 
@@ -12,7 +13,8 @@ import (
 
 // Handlers - хендлеры, обслуживающие маршруты api
 type Handlers struct {
-	Plate *plate.Handler
+	Plate   *plate.Handler
+	Regions *region.Handler
 }
 
 func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) chi.Router {
@@ -26,6 +28,7 @@ func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) ch
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/plates", response.Wrap(logger, handlers.Plate.FetchPlates))
+		r.Get("/regions", response.Wrap(logger, handlers.Regions.FetchRegions))
 	})
 
 	return r

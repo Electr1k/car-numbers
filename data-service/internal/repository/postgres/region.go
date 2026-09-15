@@ -4,8 +4,6 @@ import (
 	"context"
 	"data-service/internal/domain"
 	"fmt"
-	"maps"
-	"slices"
 )
 
 // RegionRepository - хранение регионов и кодов
@@ -31,7 +29,8 @@ func (r *RegionRepository) GetRegions(ctx context.Context) ([]domain.RegionWithC
 	}
 	defer rows.Close()
 
-	codesByRegionsID := make(map[int]domain.RegionWithCodes)
+	regions := make([]domain.RegionWithCodes, 0)
+	indexByRegionID := make(map[int]int)
 	for rows.Next() {
 		var (
 			id   int
@@ -39,8 +38,7 @@ func (r *RegionRepository) GetRegions(ctx context.Context) ([]domain.RegionWithC
 			code string
 		)
 
-		err = rows.Scan(&id, &name, &code)
-		if err != nil {
+		if err := rows.Scan(&id, &name, &code); err != nil {
 			return nil, fmt.Errorf("get region row: %w", err)
 		}
 
@@ -49,25 +47,26 @@ func (r *RegionRepository) GetRegions(ctx context.Context) ([]domain.RegionWithC
 			return nil, fmt.Errorf("get region row: %w", err)
 		}
 
-		if region, ok := codesByRegionsID[id]; ok {
-			region.RegionCodes = append(region.RegionCodes, *domainCode)
-			codesByRegionsID[id] = region
-		} else {
-			domainRegion, err := domain.RestoreRegion(id, name)
-			if err != nil {
-				return nil, fmt.Errorf("get region row: %w", err)
-			}
-
-			codesByRegionsID[id] = domain.RegionWithCodes{
-				Region:      *domainRegion,
-				RegionCodes: []domain.RegionCode{*domainCode},
-			}
+		if i, ok := indexByRegionID[id]; ok {
+			regions[i].RegionCodes = append(regions[i].RegionCodes, *domainCode)
+			continue
 		}
+
+		domainRegion, err := domain.RestoreRegion(id, name)
+		if err != nil {
+			return nil, fmt.Errorf("get region row: %w", err)
+		}
+
+		indexByRegionID[id] = len(regions)
+		regions = append(regions, domain.RegionWithCodes{
+			Region:      *domainRegion,
+			RegionCodes: []domain.RegionCode{*domainCode},
+		})
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("get regions: %w", err)
 	}
 
-	return slices.Collect(maps.Values(codesByRegionsID)), nil
+	return regions, nil
 }
