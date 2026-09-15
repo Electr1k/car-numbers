@@ -14,9 +14,15 @@ type Config struct {
 	LogConfig      `env-prefix:"LOG_"`
 	DatabaseConfig `env-prefix:"DATABASE_"`
 	PlateConfig    `env-prefix:"PLATE_"`
+	MLConfig       `env-prefix:"ML_"`
 }
 
 type PlateConfig struct {
+	URL     string        `env:"URL" env-required:"true"`
+	Timeout time.Duration `env:"TIMEOUT" env-default:"10s"`
+}
+
+type MLConfig struct {
 	URL     string        `env:"URL" env-required:"true"`
 	Timeout time.Duration `env:"TIMEOUT" env-default:"10s"`
 }
