@@ -27,8 +27,8 @@ func NewMapper(baseURL string) *Mapper {
 }
 
 // MapOfferToDomain - Маппит строку выдачи в домен
-func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNumber, error) {
-	var emptyOffer domain.OfferWithNumber
+func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
 
 	raw, err := json.Marshal(externalOffer)
 	if err != nil {
@@ -38,12 +38,12 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 	url := m.getOfferURL(externalOffer.ID, externalOffer.Slug)
 
 	numberStr := externalOffer.Number.Letters + externalOffer.Number.Region
-	numberType := domain.NumberTypeCar
+	plateType := domain.PlateTypeCar
 	if slices.Contains(externalOffer.Categories, CategoryNotCar) {
-		numberType = domain.NumberTypeMoto
+		plateType = domain.PlateTypeMoto
 	}
 
-	number, err := domain.NewNumber(numberStr, numberType)
+	plate, err := domain.NewPlate(numberStr, plateType)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
 	}
@@ -64,7 +64,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 	}
 
 	offer, err := domain.NewOffer(
-		number.ID,
+		plate.ID,
 		domain.ProviderGosnomeru,
 		externalOffer.ID,
 		price,
@@ -83,7 +83,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithNum
 		return emptyOffer, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalOffer.ID, err)
 	}
 
-	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
+	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
 }
 
 // mapStatus - маппинг статуса
@@ -114,16 +114,16 @@ func mapPostedAt(dateStr string) (time.Time, error) {
 	return postedAt, nil
 }
 
-func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
-	var emptyOffer domain.OfferWithNumber
+func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer domain.OfferWithPlate) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
 
 	newOffer, err := m.MapOfferDetailToDomain(response)
 	if err != nil {
 		return emptyOffer, err
 	}
 
-	if newOffer.Number.Number != offer.Number.Number {
-		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, newOffer.Number.Number)
+	if newOffer.Plate.Number != offer.Plate.Number {
+		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Plate.Number, newOffer.Plate.Number)
 	}
 
 	viewCount := offer.Offer.ViewCount
@@ -148,8 +148,8 @@ func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer domain.Off
 	return offer, nil
 }
 
-func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithNumber, error) {
-	var emptyOffer domain.OfferWithNumber
+func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
 
 	raw, err := json.Marshal(response)
 	if err != nil {
@@ -160,12 +160,12 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 	url := m.getOfferURL(response.ID, response.Slug)
 
 	numberStr := response.Number.Letters + response.Number.Region
-	numberType := domain.NumberTypeCar
+	plateType := domain.PlateTypeCar
 	if slices.Contains(response.Categories, CategoryNotCar) {
-		numberType = domain.NumberTypeMoto
+		plateType = domain.PlateTypeMoto
 	}
 
-	number, err := domain.NewNumber(numberStr, numberType)
+	plate, err := domain.NewPlate(numberStr, plateType)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
 	}
@@ -198,7 +198,7 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 	}
 
 	offer, err := domain.NewOffer(
-		number.ID,
+		plate.ID,
 		domain.ProviderGosnomeru,
 		response.ID,
 		price,
@@ -217,7 +217,7 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithN
 		return emptyOffer, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, response.ID, err)
 	}
 
-	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
+	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
 }
 
 func (m *Mapper) getOfferURL(externalID string, slug string) string {

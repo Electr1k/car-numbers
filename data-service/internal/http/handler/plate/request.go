@@ -1,8 +1,8 @@
-package feed
+package plate
 
 const defaultLimit = 25
 
-type feedRequest struct {
+type platesRequest struct {
 	Query           *string  `form:"query"`
 	RegionId        *int     `form:"region_id"`
 	PriceFrom       *float64 `form:"price_from"`
@@ -13,6 +13,6 @@ type feedRequest struct {
 	Cursor          string   `form:"cursor"`
 }
 
-func newFeedRequest() feedRequest {
-	return feedRequest{Limit: defaultLimit}
+func newPlatesRequest() platesRequest {
+	return platesRequest{Limit: defaultLimit}
 }

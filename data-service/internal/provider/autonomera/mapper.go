@@ -52,8 +52,8 @@ func NewMapper(baseURL string) *Mapper {
 }
 
 // MapOfferToDomain - Маппит строку выдачи в домен
-func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferStatus) (domain.OfferWithNumber, error) {
-	var empty domain.OfferWithNumber
+func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferStatus) (domain.OfferWithPlate, error) {
+	var empty domain.OfferWithPlate
 
 	raw, err := sel.Html()
 	if err != nil {
@@ -75,7 +75,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferSta
 		return empty, err
 	}
 
-	numberType, err := parseNumberType(href)
+	plateType, err := parsePlateType(href)
 	if err != nil {
 		return empty, err
 	}
@@ -95,13 +95,13 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferSta
 		return empty, err
 	}
 
-	number, err := domain.NewNumber(title, numberType)
+	plate, err := domain.NewPlate(title, plateType)
 	if err != nil {
 		return empty, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, title, err)
 	}
 
 	offer, err := domain.NewOffer(
-		number.ID,
+		plate.ID,
 		domain.ProviderAutonomera,
 		externalID,
 		price,
@@ -120,7 +120,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferSta
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalID, err)
 	}
 
-	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
+	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
 }
 
 // requiredAttr - обязательный атрибут строки
@@ -149,8 +149,8 @@ func parseExternalID(idAttr string) (string, error) {
 	return externalID, nil
 }
 
-// parseNumberType - тип ТС из первого сегмента href вида /standart/а123аа77
-func parseNumberType(href string) (domain.NumberType, error) {
+// parsePlateType - тип ТС из первого сегмента href вида /standart/а123аа77
+func parsePlateType(href string) (domain.PlateType, error) {
 	segments := strings.Split(strings.TrimPrefix(href, "/"), "/")
 	if len(segments) == 0 || segments[0] == "" {
 		return "", fmt.Errorf("%w: no vehicle type in href %q", provider.ErrBrokenOffer, href)
@@ -158,11 +158,11 @@ func parseNumberType(href string) (domain.NumberType, error) {
 
 	switch segments[0] {
 	case "standart":
-		return domain.NumberTypeCar, nil
+		return domain.PlateTypeCar, nil
 	case "moto":
-		return domain.NumberTypeMoto, nil
+		return domain.PlateTypeMoto, nil
 	case "trailer":
-		return domain.NumberTypeTrailer, nil
+		return domain.PlateTypeTrailer, nil
 	default:
 		return "", fmt.Errorf("%w: unknown vehicle type %q in href %q",
 			provider.ErrBrokenOffer, segments[0], href)
@@ -213,8 +213,8 @@ func parsePrice(priceText string) (*float64, error) {
 	return &price, nil
 }
 
-func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
-	var emptyOffer domain.OfferWithNumber
+func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.OfferWithPlate) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
 	raw, err := sel.Html()
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: read row html: %w", provider.ErrBrokenOffer, err)
@@ -225,7 +225,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 		return emptyOffer, err
 	}
 
-	if offer.Number.Type == domain.NumberTypeMoto {
+	if offer.Plate.Type == domain.PlateTypeMoto {
 		runes := []rune(number)
 		// Для мото буквы и цифры при парсинге склиеваются не в том порядке - меняем местами
 		letters := runes[0:2]
@@ -235,8 +235,8 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 		number = string(digits) + string(letters) + string(reg)
 	}
 
-	if number != offer.Number.Number {
-		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, number)
+	if number != offer.Plate.Number {
+		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Plate.Number, number)
 	}
 
 	whereAbouts := parseWhereaboutsFromDetail(sel)

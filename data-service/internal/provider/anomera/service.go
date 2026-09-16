@@ -53,19 +53,19 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 	return result, nil
 }
 
-func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
+func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithPlate) (domain.OfferWithPlate, error) {
 	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.URL)
 	if errors.Is(err, provider.ErrNotFound) {
 		offer.Offer.Status = domain.OfferStatusInactive
 		return offer, nil
 	}
 	if err != nil {
-		return domain.OfferWithNumber{}, err
+		return domain.OfferWithPlate{}, err
 	}
 
 	document, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("parse html document: %w", err)
+		return domain.OfferWithPlate{}, fmt.Errorf("parse html document: %w", err)
 	}
 
 	fetchedOffer, err := s.mapper.ApplyOfferDetailToDomain(document.Selection, offer)

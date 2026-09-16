@@ -1,4 +1,4 @@
-package fetchfeednumbers
+package fetchplates
 
 import (
 	"data-service/internal/domain"

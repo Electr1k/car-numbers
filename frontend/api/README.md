@@ -33,7 +33,7 @@ Nuxt ──► frontend-api (BFF) ──┬──► data-service   (объяв�
 
 ## Объекты
 
-### `NumberCard` — карточка в ленте, выдаче и «похожих»
+### `PlateCard` — карточка в ленте, выдаче и «похожих»
 
 ```json
 {
@@ -118,7 +118,7 @@ Nuxt ──► frontend-api (BFF) ──┬──► data-service   (объяв�
 | `region` | — | необязателен |
 
 ```json
-{ "items": [NumberCard], "next_cursor": "ZmVlZDoy" }
+{ "items": [PlateCard], "next_cursor": "ZmVlZDoy" }
 ```
 
 ### `GET /api/v1/search`
@@ -134,7 +134,7 @@ Nuxt ──► frontend-api (BFF) ──┬──► data-service   (объяв�
 | `limit`, `cursor` | пагинация |
 
 ```json
-{ "query": {...}, "total": 34, "items": [NumberCard], "cursor": null }
+{ "query": {...}, "total": 34, "items": [PlateCard], "cursor": null }
 ```
 
 `total` — сколько всего подошло; нужен для заголовка «34 номера по маске».

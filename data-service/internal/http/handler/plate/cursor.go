@@ -1,4 +1,4 @@
-package feed
+package plate
 
 import (
 	"data-service/internal/domain/data"

@@ -12,14 +12,14 @@ import (
 
 type offerProvider interface {
 	FetchLatestOffers(ctx context.Context) (provider.FetchResult, error)
-	FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error)
-	FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithNumber, error)
+	FetchOfferDetail(ctx context.Context, offer domain.OfferWithPlate) (domain.OfferWithPlate, error)
+	FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithPlate, error)
 }
 
 type offerRepository interface {
-	GetOfferByExternalID(ctx context.Context, provider domain.Provider, externalID string) (domain.OfferWithNumber, error)
+	GetOfferByExternalID(ctx context.Context, provider domain.Provider, externalID string) (domain.OfferWithPlate, error)
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
-	UpdateOrCreate(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error)
+	UpdateOrCreate(ctx context.Context, offer domain.OfferWithPlate) (domain.OfferWithPlate, error)
 }
 
 type feature interface {
@@ -131,7 +131,7 @@ func (uc *UseCase) fetchLastExternalID(ctx context.Context) (int, error) {
 }
 
 // refreshStored - догружает деталку поверх уже сохранённого предложения, не трогая поля из выдачи
-func (uc *UseCase) refreshStored(ctx context.Context, stored domain.OfferWithNumber) error {
+func (uc *UseCase) refreshStored(ctx context.Context, stored domain.OfferWithPlate) error {
 	offer, err := uc.provider.FetchOfferDetail(ctx, stored)
 	if err != nil {
 		return fmt.Errorf("fetch offer detail: %w", err)

@@ -1,4 +1,4 @@
-package fetchnumber
+package fetchplate
 
 import (
 	"context"
@@ -7,17 +7,17 @@ import (
 	"github.com/google/uuid"
 )
 
-type numberStore interface {
-	GetNumberWithOffersByID(ctx context.Context, id uuid.UUID) (*data.Number, error)
+type plateStore interface {
+	GetPlateWithOffersByID(ctx context.Context, id uuid.UUID) (*data.Plate, error)
 }
 
 // UseCase - возвращает номер с предложениями
 type UseCase struct {
-	repository numberStore
+	repository plateStore
 }
 
 func New(
-	repository numberStore,
+	repository plateStore,
 ) *UseCase {
 	return &UseCase{
 		repository: repository,
@@ -25,6 +25,6 @@ func New(
 }
 
 // Handle - возвращает номер с предложениями по идентификатору
-func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) (*data.Number, error) {
-	return uc.repository.GetNumberWithOffersByID(ctx, id)
+func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) (*data.Plate, error) {
+	return uc.repository.GetPlateWithOffersByID(ctx, id)
 }

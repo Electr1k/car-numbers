@@ -164,7 +164,7 @@ useHead(() => ({
               <template v-if="!similarDone">
                 <SkeletonCard v-for="i in 3" :key="i" />
               </template>
-              <NumberCard v-for="c in similarItems" v-else :key="c.id" :card="c" />
+              <PlateCard v-for="c in similarItems" v-else :key="c.id" :card="c" />
             </div>
           </div>
 

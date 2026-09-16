@@ -17,7 +17,7 @@ type offerProvider interface {
 }
 
 type offerSaver interface {
-	SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error)
+	SaveBatch(ctx context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error)
 }
 
 type detailDispatcher interface {

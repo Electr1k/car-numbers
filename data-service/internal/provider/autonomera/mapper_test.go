@@ -70,11 +70,11 @@ func TestMapToDomainHappyPath(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if result.Number.Number != "а123аа77" {
-		t.Errorf("number = %q", result.Number.Number)
+	if result.Plate.Number != "а123аа77" {
+		t.Errorf("number = %q", result.Plate.Number)
 	}
-	if result.Number.Type != domain.NumberTypeCar {
-		t.Errorf("type = %q", result.Number.Type)
+	if result.Plate.Type != domain.PlateTypeCar {
+		t.Errorf("type = %q", result.Plate.Type)
 	}
 	if result.Offer.ExternalID != "12345" {
 		t.Errorf("external id = %q, want 12345", result.Offer.ExternalID)
@@ -88,8 +88,8 @@ func TestMapToDomainHappyPath(t *testing.T) {
 	if result.Offer.Status != domain.OfferStatusActive {
 		t.Errorf("status = %q", result.Offer.Status)
 	}
-	if result.Offer.NumberID != result.Number.ID {
-		t.Errorf("offer.NumberID %s != number.ID %s", result.Offer.NumberID, result.Number.ID)
+	if result.Offer.PlateID != result.Plate.ID {
+		t.Errorf("offer.PlateID %s != plate.ID %s", result.Offer.PlateID, result.Plate.ID)
 	}
 	if result.Offer.PostedAt == nil || result.Offer.PostedAt.Format(dateLayout) != "05.08.2026" {
 		t.Errorf("postedAt = %v", result.Offer.PostedAt)
@@ -102,11 +102,11 @@ func TestMapToDomainHappyPath(t *testing.T) {
 func TestMapToDomainVehicleTypes(t *testing.T) {
 	cases := []struct {
 		href string
-		want domain.NumberType
+		want domain.PlateType
 	}{
-		{"/standart/а123аа77", domain.NumberTypeCar},
-		{"/moto/а123аа77", domain.NumberTypeMoto},
-		{"/trailer/а123аа77", domain.NumberTypeTrailer},
+		{"/standart/а123аа77", domain.PlateTypeCar},
+		{"/moto/а123аа77", domain.PlateTypeMoto},
+		{"/trailer/а123аа77", domain.PlateTypeTrailer},
 	}
 
 	for _, c := range cases {
@@ -117,8 +117,8 @@ func TestMapToDomainVehicleTypes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: unexpected error: %v", c.href, err)
 		}
-		if result.Number.Type != c.want {
-			t.Errorf("%s: type = %q, want %q", c.href, result.Number.Type, c.want)
+		if result.Plate.Type != c.want {
+			t.Errorf("%s: type = %q, want %q", c.href, result.Plate.Type, c.want)
 		}
 	}
 }

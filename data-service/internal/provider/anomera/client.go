@@ -14,14 +14,14 @@ import (
 )
 
 const (
-	// getAutoNumbers - постраничная выдача автономеров
-	getAutoNumbers = "/gos-nomera-v-baze"
+	// getAutoPlates - постраничная выдача автономеров
+	getAutoPlates = "/gos-nomera-v-baze"
 
-	// getMotoNumbers - постраничная выдача мотономеров
-	getMotoNumbers = getAutoNumbers + "/nomera-na-moto"
+	// getMotoPlates - постраничная выдача мотономеров
+	getMotoPlates = getAutoPlates + "/nomera-na-moto"
 
-	// getTrailerNumbers - постраничная выдача номеров на прицепы
-	getTrailerNumbers = getAutoNumbers + "/nomera-na-pricep"
+	// getTrailerPlates - постраничная выдача номеров на прицепы
+	getTrailerPlates = getAutoPlates + "/nomera-na-pricep"
 
 	orderColumn = "date"
 
@@ -89,7 +89,7 @@ func (c *Client) buildURL(page int) string {
 	query.Set("sort", orderColumn)
 	query.Set("page", strconv.Itoa(page))
 
-	return c.baseURL + getAutoNumbers + "?" + query.Encode()
+	return c.baseURL + getAutoPlates + "?" + query.Encode()
 }
 
 // FetchOfferDetail забирает деталку предложения

@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-func newTestOffer(numberID uuid.UUID, provider Provider, status OfferStatus) (*Offer, error) {
+func newTestOffer(plateID uuid.UUID, provider Provider, status OfferStatus) (*Offer, error) {
 	postedAt := time.Now()
 	price := 1000.0
 
 	return NewOffer(
-		numberID,
+		plateID,
 		provider,
 		"42",
 		&price,
@@ -44,9 +44,9 @@ func TestNewOfferAssignsID(t *testing.T) {
 	}
 }
 
-func TestNewOfferRequiresNumberID(t *testing.T) {
+func TestNewOfferRequiresPlateID(t *testing.T) {
 	if _, err := newTestOffer(uuid.Nil, ProviderAutonomera, OfferStatusActive); err == nil {
-		t.Fatal("expected error for zero number id, got nil")
+		t.Fatal("expected error for zero plate id, got nil")
 	}
 }
 

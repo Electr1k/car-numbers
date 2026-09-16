@@ -28,9 +28,9 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 	}
 
 	result := provider.FetchResult{TotalPages: response.TotalPages}
-	for index, number := range response.Items {
+	for index, plate := range response.Items {
 		result.RowsFound++
-		offer, err := s.mapper.MapOfferToDomain(number)
+		offer, err := s.mapper.MapOfferToDomain(plate)
 		if err != nil {
 			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
 			continue
@@ -42,21 +42,21 @@ func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResu
 	return result, nil
 }
 
-func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
+func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithPlate) (domain.OfferWithPlate, error) {
 	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.ExternalID)
 	if errors.Is(err, provider.ErrNotFound) {
 		offer.Offer.Status = domain.OfferStatusInactive
 		return offer, nil
 	}
 	if err != nil {
-		return domain.OfferWithNumber{}, err
+		return domain.OfferWithPlate{}, err
 	}
 
 	return s.mapper.ApplyOfferDetailToDomain(*response, offer)
 }
 
-func (s *Service) FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithNumber, error) {
-	var emptyOffer domain.OfferWithNumber
+func (s *Service) FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
 
 	response, err := s.client.FetchOfferDetail(ctx, externalID)
 	if errors.Is(err, provider.ErrNotFound) {
@@ -81,9 +81,9 @@ func (s *Service) FetchLatestOffers(ctx context.Context) (provider.FetchResult, 
 	}
 
 	result := provider.FetchResult{TotalPages: 0}
-	for index, number := range response.Items {
+	for index, plate := range response.Items {
 		result.RowsFound++
-		offer, err := s.mapper.MapOfferToDomain(number)
+		offer, err := s.mapper.MapOfferToDomain(plate)
 		if err != nil {
 			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
 			continue

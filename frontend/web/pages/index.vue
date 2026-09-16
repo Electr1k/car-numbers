@@ -63,7 +63,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
 
       <template v-else-if="items.length">
         <div class="grid">
-          <NumberCard v-for="card in items" :key="card.id" :card="card" />
+          <PlateCard v-for="card in items" :key="card.id" :card="card" />
           <SkeletonCard v-for="i in (loadingMore ? 2 : 0)" :key="`sk-${i}`" />
         </div>
         <button v-if="cursor" type="button" class="more" :disabled="loadingMore" @click="loadMore">

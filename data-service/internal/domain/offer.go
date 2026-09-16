@@ -37,7 +37,7 @@ const (
 // Offer - Предложение
 type Offer struct {
 	ID              uuid.UUID         `validate:"required"`                                    // ID - Идентификатор
-	NumberID        uuid.UUID         `validate:"required"`                                    // NumberID - Идентификатор номера
+	PlateID         uuid.UUID         `validate:"required"`                                    // PlateID - Идентификатор номера
 	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найдено предложение
 	ExternalID      string            `validate:"required"`                                    // ExternalID - Идентификатор у провайдера
 	Price           *float64          `validate:"omitempty,gt=0"`                              // Price - Цена
@@ -90,7 +90,7 @@ func (o *Offer) ApplyDetail(
 
 // NewOffer - Создание предложения, которого ещё не существовало
 func NewOffer(
-	numberID uuid.UUID,
+	plateID uuid.UUID,
 	provider Provider,
 	externalID string,
 	price *float64,
@@ -112,7 +112,7 @@ func NewOffer(
 
 	return newOffer(
 		id,
-		numberID,
+		plateID,
 		provider,
 		externalID,
 		price,
@@ -134,7 +134,7 @@ func NewOffer(
 // RestoreOffer - Восстановление существующего предложения из хранилища
 func RestoreOffer(
 	id uuid.UUID,
-	numberID uuid.UUID,
+	plateID uuid.UUID,
 	provider Provider,
 	externalID string,
 	price *float64,
@@ -153,7 +153,7 @@ func RestoreOffer(
 ) (*Offer, error) {
 	return newOffer(
 		id,
-		numberID,
+		plateID,
 		provider,
 		externalID,
 		price,
@@ -174,7 +174,7 @@ func RestoreOffer(
 
 func newOffer(
 	id uuid.UUID,
-	numberID uuid.UUID,
+	plateID uuid.UUID,
 	provider Provider,
 	externalID string,
 	price *float64,
@@ -193,7 +193,7 @@ func newOffer(
 ) (*Offer, error) {
 	offer := &Offer{
 		ID:              id,
-		NumberID:        numberID,
+		PlateID:         plateID,
 		Provider:        provider,
 		ExternalID:      externalID,
 		Price:           price,
@@ -218,8 +218,8 @@ func newOffer(
 	return offer, nil
 }
 
-// OfferWithNumber - Предложение вместе с номером, к которому оно относится
-type OfferWithNumber struct {
-	Number *Number
-	Offer  *Offer
+// OfferWithPlate - Предложение вместе с номером, к которому оно относится
+type OfferWithPlate struct {
+	Plate *Plate
+	Offer *Offer
 }

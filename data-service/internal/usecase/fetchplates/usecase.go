@@ -1,4 +1,4 @@
-package fetchfeednumbers
+package fetchplates
 
 import (
 	"context"
@@ -6,17 +6,17 @@ import (
 	"data-service/internal/repository"
 )
 
-type numberStore interface {
-	GetFeedNumbers(ctx context.Context, params repository.GetNumbersParams) ([]data.FeedNumber, bool, error)
+type plateStore interface {
+	GetPlates(ctx context.Context, params repository.GetPlatesParams) ([]data.FeedPlate, bool, error)
 }
 
 // UseCase - возвращает свежие номера
 type UseCase struct {
-	repository numberStore
+	repository plateStore
 }
 
 func New(
-	repository numberStore,
+	repository plateStore,
 ) *UseCase {
 	return &UseCase{
 		repository: repository,
@@ -30,19 +30,19 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) (Result, error) {
 		return Result{}, err
 	}
 
-	numbers, hasNext, err := uc.repository.GetFeedNumbers(ctx, repository.GetNumbersParams(params))
+	plates, hasNext, err := uc.repository.GetPlates(ctx, repository.GetPlatesParams(params))
 	if err != nil {
 		return Result{}, err
 	}
 
 	if !hasNext {
-		return Result{Numbers: numbers}, nil
+		return Result{Plates: plates}, nil
 	}
 
-	last := numbers[len(numbers)-1]
+	last := plates[len(plates)-1]
 
 	return Result{
-		Numbers: numbers,
+		Plates: plates,
 		NextCursor: &data.FeedCursor{
 			RefreshedAt: last.RefreshedAt,
 			UpdatedAt:   last.UpdatedAt,

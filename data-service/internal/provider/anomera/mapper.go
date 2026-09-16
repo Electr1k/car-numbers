@@ -107,17 +107,17 @@ const (
 // offerSlugPattern - слаг деталки
 var offerSlugPattern = regexp.MustCompile(`^(` + motoURLPrefix + `|` + trailerURLPrefix + `)?(\d+)-([a-z0-9]+)\.html$`)
 
-// sectionNumberTypes - тип ТС по префиксу раздела в слаге
-var sectionNumberTypes = map[string]domain.NumberType{
-	motoURLPrefix:    domain.NumberTypeMoto,
-	trailerURLPrefix: domain.NumberTypeTrailer,
+// sectionPlateTypes - тип ТС по префиксу раздела в слаге
+var sectionPlateTypes = map[string]domain.PlateType{
+	motoURLPrefix:    domain.PlateTypeMoto,
+	trailerURLPrefix: domain.PlateTypeTrailer,
 }
 
 // plateCaptionPattern - номер с регионом в конце подписи картинки вида "Красивый номер на авто О999У* 126"
 var plateCaptionPattern = regexp.MustCompile(`([А-Я\d*]{6})\s*([\d*]{2,3})$`)
 
-// plateImageNumberAttrs - подписи картинки номера: в них номер есть целиком, вместе с маской
-var plateImageNumberAttrs = []string{"title", "alt"}
+// plateImageAttrs - подписи картинки номера: в них номер есть целиком, вместе с маской
+var plateImageAttrs = []string{"title", "alt"}
 
 // plateLetters - обратная транслитерация: в адресах провайдер пишет номер латиницей по этой карте
 var plateLetters = map[rune]rune{
@@ -137,7 +137,7 @@ type offerRef struct {
 
 	number string
 
-	numberType domain.NumberType
+	plateType domain.PlateType
 }
 
 // parseOfferRef - адрес, идентификатор и номер предложения из ссылки на карточку
@@ -158,7 +158,7 @@ func (m *Mapper) parseOfferRef(href string) (offerRef, error) {
 		url:        m.baseURL + parsed.Path,
 		externalID: section + externalID,
 		number:     transliteratePlate(plate),
-		numberType: sectionNumberTypes[section],
+		plateType:  sectionPlateTypes[section],
 	}, nil
 }
 
@@ -183,8 +183,8 @@ func NewMapper(baseURL string) *Mapper {
 }
 
 // MapOfferToDomain - Маппит строку выдачи в домен
-func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithNumber, error) {
-	var empty domain.OfferWithNumber
+func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithPlate, error) {
+	var empty domain.OfferWithPlate
 
 	raw, err := goquery.OuterHtml(sel)
 	if err != nil {
@@ -206,7 +206,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithNumbe
 		return empty, err
 	}
 
-	numberStr, numberType, err := parseRowNumber(sel, ref, negotiable)
+	numberStr, plateType, err := parseRowNumber(sel, ref, negotiable)
 	if err != nil {
 		return empty, err
 	}
@@ -221,13 +221,13 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithNumbe
 		return empty, err
 	}
 
-	number, err := domain.NewNumber(numberStr, numberType)
+	plate, err := domain.NewPlate(numberStr, plateType)
 	if err != nil {
 		return empty, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
 	}
 
 	offer, err := domain.NewOffer(
-		number.ID,
+		plate.ID,
 		domain.ProviderAnomera,
 		ref.externalID,
 		price,
@@ -246,20 +246,20 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithNumbe
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, ref.externalID, err)
 	}
 
-	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
+	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
 }
 
 // ApplyOfferDetailToDomain - Дополняет предложение из выдачи данными его карточки
-func (m *Mapper) ApplyOfferDetailToDomain(sel *goquery.Selection, offer domain.OfferWithNumber) (domain.OfferWithNumber, error) {
-	var emptyOffer domain.OfferWithNumber
+func (m *Mapper) ApplyOfferDetailToDomain(sel *goquery.Selection, offer domain.OfferWithPlate) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
 
 	newOffer, err := m.MapOfferDetailToDomain(sel)
 	if err != nil {
 		return emptyOffer, err
 	}
 
-	if newOffer.Number.Number != offer.Number.Number {
-		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Number.Number, newOffer.Number.Number)
+	if newOffer.Plate.Number != offer.Plate.Number {
+		return emptyOffer, fmt.Errorf("%w: offer with number %q does not match its number %q", provider.ErrMapOffer, offer.Plate.Number, newOffer.Plate.Number)
 	}
 
 	viewCount := offer.Offer.ViewCount
@@ -304,8 +304,8 @@ func requiredChildAttr(sel *goquery.Selection, selector string, name string) (st
 	return strings.TrimSpace(value), nil
 }
 
-// parseNumber - номер и тип ТС из заголовка вида "А123АА 77"
-func parseNumber(title string) (string, domain.NumberType, error) {
+// parsePlate - номер и тип ТС из заголовка вида "А123АА 77"
+func parsePlate(title string) (string, domain.PlateType, error) {
 	number := strings.ToUpper(strings.Join(strings.Fields(title), ""))
 
 	runes := []rune(number)
@@ -317,23 +317,23 @@ func parseNumber(title string) (string, domain.NumberType, error) {
 		return "", "", fmt.Errorf("%w: unexpected region in number %q", provider.ErrBrokenOffer, title)
 	}
 
-	numberType, err := parseNumberType(runes[:plateLength])
+	plateType, err := parsePlateType(runes[:plateLength])
 	if err != nil {
 		return "", "", fmt.Errorf("%w: unknown vehicle type in number %q", provider.ErrBrokenOffer, title)
 	}
 
-	return number, numberType, nil
+	return number, plateType, nil
 }
 
-// parseNumberType - тип ТС по раскладке букв и цифр в номере
-func parseNumberType(plate []rune) (domain.NumberType, error) {
+// parsePlateType - тип ТС по раскладке букв и цифр в номере
+func parsePlateType(plate []rune) (domain.PlateType, error) {
 	switch {
 	case isLetters(plate[0:1]) && isDigits(plate[1:4]) && isLetters(plate[4:6]):
-		return domain.NumberTypeCar, nil
+		return domain.PlateTypeCar, nil
 	case isDigits(plate[0:4]) && isLetters(plate[4:6]):
-		return domain.NumberTypeMoto, nil
+		return domain.PlateTypeMoto, nil
 	case isLetters(plate[0:2]) && isDigits(plate[2:6]):
-		return domain.NumberTypeTrailer, nil
+		return domain.PlateTypeTrailer, nil
 	default:
 		return "", fmt.Errorf("unknown vehicle type")
 	}
@@ -376,7 +376,7 @@ func isNegotiable(sel *goquery.Selection, priceSelector string, priceCellSelecto
 }
 
 // parseRowNumber - номер и тип ТС строки выдачи
-func parseRowNumber(sel *goquery.Selection, ref offerRef, negotiable bool) (string, domain.NumberType, error) {
+func parseRowNumber(sel *goquery.Selection, ref offerRef, negotiable bool) (string, domain.PlateType, error) {
 	title, err := requiredAttr(sel, numberSelector, "content")
 	if err != nil {
 		if !negotiable {
@@ -391,17 +391,17 @@ func parseRowNumber(sel *goquery.Selection, ref offerRef, negotiable bool) (stri
 		title = ref.number
 	}
 
-	numberStr, numberType, err := parseNumber(title)
+	numberStr, plateType, err := parsePlate(title)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Раздел в адресе надёжнее раскладки номера
-	if ref.numberType != "" {
-		numberType = ref.numberType
+	if ref.plateType != "" {
+		plateType = ref.plateType
 	}
 
-	return numberStr, numberType, nil
+	return numberStr, plateType, nil
 }
 
 // parsePriceStatus - цена и статус предложения
@@ -481,8 +481,8 @@ func parseStatus(sel *goquery.Selection) (domain.OfferStatus, error) {
 }
 
 // MapOfferDetailToDomain - Маппит карточку предложения в домен
-func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWithNumber, error) {
-	var empty domain.OfferWithNumber
+func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWithPlate, error) {
+	var empty domain.OfferWithPlate
 
 	product := sel.Find(productSelector).First()
 	if product.Length() == 0 {
@@ -509,7 +509,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 		return empty, err
 	}
 
-	numberStr, numberType, err := parseDetailNumber(product, ref, negotiable)
+	numberStr, plateType, err := parseDetailNumber(product, ref, negotiable)
 	if err != nil {
 		return empty, err
 	}
@@ -541,13 +541,13 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 		return empty, err
 	}
 
-	number, err := domain.NewNumber(numberStr, numberType)
+	plate, err := domain.NewPlate(numberStr, plateType)
 	if err != nil {
 		return empty, fmt.Errorf("%w: invalid number %q: %w", provider.ErrRowSkipped, numberStr, err)
 	}
 
 	offer, err := domain.NewOffer(
-		number.ID,
+		plate.ID,
 		domain.ProviderAnomera,
 		ref.externalID,
 		price,
@@ -566,41 +566,41 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, ref.externalID, err)
 	}
 
-	return domain.OfferWithNumber{Number: number, Offer: offer}, nil
+	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
 }
 
 // parseDetailNumber - номер и тип ТС карточки
-func parseDetailNumber(product *goquery.Selection, ref offerRef, negotiable bool) (string, domain.NumberType, error) {
+func parseDetailNumber(product *goquery.Selection, ref offerRef, negotiable bool) (string, domain.PlateType, error) {
 	title, err := requiredChildAttr(product, numberSelector, "content")
 	if err != nil {
 		if !negotiable {
 			return "", "", err
 		}
 
-		title, err = parseDetailNumberFallback(product, ref)
+		title, err = parseDetailPlateFallback(product, ref)
 		if err != nil {
 			return "", "", err
 		}
 	}
 
-	numberStr, numberType, err := parseNumber(title)
+	numberStr, plateType, err := parsePlate(title)
 	if err != nil {
 		return "", "", err
 	}
 
 	// Раздел в адресе надёжнее раскладки номера
-	if ref.numberType != "" {
-		numberType = ref.numberType
+	if ref.plateType != "" {
+		plateType = ref.plateType
 	}
 
-	return numberStr, numberType, nil
+	return numberStr, plateType, nil
 }
 
-// parseDetailNumberFallback - получение номера из названия к картинке (фоллбек)
-func parseDetailNumberFallback(product *goquery.Selection, ref offerRef) (string, error) {
+// parseDetailPlateFallback - получение номера из названия к картинке (фоллбек)
+func parseDetailPlateFallback(product *goquery.Selection, ref offerRef) (string, error) {
 	image := product.Find(plateImageSelector).First()
 
-	for _, attr := range plateImageNumberAttrs {
+	for _, attr := range plateImageAttrs {
 		if number := parsePlateCaption(image.AttrOr(attr, "")); number != "" {
 			return number, nil
 		}

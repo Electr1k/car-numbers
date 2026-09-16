@@ -23,24 +23,24 @@ func (f providerFunc) FetchOffers(ctx context.Context, section autonomera.Sectio
 	return f(ctx, section, offset)
 }
 
-type saverFunc func(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error)
+type saverFunc func(ctx context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error)
 
-func (f saverFunc) SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+func (f saverFunc) SaveBatch(ctx context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 	return f(ctx, items)
 }
 
 // saveAll - батч записан целиком, деталки ни у одного оффера ещё нет
-func saveAll(_ context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+func saveAll(_ context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 	return items, nil
 }
 
 // withDetail - копия оффера, у которого деталка уже загружена
-func withDetail(item domain.OfferWithNumber) domain.OfferWithNumber {
+func withDetail(item domain.OfferWithPlate) domain.OfferWithPlate {
 	raw := "<html>detail</html>"
 	offer := *item.Offer
 	offer.RawDetailed = &raw
 
-	return domain.OfferWithNumber{Number: item.Number, Offer: &offer}
+	return domain.OfferWithPlate{Plate: item.Plate, Offer: &offer}
 }
 
 type dispatcherFunc func(ctx context.Context, offerID uuid.UUID, provider domain.Provider) (bool, error)
@@ -93,15 +93,15 @@ func resultWith(t *testing.T, count int, postedAt time.Time, rowErrs ...error) p
 	result := provider.FetchResult{RowsFound: count + len(rowErrs)}
 
 	for range count {
-		number, err := domain.NewNumber("а123аа77", domain.NumberTypeCar)
+		plate, err := domain.NewPlate("а123аа77", domain.PlateTypeCar)
 		if err != nil {
-			t.Fatalf("build number: %v", err)
+			t.Fatalf("build plate: %v", err)
 		}
 
 		price := 1000.0
 
 		offer, err := domain.NewOffer(
-			number.ID,
+			plate.ID,
 			domain.ProviderAutonomera,
 			"42",
 			&price,
@@ -120,7 +120,7 @@ func resultWith(t *testing.T, count int, postedAt time.Time, rowErrs ...error) p
 			t.Fatalf("build offer: %v", err)
 		}
 
-		result.Offers = append(result.Offers, domain.OfferWithNumber{Number: number, Offer: offer})
+		result.Offers = append(result.Offers, domain.OfferWithPlate{Plate: plate, Offer: offer})
 	}
 
 	for i, rowErr := range rowErrs {
@@ -143,9 +143,9 @@ func TestHandleDispatchesDetailForOffersWithoutDetail(t *testing.T) {
 	})
 
 	var wantIds []uuid.UUID
-	saver := saverFunc(func(_ context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+	saver := saverFunc(func(_ context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 		// База отдаёт четыре записи, у первых двух деталка уже загружена
-		stored := make([]domain.OfferWithNumber, 0, len(items))
+		stored := make([]domain.OfferWithPlate, 0, len(items))
 		for i, item := range items {
 			if i < 2 {
 				stored = append(stored, withDetail(item))
@@ -188,12 +188,12 @@ func TestHandleDispatchesStoredOfferID(t *testing.T) {
 		return resultWith(t, 1, now), nil
 	})
 
-	saver := saverFunc(func(_ context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+	saver := saverFunc(func(_ context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 		// Оффер уже существовал: в базе у него свой идентификатор от первой вставки
 		offer := *items[0].Offer
 		offer.ID = storedID
 
-		return []domain.OfferWithNumber{{Number: items[0].Number, Offer: &offer}}, nil
+		return []domain.OfferWithPlate{{Plate: items[0].Plate, Offer: &offer}}, nil
 	})
 
 	var dispatchedIds []uuid.UUID
@@ -289,7 +289,7 @@ func TestHandleStopsWhenFeedExhausted(t *testing.T) {
 	})
 
 	var saved int
-	saver := saverFunc(func(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+	saver := saverFunc(func(ctx context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 		saved += len(items)
 		return saveAll(ctx, items)
 	})
@@ -459,7 +459,7 @@ func TestHandlePropagatesSaverError(t *testing.T) {
 	p := providerFunc(func(_ context.Context, _ autonomera.Section, _ int) (provider.FetchResult, error) {
 		return resultWith(t, 20, time.Now()), nil
 	})
-	saver := saverFunc(func(context.Context, []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+	saver := saverFunc(func(context.Context, []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 		return nil, saveFailed
 	})
 

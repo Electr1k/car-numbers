@@ -1,4 +1,4 @@
-package fetchfeednumbers
+package fetchplates
 
 import (
 	"data-service/internal/domain/data"
@@ -6,6 +6,6 @@ import (
 
 // Result - результат выборки свежих номеров
 type Result struct {
-	Numbers    []data.FeedNumber
+	Plates     []data.FeedPlate
 	NextCursor *data.FeedCursor
 }

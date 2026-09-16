@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	fetchPlates  = "/api/v1/numbers"
+	fetchPlates  = "/api/v1/plates"
 	fetchRegions = "/api/v1/regions"
 
 	maxResponseSize     = 8 << 20

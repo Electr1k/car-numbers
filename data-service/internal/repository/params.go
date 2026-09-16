@@ -2,7 +2,7 @@ package repository
 
 import "data-service/internal/domain/data"
 
-type GetNumbersParams struct {
+type GetPlatesParams struct {
 	Query           *string
 	RegionId        *int
 	PriceFrom       *float64

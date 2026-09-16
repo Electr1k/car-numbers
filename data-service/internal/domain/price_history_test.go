@@ -46,15 +46,15 @@ func TestNewPriceHistoryRequiresIDs(t *testing.T) {
 	}
 
 	if _, err := NewPriceHistory(uuid.New(), uuid.Nil, &price); err == nil {
-		t.Fatal("expected error for zero number id, got nil")
+		t.Fatal("expected error for zero plate id, got nil")
 	}
 }
 
 // Номер наблюдения - снимок номера предложения на этот момент
 func TestNewPriceHistoryFromOfferCopiesOfferState(t *testing.T) {
-	numberID := uuid.New()
+	plateID := uuid.New()
 
-	offer, err := newTestOffer(numberID, ProviderAutonomera, OfferStatusActive)
+	offer, err := newTestOffer(plateID, ProviderAutonomera, OfferStatusActive)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -68,8 +68,8 @@ func TestNewPriceHistoryFromOfferCopiesOfferState(t *testing.T) {
 		t.Fatalf("offer id = %s, want %s", history.OfferID, offer.ID)
 	}
 
-	if history.NumberID != numberID {
-		t.Fatalf("number id = %s, want %s", history.NumberID, numberID)
+	if history.PlateID != plateID {
+		t.Fatalf("plate id = %s, want %s", history.PlateID, plateID)
 	}
 
 	if history.Price != offer.Price {

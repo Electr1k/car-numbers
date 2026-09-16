@@ -15,7 +15,7 @@ type RowError struct {
 
 // FetchResult - результат получения страницы офферов
 type FetchResult struct {
-	Offers     []domain.OfferWithNumber
+	Offers     []domain.OfferWithPlate
 	RowsFound  int
 	RowErrors  []RowError
 	TotalPages int

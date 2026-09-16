@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// Number - номер для выдачи
-type Number struct {
+// Plate - номер для выдачи
+type Plate struct {
 	ID         uuid.UUID // ID - Идентификатор
 	Number     string    // Number - Номер
 	RegionID   *int      // RegionID - Идентификатор региона

@@ -155,7 +155,7 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
 
     <template v-else-if="items.length">
       <div class="grid">
-        <NumberCard v-for="c in items" :key="c.id" :card="c" />
+        <PlateCard v-for="c in items" :key="c.id" :card="c" />
         <SkeletonCard v-for="i in (loadingMore ? 2 : 0)" :key="`sk-${i}`" />
       </div>
       <button v-if="cursor" type="button" class="more" :disabled="loadingMore" @click="loadMore">

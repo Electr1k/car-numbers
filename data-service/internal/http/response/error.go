@@ -37,7 +37,7 @@ func writeAPIError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, 
 	status, code, message := http.StatusInternalServerError, "internal_error", "Произошла ошибка"
 
 	switch {
-	case errors.Is(err, domain.ErrNumberNotFound):
+	case errors.Is(err, domain.ErrPlateNotFound):
 		status, code, message = http.StatusNotFound, "not_found", "Номер не найден"
 	case errors.Is(err, domain.ErrInvalidArgument):
 		status, code, message = http.StatusBadRequest, "validation_error", "Некорректные параметры запроса"

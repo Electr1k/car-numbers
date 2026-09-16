@@ -15,7 +15,7 @@ type resolver interface {
 }
 
 type offerRepository interface {
-	GetOfferByID(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error)
+	GetOfferByID(ctx context.Context, id uuid.UUID) (domain.OfferWithPlate, error)
 
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }

@@ -25,19 +25,19 @@ func NewOfferRepository(postgres *Postgres) *OfferRepository {
 
 // upsertOfferQuery - вставка номера и предложения одним запросом
 const upsertOfferQuery = `
-WITH upserted_number AS (
-	INSERT INTO numbers (id, number, type)
+WITH upserted_plate AS (
+	INSERT INTO plates (id, number, type)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (number, type) DO UPDATE SET
 		updated_at = CURRENT_TIMESTAMP
 	RETURNING id, number, type, created_at, updated_at
 ),
 upserted_offer AS (
-	INSERT INTO offers (id, number_id, provider, external_id, price, status, posted_at, refreshed_at, url, raw)
-	SELECT $4::uuid, upserted_number.id, $5, $6, $7, $8, $9, $10, $11, $12
-	FROM upserted_number
+	INSERT INTO offers (id, plate_id, provider, external_id, price, status, posted_at, refreshed_at, url, raw)
+	SELECT $4::uuid, upserted_plate.id, $5, $6, $7, $8, $9, $10, $11, $12
+	FROM upserted_plate
 	ON CONFLICT (provider, external_id) DO UPDATE SET
-		number_id    = EXCLUDED.number_id,
+		plate_id     = EXCLUDED.plate_id,
 		price        = EXCLUDED.price,
 		status       = EXCLUDED.status,
 		posted_at    = LEAST(offers.posted_at, EXCLUDED.posted_at),
@@ -52,26 +52,26 @@ SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, u
 	upserted_offer.status, upserted_offer.whereabouts, upserted_offer.reissue_included, upserted_offer.view_count,
 	upserted_offer.posted_at, upserted_offer.refreshed_at, upserted_offer.url, upserted_offer.raw,
 	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.created_at, upserted_offer.updated_at,
-	upserted_number.id, upserted_number.number, upserted_number.type,
-	upserted_number.created_at, upserted_number.updated_at
-FROM upserted_offer, upserted_number;`
+	upserted_plate.id, upserted_plate.number, upserted_plate.type,
+	upserted_plate.created_at, upserted_plate.updated_at
+FROM upserted_offer, upserted_plate;`
 
 // upsertOfferWithDetailQuery - вставка номера и предложения вместе с деталкой одним запросом
 const upsertOfferWithDetailQuery = `
-WITH upserted_number AS (
-	INSERT INTO numbers (id, number, type)
+WITH upserted_plate AS (
+	INSERT INTO plates (id, number, type)
 	VALUES ($1, $2, $3)
 	ON CONFLICT (number, type) DO UPDATE SET
 		updated_at = CURRENT_TIMESTAMP
 	RETURNING id, number, type, created_at, updated_at
 ),
 upserted_offer AS (
-	INSERT INTO offers (id, number_id, provider, external_id, price, status, whereabouts, reissue_included,
+	INSERT INTO offers (id, plate_id, provider, external_id, price, status, whereabouts, reissue_included,
 		view_count, posted_at, refreshed_at, url, raw, raw_detail, comment)
-	SELECT $4::uuid, upserted_number.id, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
-	FROM upserted_number
+	SELECT $4::uuid, upserted_plate.id, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+	FROM upserted_plate
 	ON CONFLICT (provider, external_id) DO UPDATE SET
-		number_id        = EXCLUDED.number_id,
+		plate_id         = EXCLUDED.plate_id,
 		price            = EXCLUDED.price,
 		status           = EXCLUDED.status,
 		whereabouts      = EXCLUDED.whereabouts,
@@ -91,17 +91,17 @@ SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, u
 	upserted_offer.status, upserted_offer.whereabouts, upserted_offer.reissue_included, upserted_offer.view_count,
 	upserted_offer.posted_at, upserted_offer.refreshed_at, upserted_offer.url, upserted_offer.raw,
 	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.created_at, upserted_offer.updated_at,
-	upserted_number.id, upserted_number.number, upserted_number.type,
-	upserted_number.created_at, upserted_number.updated_at
-FROM upserted_offer, upserted_number;`
+	upserted_plate.id, upserted_plate.number, upserted_plate.type,
+	upserted_plate.created_at, upserted_plate.updated_at
+FROM upserted_offer, upserted_plate;`
 
 const getOfferByIdQuery = `
 SELECT 
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
     refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
-    numbers.id, number, type, numbers.created_at, numbers.updated_at
+    plates.id, number, type, plates.created_at, plates.updated_at
 FROM offers
-JOIN numbers ON offers.number_id = numbers.id
+JOIN plates ON offers.plate_id = plates.id
 WHERE offers.id = $1
 ;`
 
@@ -109,9 +109,9 @@ const getOfferByExternalIdQuery = `
 SELECT
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
     refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
-    numbers.id, number, type, numbers.created_at, numbers.updated_at
+    plates.id, number, type, plates.created_at, plates.updated_at
 FROM offers
-JOIN numbers ON offers.number_id = numbers.id
+JOIN plates ON offers.plate_id = plates.id
 WHERE offers.provider = $1 AND offers.external_id = $2
 ;`
 
@@ -119,9 +119,9 @@ const getOffersQuery = `
 SELECT
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
     refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
-    numbers.id, number, type, numbers.created_at, numbers.updated_at
+    plates.id, number, type, plates.created_at, plates.updated_at
 FROM offers
-JOIN numbers ON offers.number_id = numbers.id
+JOIN plates ON offers.plate_id = plates.id
 WHERE offers.provider = $1 AND offers.status = $2
 ;`
 
@@ -133,7 +133,7 @@ ORDER BY posted_at
 ;`
 
 const upsertPriceHistoryQuery = `
-INSERT INTO price_history (id, offer_id, number_id, price)
+INSERT INTO price_history (id, offer_id, plate_id, price)
 SELECT $1::uuid, $2::uuid, $3::uuid, $4::numeric(12,2)
 WHERE $4::numeric(12,2) IS DISTINCT FROM (
 	SELECT price
@@ -157,9 +157,9 @@ comment = $10,
 updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
 
-const getFeedNumbers = `
+const getFeedPlates = `
 SELECT 
-	numbers.id,
+	plates.id,
 	number,
 	regions.id AS region_id,
 	regions.name,
@@ -174,13 +174,13 @@ SELECT
 		WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
 		ELSE null
 	END as reissue_included
-FROM public.numbers
-JOIN offers ON offers.number_id = numbers.id
-LEFT JOIN region_codes ON numbers.region_code = region_codes.code
+FROM public.plates
+JOIN offers ON offers.plate_id = plates.id
+LEFT JOIN region_codes ON plates.region_code = region_codes.code
 LEFT JOIN regions ON regions.id = region_codes.region_id
 WHERE status = $1
-GROUP BY numbers.id, number, regions.id, regions.name, region_codes.code, type
-HAVING ($2::date IS NULL OR (MAX(refreshed_at::date), MAX(offers.updated_at), numbers.id) < ($2::date, $3::timestamptz, $4::uuid))
+GROUP BY plates.id, number, regions.id, regions.name, region_codes.code, type
+HAVING ($2::date IS NULL OR (MAX(refreshed_at::date), MAX(offers.updated_at), plates.id) < ($2::date, $3::timestamptz, $4::uuid))
 AND ($5::TEXT IS NULL OR number LIKE $5::TEXT)
 AND ($6::BIGINT IS NULL OR regions.id = $6::BIGINT)
 AND ($7::FLOAT IS NULL OR MIN(price) >= $7::FLOAT)
@@ -194,9 +194,9 @@ ORDER BY refreshed_at DESC, updated_at DESC, id DESC
 LIMIT $10
 `
 
-const getNumberWithOffersByID = `
+const getPlateWithOffersByID = `
 SELECT 
-	numbers.id as id,
+	plates.id as id,
 	number,
 	regions.id AS region_id,
 	regions.name,
@@ -213,15 +213,15 @@ SELECT
 	posted_at,
 	refreshed_at,
 	url
-FROM public.numbers
-LEFT JOIN offers ON offers.number_id = numbers.id
-LEFT JOIN region_codes ON numbers.region_code = region_codes.code
+FROM public.plates
+LEFT JOIN offers ON offers.plate_id = plates.id
+LEFT JOIN region_codes ON plates.region_code = region_codes.code
 LEFT JOIN regions ON regions.id = region_codes.region_id
-WHERE numbers.id = $1
+WHERE plates.id = $1
 `
 
 // SaveBatch - Сохранение батча в одной транзакции и за один поход в базу
-func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWithNumber) ([]domain.OfferWithNumber, error) {
+func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWithPlate) ([]domain.OfferWithPlate, error) {
 	if len(items) == 0 {
 		return nil, nil
 	}
@@ -235,9 +235,9 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 	batch := &pgx.Batch{}
 	for _, item := range items {
 		batch.Queue(upsertOfferQuery,
-			item.Number.ID,
-			item.Number.Number,
-			item.Number.Type,
+			item.Plate.ID,
+			item.Plate.Number,
+			item.Plate.Type,
 			item.Offer.ID,
 			item.Offer.Provider,
 			item.Offer.ExternalID,
@@ -252,10 +252,10 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 
 	results := tx.SendBatch(ctx, batch)
 
-	saved := make([]domain.OfferWithNumber, 0, len(items))
+	saved := make([]domain.OfferWithPlate, 0, len(items))
 
 	for _, item := range items {
-		stored, err := scanOfferWithNumber(results.QueryRow())
+		stored, err := scanOfferWithPlate(results.QueryRow())
 		if err != nil {
 			results.Close()
 			return nil, fmt.Errorf("save offer %s/%s: %w", item.Offer.Provider, item.Offer.ExternalID, err)
@@ -280,21 +280,21 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 }
 
 // UpdateOrCreate - Сохранение одного предложения вместе с номером и деталкой
-func (r *OfferRepository) UpdateOrCreate(ctx context.Context, item domain.OfferWithNumber) (domain.OfferWithNumber, error) {
-	if item.Number == nil || item.Offer == nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("update or create offer: empty offer or number")
+func (r *OfferRepository) UpdateOrCreate(ctx context.Context, item domain.OfferWithPlate) (domain.OfferWithPlate, error) {
+	if item.Plate == nil || item.Offer == nil {
+		return domain.OfferWithPlate{}, fmt.Errorf("update or create offer: empty offer or plate")
 	}
 
 	tx, err := r.postgres.pool.Begin(ctx)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("begin transaction: %w", err)
+		return domain.OfferWithPlate{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
 	row := tx.QueryRow(ctx, upsertOfferWithDetailQuery,
-		item.Number.ID,
-		item.Number.Number,
-		item.Number.Type,
+		item.Plate.ID,
+		item.Plate.Number,
+		item.Plate.Type,
 		item.Offer.ID,
 		item.Offer.Provider,
 		item.Offer.ExternalID,
@@ -311,24 +311,24 @@ func (r *OfferRepository) UpdateOrCreate(ctx context.Context, item domain.OfferW
 		item.Offer.Comment,
 	)
 
-	saved, err := scanOfferWithNumber(row)
+	saved, err := scanOfferWithPlate(row)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("save offer %s/%s: %w", item.Offer.Provider, item.Offer.ExternalID, err)
+		return domain.OfferWithPlate{}, fmt.Errorf("save offer %s/%s: %w", item.Offer.Provider, item.Offer.ExternalID, err)
 	}
 
-	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithNumber{saved}); err != nil {
-		return domain.OfferWithNumber{}, err
+	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithPlate{saved}); err != nil {
+		return domain.OfferWithPlate{}, err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("commit transaction: %w", err)
+		return domain.OfferWithPlate{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return saved, nil
 }
 
 // upsertPriceHistory - Запись наблюдений цены, единственное место записи в price_history
-func (r *OfferRepository) upsertPriceHistory(ctx context.Context, tx pgx.Tx, items []domain.OfferWithNumber) error {
+func (r *OfferRepository) upsertPriceHistory(ctx context.Context, tx pgx.Tx, items []domain.OfferWithPlate) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -340,7 +340,7 @@ func (r *OfferRepository) upsertPriceHistory(ctx context.Context, tx pgx.Tx, ite
 			return fmt.Errorf("build price history for offer %s: %w", item.Offer.ID, err)
 		}
 
-		batch.Queue(upsertPriceHistoryQuery, history.ID, history.OfferID, history.NumberID, history.Price)
+		batch.Queue(upsertPriceHistoryQuery, history.ID, history.OfferID, history.PlateID, history.Price)
 	}
 
 	results := tx.SendBatch(ctx, batch)
@@ -359,43 +359,43 @@ func (r *OfferRepository) upsertPriceHistory(ctx context.Context, tx pgx.Tx, ite
 	return nil
 }
 
-func (r *OfferRepository) GetOfferByID(ctx context.Context, id uuid.UUID) (domain.OfferWithNumber, error) {
+func (r *OfferRepository) GetOfferByID(ctx context.Context, id uuid.UUID) (domain.OfferWithPlate, error) {
 	row := r.postgres.pool.QueryRow(ctx, getOfferByIdQuery, id)
 
-	item, err := scanOfferWithNumber(row)
+	item, err := scanOfferWithPlate(row)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("get offer by id %s: %w", id, err)
+		return domain.OfferWithPlate{}, fmt.Errorf("get offer by id %s: %w", id, err)
 	}
 
 	return item, nil
 }
 
 // GetOfferByExternalID - Предложение по идентификатору у провайдера, domain.ErrOfferNotFound если его ещё нет
-func (r *OfferRepository) GetOfferByExternalID(ctx context.Context, provider domain.Provider, externalID string) (domain.OfferWithNumber, error) {
+func (r *OfferRepository) GetOfferByExternalID(ctx context.Context, provider domain.Provider, externalID string) (domain.OfferWithPlate, error) {
 	row := r.postgres.pool.QueryRow(ctx, getOfferByExternalIdQuery, provider, externalID)
 
-	item, err := scanOfferWithNumber(row)
+	item, err := scanOfferWithPlate(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return domain.OfferWithNumber{}, domain.ErrOfferNotFound
+		return domain.OfferWithPlate{}, domain.ErrOfferNotFound
 	}
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("get offer by external id %s/%s: %w", provider, externalID, err)
+		return domain.OfferWithPlate{}, fmt.Errorf("get offer by external id %s/%s: %w", provider, externalID, err)
 	}
 
 	return item, nil
 }
 
 // GetOffers - Предложения выбранного провайдера в заданном статусе вместе с их номерами
-func (r *OfferRepository) GetOffers(ctx context.Context, status domain.OfferStatus, provider domain.Provider) ([]domain.OfferWithNumber, error) {
+func (r *OfferRepository) GetOffers(ctx context.Context, status domain.OfferStatus, provider domain.Provider) ([]domain.OfferWithPlate, error) {
 	rows, err := r.postgres.pool.Query(ctx, getOffersQuery, provider, status)
 	if err != nil {
 		return nil, fmt.Errorf("get offers (provider=%s, status=%s): %w", provider, status, err)
 	}
 	defer rows.Close()
 
-	var offers []domain.OfferWithNumber
+	var offers []domain.OfferWithPlate
 	for rows.Next() {
-		item, err := scanOfferWithNumber(rows)
+		item, err := scanOfferWithPlate(rows)
 		if err != nil {
 			return nil, fmt.Errorf("get offers (provider=%s, status=%s): %w", provider, status, err)
 		}
@@ -455,7 +455,7 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 		return fmt.Errorf("update offer %s: offer not found", offer.ID)
 	}
 
-	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithNumber{{Offer: offer}}); err != nil {
+	if err := r.upsertPriceHistory(ctx, tx, []domain.OfferWithPlate{{Offer: offer}}); err != nil {
 		return err
 	}
 
@@ -466,8 +466,8 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 	return nil
 }
 
-// GetFeedNumbers - Возвращает свежие номера
-func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.GetNumbersParams) ([]data.FeedNumber, bool, error) {
+// GetPlates - Возвращает список номеров
+func (r *OfferRepository) GetPlates(ctx context.Context, params repository.GetPlatesParams) ([]data.FeedPlate, bool, error) {
 
 	var query *string
 	if params.Query != nil && len(*params.Query) > 0 {
@@ -486,7 +486,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 
 	rows, err := r.postgres.pool.Query(
 		ctx,
-		getFeedNumbers,
+		getFeedPlates,
 		string(domain.OfferStatusActive),
 		afterRefreshedAt,
 		afterUpdatedAt,
@@ -499,7 +499,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 		params.Limit+1,
 	)
 	if err != nil {
-		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
+		return nil, false, fmt.Errorf("get feed plates (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
 			params.Limit,
 			afterRefreshedAt,
 			afterUpdatedAt,
@@ -509,7 +509,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 	}
 	defer rows.Close()
 
-	numbers := make([]data.FeedNumber, 0, params.Limit+1)
+	plates := make([]data.FeedPlate, 0, params.Limit+1)
 	for rows.Next() {
 		var (
 			id              uuid.UUID
@@ -518,15 +518,15 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 			regionName      *string
 			regionCode      *string
 			price           *float64
-			numberType      string
+			plateType       string
 			count           int
 			refreshedAt     time.Time
 			updatedAt       time.Time
 			reissueIncluded *bool
 		)
 
-		if err := rows.Scan(&id, &number, &regionID, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
-			return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
+		if err := rows.Scan(&id, &number, &regionID, &regionName, &regionCode, &price, &plateType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
+			return nil, false, fmt.Errorf("get feed plates (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
 				params.Limit,
 				afterRefreshedAt,
 				afterUpdatedAt,
@@ -535,14 +535,14 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 			)
 		}
 
-		numbers = append(numbers, data.FeedNumber{
+		plates = append(plates, data.FeedPlate{
 			ID:              id,
 			Number:          number,
 			RegionID:        regionID,
 			RegionName:      regionName,
 			RegionCode:      regionCode,
 			Price:           price,
-			Type:            domain.NumberType(numberType),
+			Type:            domain.PlateType(plateType),
 			Count:           count,
 			RefreshedAt:     refreshedAt,
 			UpdatedAt:       updatedAt,
@@ -551,7 +551,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
+		return nil, false, fmt.Errorf("get feed plates (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
 			params.Limit,
 			afterRefreshedAt,
 			afterUpdatedAt,
@@ -560,30 +560,30 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 		)
 	}
 
-	hasNext := len(numbers) > params.Limit
+	hasNext := len(plates) > params.Limit
 	if hasNext {
-		numbers = numbers[:params.Limit]
+		plates = plates[:params.Limit]
 	}
 
-	return numbers, hasNext, nil
+	return plates, hasNext, nil
 }
 
-func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.UUID) (*data.Number, error) {
-	rows, err := r.postgres.pool.Query(ctx, getNumberWithOffersByID, id)
+func (r *OfferRepository) GetPlateWithOffersByID(ctx context.Context, id uuid.UUID) (*data.Plate, error) {
+	rows, err := r.postgres.pool.Query(ctx, getPlateWithOffersByID, id)
 	if err != nil {
-		return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
+		return nil, fmt.Errorf("get plate with offers (id=%s): %w", id, err)
 	}
 	defer rows.Close()
 
 	offers := make([]data.Offer, 0)
 	hasResult := false
 	var (
-		numberID   uuid.UUID
+		plateID    uuid.UUID
 		number     string
 		regionID   *int
 		regionName *string
 		regionCode *string
-		numberType string
+		plateType  string
 	)
 
 	for rows.Next() {
@@ -601,9 +601,9 @@ func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.U
 			url             *string
 		)
 
-		if err = rows.Scan(&numberID, &number, &regionID, &regionName, &regionCode, &numberType, &offerID, &provider, &price, &status,
+		if err = rows.Scan(&plateID, &number, &regionID, &regionName, &regionCode, &plateType, &offerID, &provider, &price, &status,
 			&reissueIncluded, &whereabouts, &viewCount, &comment, &postedAt, &refreshedAt, &url); err != nil {
-			return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
+			return nil, fmt.Errorf("get plate with offers (id=%s): %w", id, err)
 		}
 
 		hasResult = true
@@ -635,15 +635,15 @@ func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.U
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
+		return nil, fmt.Errorf("get plate with offers (id=%s): %w", id, err)
 	}
 
 	if !hasResult {
-		return nil, domain.ErrNumberNotFound
+		return nil, domain.ErrPlateNotFound
 	}
 
-	return &data.Number{
-		ID:         numberID,
+	return &data.Plate{
+		ID:         plateID,
 		Number:     number,
 		RegionID:   regionID,
 		RegionName: regionName,
@@ -653,11 +653,11 @@ func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.U
 }
 
 type rowScanner interface {
-	Scan(dest ...interface{}) error
+	Scan(dest ...any) error
 }
 
-// scanOfferWithNumber - разбирает одну строку выборки offers JOIN numbers в домен
-func scanOfferWithNumber(row rowScanner) (domain.OfferWithNumber, error) {
+// scanOfferWithPlate - разбирает одну строку выборки offers JOIN plates в домен
+func scanOfferWithPlate(row rowScanner) (domain.OfferWithPlate, error) {
 	var (
 		offerID         uuid.UUID
 		provider        string
@@ -675,22 +675,22 @@ func scanOfferWithNumber(row rowScanner) (domain.OfferWithNumber, error) {
 		comment         *string
 		offerCreatedAt  *time.Time
 		offerUpdatedAt  *time.Time
-		numberID        uuid.UUID
+		plateID         uuid.UUID
 		number          string
 		vehicleType     string
-		numberCreatedAt *time.Time
-		numberUpdatedAt *time.Time
+		plateCreatedAt  *time.Time
+		plateUpdatedAt  *time.Time
 	)
 
 	err := row.Scan(&offerID, &provider, &externalID, &price, &status, &whereabouts, &reissueIncluded, &viewCount, &postedAt,
-		&refreshedAt, &url, &raw, &rawDetailed, &comment, &offerCreatedAt, &offerUpdatedAt, &numberID, &number, &vehicleType, &numberCreatedAt, &numberUpdatedAt)
+		&refreshedAt, &url, &raw, &rawDetailed, &comment, &offerCreatedAt, &offerUpdatedAt, &plateID, &number, &vehicleType, &plateCreatedAt, &plateUpdatedAt)
 	if err != nil {
-		return domain.OfferWithNumber{}, err
+		return domain.OfferWithPlate{}, err
 	}
 
-	n, err := domain.RestoreNumber(numberID, number, domain.NumberType(vehicleType), numberCreatedAt, numberUpdatedAt)
+	plate, err := domain.RestorePlate(plateID, number, domain.PlateType(vehicleType), plateCreatedAt, plateUpdatedAt)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("restore number %s: %w", numberID, err)
+		return domain.OfferWithPlate{}, fmt.Errorf("restore plate %s: %w", plateID, err)
 	}
 
 	var whereaboutsVO *domain.OfferWhereabouts
@@ -700,12 +700,12 @@ func scanOfferWithNumber(row rowScanner) (domain.OfferWithNumber, error) {
 	}
 
 	offer, err := domain.RestoreOffer(
-		offerID, numberID, domain.Provider(provider), externalID, price, domain.OfferStatus(status), whereaboutsVO, reissueIncluded,
+		offerID, plateID, domain.Provider(provider), externalID, price, domain.OfferStatus(status), whereaboutsVO, reissueIncluded,
 		viewCount, postedAt, refreshedAt, url, raw, rawDetailed, comment, offerCreatedAt, offerUpdatedAt,
 	)
 	if err != nil {
-		return domain.OfferWithNumber{}, fmt.Errorf("restore offer %s: %w", offerID, err)
+		return domain.OfferWithPlate{}, fmt.Errorf("restore offer %s: %w", offerID, err)
 	}
 
-	return domain.OfferWithNumber{Number: n, Offer: offer}, nil
+	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
 }

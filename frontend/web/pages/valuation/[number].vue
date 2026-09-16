@@ -86,7 +86,7 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
               <template v-if="!similarDone">
                 <SkeletonCard v-for="i in 3" :key="i" />
               </template>
-              <NumberCard v-for="c in similar.items" v-else :key="c.id" :card="c" />
+              <PlateCard v-for="c in similar.items" v-else :key="c.id" :card="c" />
             </div>
           </div>
 
