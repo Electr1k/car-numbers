@@ -8,39 +8,83 @@ x-plate-worker: &plate-worker
   depends_on:
     plate-migrate:
       condition: service_completed_successfully
-  env_file: .env
+  env_file: ./plate-service/.env
   restart: always
 
 services:
-  plate-migrate:
-    build:
-      context: ./plate-service
-      dockerfile: ../docker/plate-service/Dockerfile.dev
-    volumes:
-      - ./plate-service:/app
-    command: ["go", "run", "./cmd/migrate"]
-    depends_on:
-      - plate-db
-    env_file: .env
-    restart: on-failure
-
   plate-api:
     build:
       context: ./plate-service
       dockerfile: ../docker/plate-service/Dockerfile.dev
     ports:
-      - "${HTTP_FORWARD_PORT:-8080}:${HTTP_PORT:-8080}"
+      - "${PLATE_HTTP_FORWARD_PORT:-8080}:8080"
     volumes:
       - ./plate-service:/app
       - ./tmp:/app/tmp
     depends_on:
       plate-migrate:
         condition: service_completed_successfully
-    env_file: .env
+    env_file: ./plate-service/.env
     restart: always
     networks:
       - default
       - shared-network
+
+  core-api:
+    build:
+      context: ./core-service
+      dockerfile: ../docker/core-service/Dockerfile.dev
+    ports:
+      - "${CORE_HTTP_FORWARD_PORT:-8081}:8080"
+    volumes:
+      - ./core-service:/app
+    depends_on:
+      - db
+    env_file: ./core-service/.env
+    restart: always
+    networks:
+      - default
+      - shared-network
+
+  ml-api:
+    build:
+      context: ./ML
+      dockerfile: ../docker/ml/Dockerfile.dev
+    volumes:
+      - ./ML:/app
+      - ./ML/models:/app/models
+      - ./ML/data:/app/data:ro
+    ports:
+      - "8000:8000"
+    restart: always
+    networks:
+      - shared-network
+
+  frontend:
+    build:
+      context: ./frontend/web
+    ports:
+      - "80:3000"
+    volumes:
+      - ./frontend/web:/app
+      - /app/node_modules
+      - /app/.nuxt
+    environment:
+      - CORE_URL=http://core-api:8080
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+    restart: unless-stopped
+    networks:
+      - default
+      - shared-network
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "${DB_FORWARD_PORT:-8989}:5432"
+    env_file: ./docker/db/.env
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
 
   plate-worker-autonomera:
     <<: *plate-worker
@@ -82,50 +126,17 @@ services:
       WORKER_QUEUES: default
       WORKER_CONCURRENCY: ${DEFAULT_WORKER_CONCURRENCY:-1}
 
-  ml-api:
+  plate-migrate:
     build:
-      context: ./ML
-      dockerfile: ../docker/ml/Dockerfile.dev
+      context: ./plate-service
+      dockerfile: ../docker/plate-service/Dockerfile.dev
     volumes:
-      - ./ML:/app
-      - ./ML/models:/app/models
-      - ./ML/data:/app/data:ro
-    ports:
-      - "8000:8000"
-    restart: always
-    networks:
-      - shared-network
-
-  frontend:
-    build:
-      context: ./frontend/web
-    ports:
-      - "3000:3000"
-    volumes:
-      # исходники монтируются для горячей перезагрузки
-      - ./frontend/web:/app
-      # node_modules остаются контейнерными, чтобы хостовые не затирали их
-      - /app/node_modules
-      - /app/.nuxt
-    environment:
-      - CORE_URL=http://core-api:8080
-      - NUXT_HOST=0.0.0.0
-      - NUXT_PORT=3000
-    restart: unless-stopped
-    networks:
-      - default
-      - shared-network
-
-  plate-db:
-    image: postgres:15-alpine
-    ports:
-      - ${DATABASE_PORT:-5555}:5432
-    environment:
-      - POSTGRES_USER=${DATABASE_USER:-postgres}
-      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres1}
-      - POSTGRES_DB=${DATABASE_DATABASE:-postgres}
-    volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - ./plate-service:/app
+    command: ["go", "run", "./cmd/migrate"]
+    depends_on:
+      - db
+    env_file: ./plate-service/.env
+    restart: on-failure
 
 networks:
   shared-network:
