@@ -2,7 +2,7 @@
 import type { PlatesResponse } from '~/types/api'
 
 /* Примеры берём из ленты, чтобы ссылки вели на живые номера, а не на выдумку */
-const { data: feed } = await useFetch<PlatesResponse>('/api/v1/feed', { query: { limit: 3 } })
+const { data: feed, pending } = useApi<PlatesResponse>('/api/v1/plates', { query: { limit: 3 }, lazy: true, server: false })
 
 useHead({
   title: 'Оценка номера — Номерограф',
@@ -23,7 +23,12 @@ useHead({
       </p>
       <PlateSearch mode="estimate" label="Номер для оценки" cta="Оценить" />
 
-      <p v-if="feed?.items?.length" class="examples">
+      <p v-if="pending || !feed" class="examples" aria-busy="true">
+        Например:
+        <span v-for="i in 3" :key="i" class="sk example-sk" aria-hidden="true" />
+      </p>
+
+      <p v-else-if="feed?.items?.length" class="examples">
         Например:
         <NuxtLink v-for="c in feed.items" :key="c.id" :to="`/valuation/${c.number}`">{{ c.number }}</NuxtLink>
       </p>
@@ -114,6 +119,7 @@ useHead({
 .lede { font-size: 18px; color: var(--text-muted); margin: 14px 0 24px; max-width: 640px; }
 .examples { margin-top: 20px; font-size: 15px; color: var(--text-faint); display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; }
 .examples a { font-family: var(--font-plate); font-weight: 700; font-size: 18px; letter-spacing: .04em; }
+.example-sk { display: inline-block; width: 112px; height: 20px; }
 
 .band { padding: 0 24px 44px; }
 .band.last { padding-bottom: 64px; }

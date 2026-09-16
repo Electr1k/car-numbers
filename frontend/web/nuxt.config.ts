@@ -39,5 +39,10 @@ export default defineNuxtConfig({
     coreUrl: process.env.CORE_URL || 'http://localhost:8081'
   },
 
+  // Браузер ходит в core-service через тот же хост: без CORS и без публичного адреса core. В продакшене то же правило держит nginx
+  routeRules: {
+    '/api/**': { proxy: `${process.env.CORE_URL || 'http://localhost:8081'}/api/**` }
+  },
+
   nitro: { compressPublicAssets: true }
 })

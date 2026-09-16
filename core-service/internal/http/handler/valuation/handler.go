@@ -2,6 +2,7 @@ package valuation
 
 import (
 	"context"
+	"core-service/internal/domain"
 	"core-service/internal/http/request"
 	"core-service/internal/http/response"
 	"core-service/internal/service"
@@ -32,9 +33,9 @@ func (h *Handler) FetchValuation(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%w: query decode: %v", service.ErrBadRequest, err)
 	}
 
-	number := normalizeNumber(req.Number)
-	if !isValidNumber(number) {
-		return fmt.Errorf("%w: invalid number %s", service.ErrBadRequest, req.Number)
+	number := domain.NormalizePlate(req.Number)
+	if err := validateNumber(number); err != nil {
+		return fmt.Errorf("validate number %q: %w", req.Number, err)
 	}
 
 	res, err := h.fetchValuationUC.Handle(r.Context(), number)

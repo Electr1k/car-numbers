@@ -26,6 +26,7 @@ type feedNumberItem struct {
 }
 
 type feedRegion struct {
+	ID   int    `json:"id"`
 	Name string `json:"name"`
 	Code string `json:"code"`
 }
@@ -35,8 +36,9 @@ func mapFeedNumbers(numbers []data.FeedNumber, nextCursor *string) feedNumberRes
 	items := make([]feedNumberItem, 0, len(numbers))
 	for _, number := range numbers {
 		var region *feedRegion
-		if number.RegionName != nil && number.RegionCode != nil {
+		if number.RegionID != nil && number.RegionName != nil && number.RegionCode != nil {
 			region = &feedRegion{
+				ID:   *number.RegionID,
 				Name: *number.RegionName,
 				Code: *number.RegionCode,
 			}

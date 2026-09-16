@@ -36,6 +36,7 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) (*Result, error) {
 	var region *Region
 	if plateResult.Region != nil {
 		region = &Region{
+			ID:   plateResult.Region.ID,
 			Code: plateResult.Region.Code,
 			Name: plateResult.Region.Name,
 		}

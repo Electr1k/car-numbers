@@ -1,6 +1,7 @@
 package fetchplates
 
 import (
+	"core-service/internal/domain"
 	"core-service/internal/service"
 	"core-service/internal/service/plate"
 	"fmt"
@@ -21,6 +22,18 @@ type Params struct {
 	CategoryIDs     []int
 	Limit           int
 	Cursor          string
+}
+
+func (p Params) normalize() Params {
+	if p.Query != nil {
+		if query := domain.NormalizePlate(*p.Query); query != "" {
+			p.Query = &query
+		} else {
+			p.Query = nil
+		}
+	}
+
+	return p
 }
 
 func (p Params) validate() error {

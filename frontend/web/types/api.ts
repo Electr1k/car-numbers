@@ -8,7 +8,7 @@ export type Confidence = 'high' | 'medium' | 'low'
 /** true — включено, false — нет, null — площадка не сказала */
 export type Reissue = boolean | null
 
-export interface RegionRef { code: string; name: string }
+export interface RegionRef { id: number; code: string; name: string }
 
 export interface PlateItem {
   id: string

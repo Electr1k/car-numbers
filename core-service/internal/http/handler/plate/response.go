@@ -26,6 +26,7 @@ type fetchPlatesItem struct {
 }
 
 type fetchPlatesRegion struct {
+	ID   int    `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
 }
@@ -36,6 +37,7 @@ func mapFetchPlatesResponse(result fetchplates.Result) fetchPlatesResponse {
 		var region *fetchPlatesRegion
 		if item.Region != nil {
 			region = &fetchPlatesRegion{
+				ID:   item.Region.ID,
 				Code: item.Region.Code,
 				Name: item.Region.Name,
 			}
@@ -82,6 +84,7 @@ type fetchPlateByIDOffer struct {
 }
 
 type fetchPlateByIDRegion struct {
+	ID   int    `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
 }
@@ -90,6 +93,7 @@ func mapFetchPlateByIDResponse(result fetchplate.Result) fetchPlateByIDResponse 
 	var region *fetchPlateByIDRegion
 	if result.Region != nil {
 		region = &fetchPlateByIDRegion{
+			ID:   result.Region.ID,
 			Code: result.Region.Code,
 			Name: result.Region.Name,
 		}

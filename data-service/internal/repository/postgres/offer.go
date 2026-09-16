@@ -161,6 +161,7 @@ const getFeedNumbers = `
 SELECT 
 	numbers.id,
 	number,
+	regions.id AS region_id,
 	regions.name,
 	region_codes.code,
 	MIN(price),
@@ -197,6 +198,7 @@ const getNumberWithOffersByID = `
 SELECT 
 	numbers.id as id,
 	number,
+	regions.id AS region_id,
 	regions.name,
 	region_codes.code,
 	type,
@@ -512,6 +514,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 		var (
 			id              uuid.UUID
 			number          string
+			regionID        *int
 			regionName      *string
 			regionCode      *string
 			price           *float64
@@ -522,7 +525,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 			reissueIncluded *bool
 		)
 
-		if err := rows.Scan(&id, &number, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
+		if err := rows.Scan(&id, &number, &regionID, &regionName, &regionCode, &price, &numberType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
 			return nil, false, fmt.Errorf("get feed numbers (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
 				params.Limit,
 				afterRefreshedAt,
@@ -535,6 +538,7 @@ func (r *OfferRepository) GetFeedNumbers(ctx context.Context, params repository.
 		numbers = append(numbers, data.FeedNumber{
 			ID:              id,
 			Number:          number,
+			RegionID:        regionID,
 			RegionName:      regionName,
 			RegionCode:      regionCode,
 			Price:           price,
@@ -576,6 +580,7 @@ func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.U
 	var (
 		numberID   uuid.UUID
 		number     string
+		regionID   *int
 		regionName *string
 		regionCode *string
 		numberType string
@@ -596,7 +601,7 @@ func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.U
 			url             *string
 		)
 
-		if err = rows.Scan(&numberID, &number, &regionName, &regionCode, &numberType, &offerID, &provider, &price, &status,
+		if err = rows.Scan(&numberID, &number, &regionID, &regionName, &regionCode, &numberType, &offerID, &provider, &price, &status,
 			&reissueIncluded, &whereabouts, &viewCount, &comment, &postedAt, &refreshedAt, &url); err != nil {
 			return nil, fmt.Errorf("get number with offers (id=%s): %w", id, err)
 		}
@@ -640,6 +645,7 @@ func (r *OfferRepository) GetNumberWithOffersByID(ctx context.Context, id uuid.U
 	return &data.Number{
 		ID:         numberID,
 		Number:     number,
+		RegionID:   regionID,
 		RegionName: regionName,
 		RegionCode: regionCode,
 		Offers:     offers,

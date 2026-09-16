@@ -80,7 +80,7 @@ func (uc *UseCase) findRegion(ctx context.Context, number string) *Region {
 	for _, r := range regions.Items {
 		for _, code := range r.Codes {
 			if code == regionCode {
-				return &Region{Code: code, Name: r.Name}
+				return &Region{ID: r.ID, Code: code, Name: r.Name}
 			}
 		}
 	}

@@ -3,26 +3,54 @@ import type { PlateDetail, PlatesResponse, Valuation } from '~/types/api'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
+const event = useRequestEvent()
 
-const { data: plate, error } = await useFetch<PlateDetail>(() => `/api/v1/plates/${id.value}`)
+/* Страница индексируется: номер и объявления рендерятся на сервере */
+const { data: plate, pending, error } = await useApi<PlateDetail>(() => `/api/v1/plates/${id.value}`, {
+  lazy: true
+})
+
+/* Поисковику — настоящий статус, а не 200 со страницей ошибки */
+if (event && error.value) setResponseStatus(event, error.value.statusCode ?? 502)
 
 /**
  * Оценка живёт отдельным эндпоинтом, поэтому запрашивается вторым запросом.
  * Её отсутствие — штатное состояние: объявления показываем и без неё.
  */
-const { data: valuation } = await useFetch<Valuation>('/api/v1/valuation', {
+const { data: valuation, refresh: refreshValuation } = useApi<Valuation>('/api/v1/valuation', {
   query: computed(() => ({ number: plate.value?.number ?? '' })),
+  immediate: false,
+  lazy: true,
+  server: false,
   default: () => null
 })
 
 /* Похожие в продаже core-service не отдаёт — добираем выдачей по региону */
-const { data: similar } = await useFetch<PlatesResponse>('/api/v1/search', {
-  query: computed(() => ({ region: plate.value?.region?.code ?? '', limit: 4 })),
+const { data: similar, refresh: refreshSimilar } = useApi<PlatesResponse>('/api/v1/plates', {
+  query: computed(() => ({ region_id: plate.value?.region?.id, limit: 4 })),
+  immediate: false,
+  lazy: true,
+  server: false,
   default: () => ({ items: [], next_cursor: null })
 })
 
 const similarItems = computed(() =>
   (similar.value?.items ?? []).filter(c => c.id !== id.value).slice(0, 3))
+
+const loading = computed(() => !error.value && (pending.value || !plate.value))
+
+/* Оценка и похожие зависят от номера и региона, поэтому ждут первый ответ */
+const valuationDone = ref(false)
+const similarDone = ref(false)
+
+watch(plate, (p) => {
+  if (!p || import.meta.server) return
+
+  refreshValuation().finally(() => { valuationDone.value = true })
+
+  if (p.region) refreshSimilar().finally(() => { similarDone.value = true })
+  else similarDone.value = true
+}, { immediate: true })
 
 const archive = computed(() => plate.value?.archive_offers ?? [])
 const hasActive = computed(() => (plate.value?.active_offers?.length ?? 0) > 0)
@@ -59,27 +87,41 @@ useHead(() => ({
       Не удалось загрузить страницу номера. Обновите страницу или попробуйте позже.
     </p>
 
-    <template v-else-if="plate">
+    <template v-else>
       <nav class="crumb" aria-label="Хлебные крошки">
         <NuxtLink to="/">Поиск</NuxtLink>
         <span aria-hidden="true">→</span>
-        <template v-if="plate.region">
+        <template v-if="plate?.region">
           <span>{{ plate.region.name }}</span>
           <span aria-hidden="true">→</span>
         </template>
-        <span class="cur">{{ plate.number }}</span>
+        <span v-if="plate" class="cur">{{ plate.number }}</span>
+        <span v-else class="sk crumb-sk" aria-hidden="true" />
       </nav>
 
       <div class="cols">
         <!-- Левая колонка одинакова во всех состояниях -->
         <div class="left">
-          <h1 class="visually-hidden">Номер {{ plate.number }}</h1>
-          <PlateSign :number="plate.number" />
-          <EstimateCard :estimate="valuation" />
+          <template v-if="plate">
+            <h1 class="visually-hidden">Номер {{ plate.number }}</h1>
+            <PlateSign :number="plate.number" />
+          </template>
+          <span v-else class="sk plate-sk" aria-hidden="true" />
+
+          <EstimateCard :estimate="valuation" :pending="loading || !valuationDone" />
         </div>
 
         <div class="right">
-          <template v-if="hasActive">
+          <template v-if="loading">
+            <div class="sect">
+              <span class="sk head-sk" aria-hidden="true" />
+            </div>
+            <div class="stack" aria-busy="true">
+              <SkeletonOffer v-for="i in 2" :key="i" />
+            </div>
+          </template>
+
+          <template v-else-if="hasActive">
             <div class="sect">
               <h2>{{ plate.active_offers.length }} предложения</h2>
               <span class="note">Цены отличаются тем, что в них входит</span>
@@ -111,15 +153,18 @@ useHead(() => ({
             </div>
           </template>
 
-          <div v-if="similarItems.length" class="similar">
+          <div v-if="plate && (!similarDone || similarItems.length)" class="similar">
             <div class="sect">
               <h2>Похожие в продаже</h2>
-              <NuxtLink v-if="plate.region" :to="`/search?region=${plate.region.code}`">
+              <NuxtLink v-if="plate?.region" :to="`/search?region=${plate.region.id}`">
                 Все в регионе {{ plate.region.code }} →
               </NuxtLink>
             </div>
-            <div class="grid">
-              <NumberCard v-for="c in similarItems" :key="c.id" :card="c" />
+            <div class="grid" :aria-busy="!similarDone">
+              <template v-if="!similarDone">
+                <SkeletonCard v-for="i in 3" :key="i" />
+              </template>
+              <NumberCard v-for="c in similarItems" v-else :key="c.id" :card="c" />
             </div>
           </div>
 
@@ -139,6 +184,9 @@ useHead(() => ({
 
 .crumb { display: flex; flex-wrap: wrap; gap: 8px; font-size: 14.5px; color: var(--text-faint); margin-bottom: 20px; }
 .crumb .cur { color: var(--text-muted); }
+.crumb-sk { display: inline-block; width: 104px; height: 15px; }
+.plate-sk { display: block; width: 236px; height: 62px; border-radius: var(--r-md); }
+.head-sk { display: block; width: 168px; height: 24px; }
 
 .cols { display: grid; grid-template-columns: 2fr 3fr; gap: 32px; align-items: start; }
 .left { display: grid; gap: 20px; justify-items: start; align-content: start; }

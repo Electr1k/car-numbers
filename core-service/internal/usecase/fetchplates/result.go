@@ -25,6 +25,7 @@ type Plate struct {
 }
 
 type Region struct {
+	ID   int
 	Code string
 	Name string
 }

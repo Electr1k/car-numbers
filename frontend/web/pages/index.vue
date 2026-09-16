@@ -3,12 +3,20 @@ import type { PlateItem, PlatesResponse } from '~/types/api'
 
 const PAGE = 16
 
-const { data: feed, pending, error } = await useFetch<PlatesResponse>('/api/v1/feed', {
-  query: { limit: PAGE }
+const { $api } = useNuxtApp()
+
+const { data: feed, pending, error } = useApi<PlatesResponse>('/api/v1/plates', {
+  query: { limit: PAGE },
+  lazy: true,
+  server: false
 })
 
+const loading = computed(() => !error.value && (pending.value || !feed.value))
+
 const loaded = ref<PlateItem[]>([])
-const cursor = ref<string | null>(feed.value?.next_cursor ?? null)
+const cursor = ref<string | null>(null)
+
+watch(feed, (f) => { cursor.value = f?.next_cursor ?? null }, { immediate: true })
 const loadingMore = ref(false)
 
 const items = computed(() => [...(feed.value?.items ?? []), ...loaded.value])
@@ -18,7 +26,7 @@ const loadMore = async () => {
 
   loadingMore.value = true
   try {
-    const next = await $fetch<PlatesResponse>('/api/v1/feed', {
+    const next = await $api<PlatesResponse>('/api/v1/plates', {
       query: { limit: PAGE, cursor: cursor.value }
     })
     loaded.value = [...loaded.value, ...next.items]
@@ -45,7 +53,9 @@ useHead({ title: 'Номерограф — объявления о продаж�
     <section class="feed container">
       <h2 class="sect">Свежие предложения</h2>
 
-      <p v-if="pending" class="state">Загружаем предложения…</p>
+      <div v-if="loading" class="grid" aria-busy="true">
+        <SkeletonCard v-for="i in 6" :key="i" />
+      </div>
 
       <p v-else-if="error" class="state error">
         Не удалось загрузить предложения. Обновите страницу или попробуйте позже.
@@ -54,6 +64,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
       <template v-else-if="items.length">
         <div class="grid">
           <NumberCard v-for="card in items" :key="card.id" :card="card" />
+          <SkeletonCard v-for="i in (loadingMore ? 2 : 0)" :key="`sk-${i}`" />
         </div>
         <button v-if="cursor" type="button" class="more" :disabled="loadingMore" @click="loadMore">
           {{ loadingMore ? 'Загружаем…' : `Показать ещё ${PAGE}` }}

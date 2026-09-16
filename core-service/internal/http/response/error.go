@@ -42,6 +42,8 @@ func writeAPIError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, 
 	case errors.Is(err, service.ErrBadRequest):
 		status, code, message = http.StatusBadRequest, "validation_error", "Некорректные параметры запроса"
 		logger.WarnContext(r.Context(), "bad request", logAttrs(r, err)...)
+	case errors.Is(err, service.ErrUnprocessable):
+		status, code, message = http.StatusUnprocessableEntity, "unprocessable", "Запрос не может быть обработан"
 	case errors.Is(err, service.ErrInternalServiceError), errors.Is(err, service.ErrServiceUnavailable):
 		status, code, message = http.StatusBadGateway, "bad_gateway", "Сервис временно недоступен"
 		logger.ErrorContext(r.Context(), "upstream failed", logAttrs(r, err)...)
@@ -53,6 +55,11 @@ func writeAPIError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, 
 		logger.WarnContext(r.Context(), "request canceled by client", logAttrs(r, err)...)
 	default:
 		logger.ErrorContext(r.Context(), "request failed", logAttrs(r, err)...)
+	}
+
+	var clientErr *service.ClientError
+	if errors.As(err, &clientErr) {
+		code, message = clientErr.Code, clientErr.Message
 	}
 
 	if err := WriteError(w, r, status, code, message); err != nil {

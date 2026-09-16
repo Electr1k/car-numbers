@@ -33,6 +33,20 @@ button { font: inherit; color: inherit; }
   clip-path: inset(50%); white-space: nowrap;
 }
 
+/* Плашка-заполнитель. Блик — единственная анимация; при reduce остаётся ровный прямоугольник */
+.sk {
+  position: relative; overflow: hidden;
+  background: var(--surface-sunk); border-radius: var(--r-sm);
+}
+.sk::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--sk-sweep), transparent);
+  transform: translateX(-100%);
+  animation: sk-sweep 1.4s infinite;
+}
+@keyframes sk-sweep { to { transform: translateX(100%); } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  .sk::after { content: none; }
 }

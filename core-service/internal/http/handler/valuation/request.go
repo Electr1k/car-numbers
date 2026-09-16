@@ -1,8 +1,8 @@
 package valuation
 
 import (
-	"regexp"
-	"strings"
+	"core-service/internal/domain"
+	"core-service/internal/service"
 )
 
 type valuationRequest struct {
@@ -13,32 +13,17 @@ func newValuationRequest() valuationRequest {
 	return valuationRequest{}
 }
 
-var plateMask = regexp.MustCompile(
-	`^[АВЕКМНОРСТУХ]\d{3}[АВЕКМНОРСТУХ]{2}\d{2,3}$`,
-)
-
-var latinToCyrillic = map[rune]rune{
-	'A': 'А', 'B': 'В', 'E': 'Е', 'K': 'К', 'M': 'М',
-	'H': 'Н', 'O': 'О', 'P': 'Р', 'C': 'С', 'T': 'Т',
-	'Y': 'У', 'X': 'Х',
-}
-
-// normalizeNumber нормализует номер
-func normalizeNumber(s string) string {
-	s = strings.ToUpper(strings.TrimSpace(s))
-	s = strings.ReplaceAll(s, " ", "")
-
-	var b strings.Builder
-	for _, r := range s {
-		if c, ok := latinToCyrillic[r]; ok {
-			r = c
-		}
-		b.WriteRune(r)
+func validateNumber(number string) error {
+	switch {
+	case number == "":
+		return service.NewClientError(service.ErrBadRequest, "number_required", "Укажите номер для оценки.")
+	case domain.IsMotoPlate(number):
+		return service.NewClientError(service.ErrUnprocessable, "moto", "Оценка возможна только для автономеров.")
+	case domain.HasPlateMask(number):
+		return service.NewClientError(service.ErrUnprocessable, "mask_not_supported", "Неверный формат номера.")
+	case !domain.IsCanonicalPlate(number):
+		return service.NewClientError(service.ErrUnprocessable, "format", "Номер вводится как А123ВС777.")
 	}
-	return b.String()
-}
 
-// isValidNumber валидация
-func isValidNumber(s string) bool {
-	return plateMask.MatchString(s)
+	return nil
 }

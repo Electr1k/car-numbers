@@ -13,6 +13,7 @@ type valuationResponse struct {
 }
 
 type valuationRegion struct {
+	ID   int    `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
 }
@@ -40,6 +41,7 @@ func mapValuationResponse(result valuation.Result) valuationResponse {
 	var region *valuationRegion
 	if result.Region != nil {
 		region = &valuationRegion{
+			ID:   result.Region.ID,
 			Code: result.Region.Code,
 			Name: result.Region.Name,
 		}

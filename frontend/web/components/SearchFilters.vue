@@ -25,7 +25,7 @@ const SORTS = [
 ]
 
 /* Регионы приходят из справочника уже в алфавитном порядке */
-const { data: regions } = await useFetch<RegionsResponse>('/api/v1/regions')
+const { data: regions, pending: regionsPending } = useApi<RegionsResponse>('/api/v1/regions', { lazy: true, server: false })
 
 const digitPatterns = PATTERN_LIST.filter(p => p.group === 'digits')
 const letterPatterns = PATTERN_LIST.filter(p => p.group === 'letters')
@@ -78,7 +78,8 @@ const commitPrice = (key: 'price_min' | 'price_max') => {
 <template>
   <div class="filters">
     <div class="selects">
-      <RegionSelect v-model="region" :items="regions?.items ?? []" />
+      <span v-if="regionsPending || !regions" class="sk region-sk" aria-hidden="true" />
+      <RegionSelect v-else v-model="region" :items="regions?.items ?? []" />
 
       <div class="price" role="group" :aria-labelledby="`${uid}-price`">
         <span :id="`${uid}-price`">Цена, ₽</span>
@@ -142,6 +143,7 @@ const commitPrice = (key: 'price_min' | 'price_max') => {
 <style scoped>
 .filters { display: grid; gap: 20px; }
 .selects { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+.region-sk { min-width: 240px; min-height: 44px; border-radius: var(--r-md); }
 .sel { display: grid; gap: 6px; }
 .sel > span { font-size: 14px; font-weight: 500; color: var(--text-muted); }
 select {

@@ -3,16 +3,33 @@ import type { PlatesResponse, Valuation } from '~/types/api'
 
 const route = useRoute()
 const number = computed(() => String(route.params.number).toUpperCase())
+const event = useRequestEvent()
 
-const { data: valuation, error } = await useFetch<Valuation>('/api/v1/valuation', {
-  query: computed(() => ({ number: number.value }))
+/* Страница индексируется: оценка рендерится на сервере */
+const { data: valuation, pending, error } = await useApi<Valuation>('/api/v1/valuation', {
+  query: computed(() => ({ number: number.value })),
+  lazy: true
 })
+
+/* Поисковику — настоящий статус, а не 200 со страницей отказа */
+if (event && error.value) setResponseStatus(event, error.value.statusCode ?? 502)
 
 /* Оценка есть для любой комбинации, но в продаже её обычно нет — предлагаем похожие */
-const { data: similar } = await useFetch<PlatesResponse>('/api/v1/search', {
-  query: computed(() => ({ region: valuation.value?.region?.code ?? '', limit: 3 })),
+const { data: similar, refresh: refreshSimilar } = useApi<PlatesResponse>('/api/v1/plates', {
+  query: computed(() => ({ region_id: valuation.value?.region?.id, limit: 3 })),
+  immediate: false,
+  lazy: true,
+  server: false,
   default: () => ({ items: [], next_cursor: null })
 })
+
+const similarDone = ref(false)
+
+watch(valuation, (v) => {
+  if (!v || import.meta.server) return
+  if (v.region) refreshSimilar().finally(() => { similarDone.value = true })
+  else similarDone.value = true
+}, { immediate: true })
 
 const refusal = computed(() => {
   const body = error.value?.data as { error?: { code: string; message: string } } | undefined
@@ -34,18 +51,18 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
       Не удалось получить оценку. Обновите страницу или попробуйте позже.
     </p>
 
-    <template v-else-if="valuation">
+    <template v-else>
       <nav class="crumb" aria-label="Хлебные крошки">
         <NuxtLink to="/estimate">Оценка номера</NuxtLink>
         <span aria-hidden="true">→</span>
-        <span class="cur">{{ valuation.number }}</span>
+        <span class="cur">{{ number }}</span>
       </nav>
 
       <div class="cols">
         <div class="left">
-          <h1 class="visually-hidden">Оценка номера {{ valuation.number }}</h1>
-          <PlateSign :number="valuation.number" />
-          <EstimateCard :estimate="valuation" />
+          <h1 class="visually-hidden">Оценка номера {{ number }}</h1>
+          <PlateSign :number="number" />
+          <EstimateCard :estimate="valuation" :pending="pending || !valuation" />
         </div>
 
         <div class="right">
@@ -58,19 +75,22 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
             <NuxtLink to="/triggers" class="cta">Сообщить, когда появится</NuxtLink>
           </div>
 
-          <div v-if="similar?.items.length" class="similar">
+          <div v-if="valuation && (!similarDone || similar?.items.length)" class="similar">
             <div class="sect">
               <h2>Похожие в продаже</h2>
-              <NuxtLink v-if="valuation.region" :to="`/search?region=${valuation.region.code}`">
+              <NuxtLink v-if="valuation?.region" :to="`/search?region=${valuation.region.id}`">
                 Все в регионе {{ valuation.region.code }} →
               </NuxtLink>
             </div>
-            <div class="grid">
-              <NumberCard v-for="c in similar.items" :key="c.id" :card="c" />
+            <div class="grid" :aria-busy="!similarDone">
+              <template v-if="!similarDone">
+                <SkeletonCard v-for="i in 3" :key="i" />
+              </template>
+              <NumberCard v-for="c in similar.items" v-else :key="c.id" :card="c" />
             </div>
           </div>
 
-          <aside v-if="valuation.region" class="restrict">
+          <aside v-if="valuation?.region" class="restrict">
             Номер с кодом {{ valuation.region.code }} можно поставить только на автомобиль,
             зарегистрированный в этом регионе.
             <NuxtLink to="/reissue">Как это устроено</NuxtLink>

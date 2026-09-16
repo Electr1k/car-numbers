@@ -104,6 +104,7 @@ type FetchPlatesItem struct {
 }
 
 type FetchPlatesRegion struct {
+	ID   int    `json:"id"`
 	Code string `json:"code"`
 	Name string `json:"name"`
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Valuation } from '~/types/api'
 
-const props = defineProps<{ estimate: Valuation | null }>()
+const props = withDefaults(defineProps<{ estimate: Valuation | null; pending?: boolean }>(), { pending: false })
 
 const money = (v: number) => v.toLocaleString('ru-RU').replace(/ /g, ' ') + ' ₽'
 const short = (v: number) =>
@@ -23,7 +23,9 @@ const confidenceNote = computed(() => ({
 </script>
 
 <template>
-  <section v-if="estimate" class="est" aria-labelledby="est-h">
+  <SkeletonEstimate v-if="pending && !estimate" />
+
+  <section v-else-if="estimate" class="est" aria-labelledby="est-h">
     <div>
       <h2 id="est-h" class="lbl">За похожие номера просят</h2>
       <p class="p50">{{ money(estimate.price.p50) }}</p>

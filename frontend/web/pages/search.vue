@@ -36,9 +36,25 @@ const filters = computed<Filters>({
 
 const PAGE = 24
 
-const { data: res, pending, error, refresh } = await useFetch<PlatesResponse>('/api/v1/search', {
-  query: computed(() => ({ ...route.query, limit: PAGE }))
+const { $api } = useNuxtApp()
+
+/** Адрес страницы — для людей и ссылок, запрос — в терминах core-service */
+const apiQuery = computed(() => ({
+  query: q.value || undefined,
+  region_id: Number(region.value) || undefined,
+  price_from: Number(priceMin.value) || undefined,
+  price_to: Number(priceMax.value) || undefined,
+  reissue_included: ['true', 'false'].includes(reissue.value) ? reissue.value : undefined,
+  limit: PAGE
+}))
+
+const { data: res, pending, error, refresh } = useApi<PlatesResponse>('/api/v1/plates', {
+  query: apiQuery,
+  lazy: true,
+  server: false
 })
+
+const loading = computed(() => !error.value && (pending.value || !res.value))
 
 /* Догруженные страницы живут отдельно: первая приходит из useFetch и сбрасывает их при смене фильтров */
 const loaded = ref<PlateItem[]>([])
@@ -57,8 +73,8 @@ const loadMore = async () => {
 
   loadingMore.value = true
   try {
-    const next = await $fetch<PlatesResponse>('/api/v1/search', {
-      query: { ...route.query, limit: PAGE, cursor: cursor.value }
+    const next = await $api<PlatesResponse>('/api/v1/plates', {
+      query: { ...apiQuery.value, cursor: cursor.value }
     })
     loaded.value = [...loaded.value, ...next.items]
     cursor.value = next.next_cursor
@@ -111,7 +127,7 @@ const plural = (n: number) => {
 }
 
 const heading = computed(() => {
-  if (!res.value) return 'Поиск'
+  if (loading.value || !res.value) return 'Поиск'
   const n = items.value.length
   return `${n} ${plural(n)}` + (q.value ? ` по маске ${q.value}` : '')
 })
@@ -128,8 +144,8 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
     <h1 class="heading">{{ heading }}</h1>
 
     <!-- Скелет держит высоту, чтобы страница не прыгала -->
-    <div v-if="pending" class="grid" aria-hidden="true">
-      <div v-for="i in 6" :key="i" class="skeleton" />
+    <div v-if="loading" class="grid" aria-busy="true">
+      <SkeletonCard v-for="i in 6" :key="i" />
     </div>
 
     <div v-else-if="error" class="fail">
@@ -140,6 +156,7 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
     <template v-else-if="items.length">
       <div class="grid">
         <NumberCard v-for="c in items" :key="c.id" :card="c" />
+        <SkeletonCard v-for="i in (loadingMore ? 2 : 0)" :key="`sk-${i}`" />
       </div>
       <button v-if="cursor" type="button" class="more" :disabled="loadingMore" @click="loadMore">
         {{ loadingMore ? 'Загружаем…' : `Показать ещё ${PAGE}` }}
@@ -182,10 +199,6 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
 .heading { font-size: 24px; margin-bottom: 18px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-.skeleton {
-  height: 172px; border-radius: var(--r-lg);
-  background: var(--surface); border: 1px solid var(--border);
-}
 
 .more, .btn-primary {
   min-height: 44px; padding: 11px 20px; cursor: pointer;

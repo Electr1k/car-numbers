@@ -15,6 +15,7 @@ type numberResponse struct {
 }
 
 type region struct {
+	ID   int    `json:"id"`
 	Name string `json:"name"`
 	Code string `json:"code"`
 }
@@ -36,8 +37,9 @@ type offer struct {
 // mapNumber - маппинг номера в ответ API
 func mapNumber(number data.Number) numberResponse {
 	var regionJSON *region
-	if number.RegionName != nil && number.RegionCode != nil {
+	if number.RegionID != nil && number.RegionName != nil && number.RegionCode != nil {
 		regionJSON = &region{
+			ID:   *number.RegionID,
 			Name: *number.RegionName,
 			Code: *number.RegionCode,
 		}

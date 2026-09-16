@@ -24,6 +24,7 @@ func New(
 
 // Handle - возвращает список номеров
 func (uc *UseCase) Handle(ctx context.Context, params Params) (*Result, error) {
+	params = params.normalize()
 	if err := params.validate(); err != nil {
 		return nil, err
 	}
@@ -41,6 +42,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) (*Result, error) {
 		var region *Region
 		if item.Region != nil {
 			region = &Region{
+				ID:   item.Region.ID,
 				Code: item.Region.Code,
 				Name: item.Region.Name,
 			}

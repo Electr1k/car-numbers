@@ -11,6 +11,7 @@ import (
 type Number struct {
 	ID         uuid.UUID // ID - Идентификатор
 	Number     string    // Number - Номер
+	RegionID   *int      // RegionID - Идентификатор региона
 	RegionName *string   // RegionName - Название региона
 	RegionCode *string   // RegionCode - Код региона
 	Offers     []Offer   // Offers - предложения по номеру

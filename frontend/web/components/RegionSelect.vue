@@ -22,7 +22,7 @@ const uid = useId()
 
 const options = computed(() => [
   ANY,
-  ...props.items.map(r => ({ value: r.codes.join(','), name: r.name, codes: r.codes }))
+  ...props.items.map(r => ({ value: String(r.id), name: r.name, codes: r.codes }))
 ])
 const searchable = computed(() => options.value.length > props.searchFrom)
 

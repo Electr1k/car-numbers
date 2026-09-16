@@ -11,6 +11,7 @@ import (
 type FeedNumber struct {
 	ID              uuid.UUID         // ID - Идентификатор
 	Number          string            // Number - Номер
+	RegionID        *int              // RegionId - Идентификатор региона
 	RegionName      *string           // RegionName - Название региона
 	RegionCode      *string           // RegionCode - Код региона
 	Price           *float64          // Price - Минимальная цена
