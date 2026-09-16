@@ -51,9 +51,9 @@ services:
       context: ./ML
       dockerfile: ../docker/ml/Dockerfile.dev
     volumes:
-      - ./ML:/app
-      - ./ML/models:/app/models
-      - ./ML/data:/app/data:ro
+      - ./ml-service:/app
+      - ./ml-service/models:/app/models
+      - ./ml-service/data:/app/data:ro
     ports:
       - "8000:8000"
     restart: always
