@@ -1,0 +1,96 @@
+package gosnomeru
+
+import (
+	"context"
+	"errors"
+	"plate-service/internal/domain"
+	"plate-service/internal/provider"
+)
+
+type Service struct {
+	client *Client
+	mapper *Mapper
+}
+
+func NewService(client *Client, mapper *Mapper) *Service {
+	return &Service{
+		client: client,
+		mapper: mapper,
+	}
+}
+
+// FetchOffers забирает одну страницу раздела и маппит её в домен
+func (s *Service) FetchOffers(ctx context.Context, page int) (provider.FetchResult, error) {
+
+	response, err := s.client.FetchOffers(ctx, page)
+	if err != nil {
+		return provider.FetchResult{}, err
+	}
+
+	result := provider.FetchResult{TotalPages: response.TotalPages}
+	for index, plate := range response.Items {
+		result.RowsFound++
+		offer, err := s.mapper.MapOfferToDomain(plate)
+		if err != nil {
+			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
+			continue
+		}
+
+		result.Offers = append(result.Offers, offer)
+	}
+
+	return result, nil
+}
+
+func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithPlate) (domain.OfferWithPlate, error) {
+	response, err := s.client.FetchOfferDetail(ctx, offer.Offer.ExternalID)
+	if errors.Is(err, provider.ErrNotFound) {
+		offer.Offer.Status = domain.OfferStatusInactive
+		return offer, nil
+	}
+	if err != nil {
+		return domain.OfferWithPlate{}, err
+	}
+
+	return s.mapper.ApplyOfferDetailToDomain(*response, offer)
+}
+
+func (s *Service) FetchOfferDetailByExternalID(ctx context.Context, externalID string) (domain.OfferWithPlate, error) {
+	var emptyOffer domain.OfferWithPlate
+
+	response, err := s.client.FetchOfferDetail(ctx, externalID)
+	if errors.Is(err, provider.ErrNotFound) {
+		return emptyOffer, provider.ErrNotFound
+	}
+	if err != nil {
+		return emptyOffer, err
+	}
+
+	offer, err := s.mapper.MapOfferDetailToDomain(*response)
+	if err != nil {
+		return emptyOffer, err
+	}
+
+	return offer, nil
+}
+
+func (s *Service) FetchLatestOffers(ctx context.Context) (provider.FetchResult, error) {
+	response, err := s.client.FetchLatestOffers(ctx)
+	if err != nil {
+		return provider.FetchResult{}, err
+	}
+
+	result := provider.FetchResult{TotalPages: 0}
+	for index, plate := range response.Items {
+		result.RowsFound++
+		offer, err := s.mapper.MapOfferToDomain(plate)
+		if err != nil {
+			result.RowErrors = append(result.RowErrors, provider.RowError{Index: index, Err: err})
+			continue
+		}
+
+		result.Offers = append(result.Offers, offer)
+	}
+
+	return result, err
+}

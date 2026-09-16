@@ -1,0 +1,68 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"plate-service/internal/app"
+	"plate-service/internal/feature"
+	httptransport "plate-service/internal/http"
+	"plate-service/internal/http/handler/plate"
+	"plate-service/internal/http/handler/region"
+	"plate-service/internal/job"
+	"plate-service/internal/job/cron"
+	"plate-service/internal/repository/postgres"
+	"plate-service/internal/scheduler"
+	"plate-service/internal/usecase/fetchplate"
+	"plate-service/internal/usecase/fetchplates"
+	"plate-service/internal/usecase/fetchregions"
+
+	"golang.org/x/sync/errgroup"
+)
+
+func main() {
+	app.Run("api", func(ctx context.Context, a *app.App) error {
+		featureGuard := feature.NewFeature(postgres.NewFeatureRepository(a.Database), a.Logger)
+
+		// Запуск шедулера для кронов
+		sched := scheduler.New(a.Logger)
+		if err := cron.Register(sched, cron.Deps{
+			Producer:   job.NewProducer(postgres.NewJobRepository(a.Database), featureGuard),
+			Specs:      a.Config.CronConfig,
+			AutoNomera: a.Config.AutoNomeraConfig,
+			Gosnomeru:  a.Config.GosnomeruConfig,
+			Anomera:    a.Config.AnomeraConfig,
+			Logger:     a.Logger,
+		}); err != nil {
+			return fmt.Errorf("register crons: %w", err)
+		}
+
+		offerRepository := postgres.NewOfferRepository(a.Database)
+
+		router := httptransport.NewRouter(a.Config.HTTPServer, a.Logger, httptransport.Handlers{
+			Region: region.New(fetchregions.New(postgres.NewRegionRepository(a.Database))),
+			Plate:  plate.New(fetchplate.New(offerRepository), fetchplates.New(offerRepository)),
+		})
+		httpServer := httptransport.NewServer(a.Config.HTTPServer, router)
+
+		group, groupCtx := errgroup.WithContext(ctx)
+
+		group.Go(func() error {
+			return sched.Run(groupCtx)
+		})
+
+		group.Go(func() error {
+			return httpServer.Run()
+		})
+
+		group.Go(func() error {
+			<-groupCtx.Done()
+
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), a.Config.ShutdownTimeout)
+			defer cancel()
+
+			return httpServer.Shutdown(shutdownCtx)
+		})
+
+		return group.Wait()
+	})
+}

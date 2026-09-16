@@ -1,11 +1,11 @@
 # Контракт API фронтенда
 
-Сервис фронтенда (BFF) — отдельный от `data-service`. Он ходит в `data-service` за
+Сервис фронтенда (BFF) — отдельный от `plate-service`. Он ходит в `plate-service` за
 объявлениями и в `ml-api` за оценкой, склеивает и отдаёт Nuxt-приложению.
-В `data-service` фронтенд не ходит напрямую никогда.
+В `plate-service` фронтенд не ходит напрямую никогда.
 
 ```
-Nuxt ──► frontend-api (BFF) ──┬──► data-service   (объявления, номера)
+Nuxt ──► frontend-api (BFF) ──┬──► plate-service   (объявления, номера)
                               └──► ml-api         (оценка)
 ```
 
