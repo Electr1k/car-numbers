@@ -7,6 +7,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// PlateSort - порядок выдачи номеров
+type PlateSort string
+
+const (
+	PlateSortUpdatedDesc PlateSort = "updated_desc"
+	PlateSortPriceAsc    PlateSort = "price_asc"
+	PlateSortPriceDesc   PlateSort = "price_desc"
+)
+
+// Valid - известен ли порядок выдачи
+func (s PlateSort) Valid() bool {
+	switch s {
+	case PlateSortUpdatedDesc, PlateSortPriceAsc, PlateSortPriceDesc:
+		return true
+	}
+	return false
+}
+
 // FeedPlate - номер для выдачи в свежих номерах
 type FeedPlate struct {
 	ID              uuid.UUID        // ID - Идентификатор
@@ -22,8 +40,11 @@ type FeedPlate struct {
 	ReissueIncluded *bool            // ReissueIncluded - включено ли переоформление
 }
 
+// FeedCursor - позиция в выдаче номеров для сортировки Sort
 type FeedCursor struct {
-	RefreshedAt time.Time `json:"refreshed_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	ID          uuid.UUID `json:"id"`
+	Sort        PlateSort  `json:"s"`
+	ID          uuid.UUID  `json:"id"`
+	RefreshedAt *time.Time `json:"r,omitempty"`
+	UpdatedAt   *time.Time `json:"u,omitempty"`
+	Price       *string    `json:"p,omitempty"`
 }

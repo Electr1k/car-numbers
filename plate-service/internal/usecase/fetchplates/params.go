@@ -15,6 +15,8 @@ const (
 	maxQueryLen = 9
 )
 
+var cursorPrice = regexp.MustCompile(`^\d{1,10}(\.\d{1,2})?$`)
+
 // Params - входные параметры выборки свежих номеров
 type Params struct {
 	Query           *string
@@ -23,6 +25,7 @@ type Params struct {
 	PriceTo         *float64
 	ReissueIncluded *bool
 	CategoryIds     []int
+	Sort            data.PlateSort
 	Limit           int
 	Cursor          *data.FeedCursor
 }
@@ -31,6 +34,9 @@ func (p *Params) validate() error {
 	if p.Query != nil {
 		str := strings.ToUpper(strings.TrimSpace(*p.Query))
 		p.Query = &str
+	}
+	if p.Sort == "" {
+		p.Sort = data.PlateSortUpdatedDesc
 	}
 
 	switch {
@@ -46,6 +52,14 @@ func (p *Params) validate() error {
 		return fmt.Errorf("%w: invalid query: %s", domain.ErrInvalidArgument, *p.Query)
 	case p.PriceFrom != nil && p.PriceTo != nil && *p.PriceFrom > *p.PriceTo:
 		return fmt.Errorf("%w: price_from cannot be greater than price_to", domain.ErrInvalidArgument)
+	case !p.Sort.Valid():
+		return fmt.Errorf("%w: unknown sort %q", domain.ErrInvalidArgument, p.Sort)
+	case p.Cursor != nil && p.Cursor.Sort != p.Sort:
+		return fmt.Errorf("%w: cursor issued for sort %q, got %q", domain.ErrInvalidArgument, p.Cursor.Sort, p.Sort)
+	case p.Cursor != nil && p.Sort == data.PlateSortUpdatedDesc && (p.Cursor.RefreshedAt == nil || p.Cursor.UpdatedAt == nil):
+		return fmt.Errorf("%w: incomplete cursor", domain.ErrInvalidArgument)
+	case p.Cursor != nil && p.Cursor.Price != nil && !cursorPrice.MatchString(*p.Cursor.Price):
+		return fmt.Errorf("%w: invalid cursor price", domain.ErrInvalidArgument)
 	}
 
 	return nil

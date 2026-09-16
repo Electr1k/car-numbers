@@ -2,6 +2,7 @@ package plate
 
 import (
 	"context"
+	"core-service/internal/domain"
 	"core-service/internal/http/request"
 	"core-service/internal/http/response"
 	"core-service/internal/service"
@@ -50,6 +51,7 @@ func (h *Handler) FetchPlates(w http.ResponseWriter, r *http.Request) error {
 		PriceTo:         req.PriceTo,
 		ReissueIncluded: req.ReissueIncluded,
 		CategoryIDs:     req.CategoryIDs,
+		Sort:            domain.PlateSort(req.Sort),
 		Limit:           req.Limit,
 		Cursor:          req.Cursor,
 	}

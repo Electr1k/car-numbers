@@ -7,6 +7,24 @@ import (
 
 const PlateMaskChar = "*"
 
+// PlateSort - порядок выдачи номеров
+type PlateSort string
+
+const (
+	PlateSortUpdatedDesc PlateSort = "updated_desc"
+	PlateSortPriceAsc    PlateSort = "price_asc"
+	PlateSortPriceDesc   PlateSort = "price_desc"
+)
+
+// Valid - известен ли порядок выдачи
+func (s PlateSort) Valid() bool {
+	switch s {
+	case PlateSortUpdatedDesc, PlateSortPriceAsc, PlateSortPriceDesc:
+		return true
+	}
+	return false
+}
+
 var (
 	canonicalPlate = regexp.MustCompile(`^[АВЕКМНОРСТУХ][0-9]{3}[АВЕКМНОРСТУХ]{2}[0-9]{2,3}$`)
 	motoPlate      = regexp.MustCompile(`^[0-9]{4}[АВЕКМНОРСТУХ]{2}[0-9]{2,3}$`)

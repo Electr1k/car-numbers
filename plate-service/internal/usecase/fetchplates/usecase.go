@@ -4,6 +4,7 @@ import (
 	"context"
 	"plate-service/internal/domain/data"
 	"plate-service/internal/repository"
+	"strconv"
 )
 
 type plateStore interface {
@@ -39,14 +40,25 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) (Result, error) {
 		return Result{Plates: plates}, nil
 	}
 
-	last := plates[len(plates)-1]
-
 	return Result{
-		Plates: plates,
-		NextCursor: &data.FeedCursor{
-			RefreshedAt: last.RefreshedAt,
-			UpdatedAt:   last.UpdatedAt,
-			ID:          last.ID,
-		},
+		Plates:     plates,
+		NextCursor: nextCursor(params.Sort, plates[len(plates)-1]),
 	}, nil
+}
+
+func nextCursor(sort data.PlateSort, last data.FeedPlate) *data.FeedCursor {
+	cursor := &data.FeedCursor{Sort: sort, ID: last.ID}
+
+	switch sort {
+	case data.PlateSortPriceAsc, data.PlateSortPriceDesc:
+		if last.Price != nil {
+			price := strconv.FormatFloat(*last.Price, 'f', -1, 64)
+			cursor.Price = &price
+		}
+	default:
+		cursor.RefreshedAt = &last.RefreshedAt
+		cursor.UpdatedAt = &last.UpdatedAt
+	}
+
+	return cursor
 }

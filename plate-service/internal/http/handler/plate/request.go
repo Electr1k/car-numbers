@@ -9,6 +9,7 @@ type platesRequest struct {
 	PriceTo         *float64 `form:"price_to"`
 	ReissueIncluded *bool    `form:"reissue_included"`
 	CategoryIds     []int    `form:"category_ids"`
+	Sort            string   `form:"sort"`
 	Limit           int      `form:"limit"`
 	Cursor          string   `form:"cursor"`
 }

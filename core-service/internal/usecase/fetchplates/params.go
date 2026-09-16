@@ -20,6 +20,7 @@ type Params struct {
 	PriceTo         *float64
 	ReissueIncluded *bool
 	CategoryIDs     []int
+	Sort            domain.PlateSort
 	Limit           int
 	Cursor          string
 }
@@ -44,6 +45,8 @@ func (p Params) validate() error {
 		return fmt.Errorf("%w: limit must not exceed %d, got %d", service.ErrBadRequest, maxLimit, p.Limit)
 	case p.PriceFrom != nil && p.PriceTo != nil && *p.PriceFrom > *p.PriceTo:
 		return fmt.Errorf("%w: price_from cannot be greater than price_to", service.ErrBadRequest)
+	case p.Sort != "" && !p.Sort.Valid():
+		return fmt.Errorf("%w: unknown sort %q", service.ErrBadRequest, p.Sort)
 	}
 
 	return nil
@@ -57,6 +60,7 @@ func (p Params) toClientParams() plate.FetchPlatesParams {
 		PriceTo:         p.PriceTo,
 		ReissueIncluded: p.ReissueIncluded,
 		CategoryIDs:     p.CategoryIDs,
+		Sort:            string(p.Sort),
 		Limit:           p.Limit,
 		Cursor:          p.Cursor,
 	}

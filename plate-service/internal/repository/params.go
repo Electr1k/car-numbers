@@ -9,6 +9,7 @@ type GetPlatesParams struct {
 	PriceTo         *float64
 	ReissueIncluded *bool
 	CategoryIds     []int
+	Sort            data.PlateSort
 	Limit           int
 	Cursor          *data.FeedCursor
 }

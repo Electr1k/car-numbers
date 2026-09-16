@@ -47,6 +47,7 @@ func (h *Handler) GetPlates(w http.ResponseWriter, r *http.Request) error {
 		PriceTo:         req.PriceTo,
 		ReissueIncluded: req.ReissueIncluded,
 		CategoryIds:     req.CategoryIds,
+		Sort:            data.PlateSort(req.Sort),
 		Limit:           req.Limit,
 	}
 	if req.Cursor != "" {

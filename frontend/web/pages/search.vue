@@ -45,6 +45,7 @@ const apiQuery = computed(() => ({
   price_from: Number(priceMin.value) || undefined,
   price_to: Number(priceMax.value) || undefined,
   reissue_included: ['true', 'false'].includes(reissue.value) ? reissue.value : undefined,
+  sort: sort.value !== 'updated_desc' ? sort.value : undefined,
   limit: PAGE
 }))
 

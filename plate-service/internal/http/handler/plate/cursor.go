@@ -29,7 +29,7 @@ func decodeCursor(encoded string) (data.FeedCursor, error) {
 	if err := json.Unmarshal(raw, &cursor); err != nil {
 		return data.FeedCursor{}, fmt.Errorf("decode cursor: %w", err)
 	}
-	if cursor.RefreshedAt.IsZero() || cursor.UpdatedAt.IsZero() || cursor.ID == uuid.Nil {
+	if cursor.ID == uuid.Nil || !cursor.Sort.Valid() {
 		return data.FeedCursor{}, errors.New("decode cursor: incomplete cursor")
 	}
 

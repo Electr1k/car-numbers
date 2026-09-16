@@ -158,41 +158,82 @@ updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
 
 const getFeedPlates = `
-SELECT 
-	plates.id,
-	number,
-	regions.id AS region_id,
-	regions.name,
-	region_codes.code,
-	MIN(price),
-	type,
-	count(*) as count,
-	MAX(refreshed_at::date) as refreshed_at,
-	MAX(offers.updated_at) as updated_at,
-	CASE
-		WHEN COUNT(CASE WHEN reissue_included = true THEN 1 END) > 0 THEN true
-		WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
-		ELSE null
-	END as reissue_included
-FROM public.plates
-JOIN offers ON offers.plate_id = plates.id
-LEFT JOIN region_codes ON plates.region_code = region_codes.code
-LEFT JOIN regions ON regions.id = region_codes.region_id
-WHERE status = $1
-GROUP BY plates.id, number, regions.id, regions.name, region_codes.code, type
-HAVING ($2::date IS NULL OR (MAX(refreshed_at::date), MAX(offers.updated_at), plates.id) < ($2::date, $3::timestamptz, $4::uuid))
-AND ($5::TEXT IS NULL OR number LIKE $5::TEXT)
-AND ($6::BIGINT IS NULL OR regions.id = $6::BIGINT)
-AND ($7::FLOAT IS NULL OR MIN(price) >= $7::FLOAT)
-AND ($8::FLOAT IS NULL OR MIN(price) <= $8::FLOAT)
-AND ($9::BOOLEAN IS NULL OR 
-	CASE WHEN COUNT(CASE WHEN reissue_included = true THEN 1 END) > 0 THEN true 
-		WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
-		ELSE null
-	END = $9::BOOLEAN)
-ORDER BY refreshed_at DESC, updated_at DESC, id DESC
-LIMIT $10
+SELECT id, number, region_id, region_name, region_code, price, type, count, refreshed_at, updated_at, reissue_included
+FROM (
+	SELECT
+		plates.id,
+		number,
+		regions.id AS region_id,
+		regions.name AS region_name,
+		region_codes.code AS region_code,
+		MIN(price) AS price,
+		type,
+		count(*) AS count,
+		MAX(refreshed_at::date) AS refreshed_at,
+		MAX(offers.updated_at) AS updated_at,
+		CASE
+			WHEN COUNT(CASE WHEN reissue_included = true THEN 1 END) > 0 THEN true
+			WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
+			ELSE null
+		END AS reissue_included
+	FROM public.plates
+	JOIN offers ON offers.plate_id = plates.id
+	LEFT JOIN region_codes ON plates.region_code = region_codes.code
+	LEFT JOIN regions ON regions.id = region_codes.region_id
+	WHERE status = $1
+	GROUP BY plates.id, number, regions.id, regions.name, region_codes.code, type
+	HAVING ($2::TEXT IS NULL OR number LIKE $2::TEXT)
+	AND ($3::BIGINT IS NULL OR regions.id = $3::BIGINT)
+	AND ($4::FLOAT IS NULL OR MIN(price) >= $4::FLOAT)
+	AND ($5::FLOAT IS NULL OR MIN(price) <= $5::FLOAT)
+	AND ($6::BOOLEAN IS NULL OR
+		CASE WHEN COUNT(CASE WHEN reissue_included = true THEN 1 END) > 0 THEN true
+			WHEN COUNT(CASE WHEN reissue_included = false THEN 1 END) > 0 THEN false
+			ELSE null
+		END = $6::BOOLEAN)
+) plates
+WHERE %s
+ORDER BY %s
+LIMIT $7
 `
+
+// plateSortSpec - условие курсора и порядок выдачи для сортировки
+type plateSortSpec struct {
+	cursorCond string
+	orderBy    string
+	cursorArgs func(cursor *data.FeedCursor) []any
+}
+
+var plateSortSpecs = map[data.PlateSort]plateSortSpec{
+	data.PlateSortUpdatedDesc: {
+		cursorCond: `$8::uuid IS NULL OR (refreshed_at, updated_at, id) < ($9::date, $10::timestamptz, $8::uuid)`,
+		orderBy:    `refreshed_at DESC, updated_at DESC, id DESC`,
+		cursorArgs: func(cursor *data.FeedCursor) []any {
+			if cursor == nil {
+				return []any{nil, nil, nil}
+			}
+			return []any{cursor.ID, cursor.RefreshedAt, cursor.UpdatedAt}
+		},
+	},
+	data.PlateSortPriceAsc: {
+		cursorCond: `$8::uuid IS NULL OR (COALESCE(price, 'Infinity'), id) > (COALESCE($9::text::numeric, 'Infinity'), $8::uuid)`,
+		orderBy:    `COALESCE(price, 'Infinity') ASC, id ASC`,
+		cursorArgs: priceCursorArgs,
+	},
+	data.PlateSortPriceDesc: {
+		cursorCond: `$8::uuid IS NULL OR (COALESCE(price, '-Infinity'), id) < (COALESCE($9::text::numeric, '-Infinity'), $8::uuid)`,
+		orderBy:    `COALESCE(price, '-Infinity') DESC, id DESC`,
+		cursorArgs: priceCursorArgs,
+	},
+}
+
+// priceCursorArgs - параметры курсора для сортировок по цене
+func priceCursorArgs(cursor *data.FeedCursor) []any {
+	if cursor == nil {
+		return []any{nil, nil}
+	}
+	return []any{cursor.ID, cursor.Price}
+}
 
 const getPlateWithOffersByID = `
 SELECT 
@@ -468,6 +509,10 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 
 // GetPlates - Возвращает список номеров
 func (r *OfferRepository) GetPlates(ctx context.Context, params repository.GetPlatesParams) ([]data.FeedPlate, bool, error) {
+	spec, ok := plateSortSpecs[params.Sort]
+	if !ok {
+		return nil, false, fmt.Errorf("get plates: unknown sort %q", params.Sort)
+	}
 
 	var query *string
 	if params.Query != nil && len(*params.Query) > 0 {
@@ -475,89 +520,40 @@ func (r *OfferRepository) GetPlates(ctx context.Context, params repository.GetPl
 		query = &str
 	}
 
-	var (
-		afterRefreshedAt *time.Time
-		afterUpdatedAt   *time.Time
-		afterID          *uuid.UUID
-	)
-	if params.Cursor != nil {
-		afterRefreshedAt, afterUpdatedAt, afterID = &params.Cursor.RefreshedAt, &params.Cursor.UpdatedAt, &params.Cursor.ID
-	}
-
-	rows, err := r.postgres.pool.Query(
-		ctx,
-		getFeedPlates,
+	args := []any{
 		string(domain.OfferStatusActive),
-		afterRefreshedAt,
-		afterUpdatedAt,
-		afterID,
 		query,
 		params.RegionId,
 		params.PriceFrom,
 		params.PriceTo,
 		params.ReissueIncluded,
-		params.Limit+1,
-	)
+		params.Limit + 1,
+	}
+	args = append(args, spec.cursorArgs(params.Cursor)...)
+
+	rows, err := r.postgres.pool.Query(ctx, fmt.Sprintf(getFeedPlates, spec.cursorCond, spec.orderBy), args...)
 	if err != nil {
-		return nil, false, fmt.Errorf("get feed plates (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
-			params.Limit,
-			afterRefreshedAt,
-			afterUpdatedAt,
-			afterID,
-			err,
-		)
+		return nil, false, fmt.Errorf("get plates (sort=%s, limit=%d): %w", params.Sort, params.Limit, err)
 	}
 	defer rows.Close()
 
 	plates := make([]data.FeedPlate, 0, params.Limit+1)
 	for rows.Next() {
 		var (
-			id              uuid.UUID
-			number          string
-			regionID        *int
-			regionName      *string
-			regionCode      *string
-			price           *float64
-			plateType       string
-			count           int
-			refreshedAt     time.Time
-			updatedAt       time.Time
-			reissueIncluded *bool
+			plate     data.FeedPlate
+			plateType string
 		)
-
-		if err := rows.Scan(&id, &number, &regionID, &regionName, &regionCode, &price, &plateType, &count, &refreshedAt, &updatedAt, &reissueIncluded); err != nil {
-			return nil, false, fmt.Errorf("get feed plates (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
-				params.Limit,
-				afterRefreshedAt,
-				afterUpdatedAt,
-				afterID,
-				err,
-			)
+		if err := rows.Scan(&plate.ID, &plate.Number, &plate.RegionID, &plate.RegionName, &plate.RegionCode, &plate.Price,
+			&plateType, &plate.Count, &plate.RefreshedAt, &plate.UpdatedAt, &plate.ReissueIncluded); err != nil {
+			return nil, false, fmt.Errorf("get plates (sort=%s, limit=%d): %w", params.Sort, params.Limit, err)
 		}
+		plate.Type = domain.PlateType(plateType)
 
-		plates = append(plates, data.FeedPlate{
-			ID:              id,
-			Number:          number,
-			RegionID:        regionID,
-			RegionName:      regionName,
-			RegionCode:      regionCode,
-			Price:           price,
-			Type:            domain.PlateType(plateType),
-			Count:           count,
-			RefreshedAt:     refreshedAt,
-			UpdatedAt:       updatedAt,
-			ReissueIncluded: reissueIncluded,
-		})
+		plates = append(plates, plate)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("get feed plates (limit=%d, refreshed_at:%s, updated_at:%s, id:%s): %w",
-			params.Limit,
-			afterRefreshedAt,
-			afterUpdatedAt,
-			afterID,
-			err,
-		)
+		return nil, false, fmt.Errorf("get plates (sort=%s, limit=%d): %w", params.Sort, params.Limit, err)
 	}
 
 	hasNext := len(plates) > params.Limit

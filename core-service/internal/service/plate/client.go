@@ -116,6 +116,7 @@ type FetchPlatesParams struct {
 	PriceTo         *float64
 	ReissueIncluded *bool
 	CategoryIDs     []int
+	Sort            string
 	Limit           int
 	Cursor          string
 }
@@ -216,6 +217,9 @@ func (c *Client) buildFetchPlatesURL(params FetchPlatesParams) string {
 	}
 	if params.PriceTo != nil {
 		query.Set("price_to", strconv.FormatFloat(*params.PriceTo, 'f', -1, 64))
+	}
+	if params.Sort != "" {
+		query.Set("sort", params.Sort)
 	}
 	if params.Limit > 0 {
 		query.Set("limit", strconv.Itoa(params.Limit))
