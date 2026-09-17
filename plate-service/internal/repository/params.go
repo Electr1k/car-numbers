@@ -1,6 +1,9 @@
 package repository
 
-import "plate-service/internal/domain/data"
+import (
+	"plate-service/internal/domain"
+	"plate-service/internal/domain/data"
+)
 
 type GetPlatesParams struct {
 	Query           *string
@@ -8,7 +11,7 @@ type GetPlatesParams struct {
 	PriceFrom       *float64
 	PriceTo         *float64
 	ReissueIncluded *bool
-	CategoryIds     []int
+	CategoryIds     []domain.CategoryID
 	Sort            data.PlateSort
 	Limit           int
 	Cursor          *data.FeedCursor

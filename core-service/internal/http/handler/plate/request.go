@@ -8,7 +8,7 @@ type fetchPlatesRequest struct {
 	PriceFrom       *float64 `form:"price_from"`
 	PriceTo         *float64 `form:"price_to"`
 	ReissueIncluded *bool    `form:"reissue_included"`
-	CategoryIDs     []int    `form:"category_ids"`
+	CategoryIDs     []string `form:"category_ids"`
 	Sort            string   `form:"sort"`
 	Limit           int      `form:"limit"`
 	Cursor          string   `form:"cursor"`

@@ -24,7 +24,7 @@ type Params struct {
 	PriceFrom       *float64
 	PriceTo         *float64
 	ReissueIncluded *bool
-	CategoryIds     []int
+	CategoryIds     []domain.CategoryID
 	Sort            data.PlateSort
 	Limit           int
 	Cursor          *data.FeedCursor
@@ -60,6 +60,12 @@ func (p *Params) validate() error {
 		return fmt.Errorf("%w: incomplete cursor", domain.ErrInvalidArgument)
 	case p.Cursor != nil && p.Cursor.Price != nil && !cursorPrice.MatchString(*p.Cursor.Price):
 		return fmt.Errorf("%w: invalid cursor price", domain.ErrInvalidArgument)
+	}
+
+	for _, id := range p.CategoryIds {
+		if !id.Valid() {
+			return fmt.Errorf("%w: unknown category %q", domain.ErrInvalidArgument, id)
+		}
 	}
 
 	return nil

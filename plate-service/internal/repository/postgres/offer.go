@@ -181,6 +181,10 @@ FROM (
 	LEFT JOIN region_codes ON plates.region_code = region_codes.code
 	LEFT JOIN regions ON regions.id = region_codes.region_id
 	WHERE status = $1
+	AND ($8::TEXT[] IS NULL OR EXISTS (
+		SELECT 1 FROM plate_categories
+		WHERE plate_categories.plate_id = plates.id AND plate_categories.category_id = ANY($8::TEXT[])
+	))
 	GROUP BY plates.id, number, regions.id, regions.name, region_codes.code, type
 	HAVING ($2::TEXT IS NULL OR number LIKE $2::TEXT)
 	AND ($3::BIGINT IS NULL OR regions.id = $3::BIGINT)
@@ -206,7 +210,7 @@ type plateSortSpec struct {
 
 var plateSortSpecs = map[data.PlateSort]plateSortSpec{
 	data.PlateSortUpdatedDesc: {
-		cursorCond: `$8::uuid IS NULL OR (refreshed_at, updated_at, id) < ($9::date, $10::timestamptz, $8::uuid)`,
+		cursorCond: `$9::uuid IS NULL OR (refreshed_at, updated_at, id) < ($10::date, $11::timestamptz, $9::uuid)`,
 		orderBy:    `refreshed_at DESC, updated_at DESC, id DESC`,
 		cursorArgs: func(cursor *data.FeedCursor) []any {
 			if cursor == nil {
@@ -216,12 +220,12 @@ var plateSortSpecs = map[data.PlateSort]plateSortSpec{
 		},
 	},
 	data.PlateSortPriceAsc: {
-		cursorCond: `$8::uuid IS NULL OR (COALESCE(price, 'Infinity'), id) > (COALESCE($9::text::numeric, 'Infinity'), $8::uuid)`,
+		cursorCond: `$9::uuid IS NULL OR (COALESCE(price, 'Infinity'), id) > (COALESCE($10::text::numeric, 'Infinity'), $9::uuid)`,
 		orderBy:    `COALESCE(price, 'Infinity') ASC, id ASC`,
 		cursorArgs: priceCursorArgs,
 	},
 	data.PlateSortPriceDesc: {
-		cursorCond: `$8::uuid IS NULL OR (COALESCE(price, '-Infinity'), id) < (COALESCE($9::text::numeric, '-Infinity'), $8::uuid)`,
+		cursorCond: `$9::uuid IS NULL OR (COALESCE(price, '-Infinity'), id) < (COALESCE($10::text::numeric, '-Infinity'), $9::uuid)`,
 		orderBy:    `COALESCE(price, '-Infinity') DESC, id DESC`,
 		cursorArgs: priceCursorArgs,
 	},
@@ -520,6 +524,14 @@ func (r *OfferRepository) GetPlates(ctx context.Context, params repository.GetPl
 		query = &str
 	}
 
+	var categoryIds []string
+	if len(params.CategoryIds) > 0 {
+		categoryIds = make([]string, len(params.CategoryIds))
+		for i, id := range params.CategoryIds {
+			categoryIds[i] = string(id)
+		}
+	}
+
 	args := []any{
 		string(domain.OfferStatusActive),
 		query,
@@ -528,6 +540,7 @@ func (r *OfferRepository) GetPlates(ctx context.Context, params repository.GetPl
 		params.PriceTo,
 		params.ReissueIncluded,
 		params.Limit + 1,
+		categoryIds,
 	}
 	args = append(args, spec.cursorArgs(params.Cursor)...)
 

@@ -115,7 +115,7 @@ type FetchPlatesParams struct {
 	PriceFrom       *float64
 	PriceTo         *float64
 	ReissueIncluded *bool
-	CategoryIDs     []int
+	CategoryIDs     []string
 	Sort            string
 	Limit           int
 	Cursor          string
@@ -231,7 +231,7 @@ func (c *Client) buildFetchPlatesURL(params FetchPlatesParams) string {
 		query.Set("reissue_included", strconv.FormatBool(*params.ReissueIncluded))
 	}
 	for _, id := range params.CategoryIDs {
-		query.Add("category_ids", strconv.Itoa(id))
+		query.Add("category_ids", id)
 	}
 
 	return c.baseURL + fetchPlates + "?" + query.Encode()

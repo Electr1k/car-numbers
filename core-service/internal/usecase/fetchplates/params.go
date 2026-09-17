@@ -19,7 +19,7 @@ type Params struct {
 	PriceFrom       *float64
 	PriceTo         *float64
 	ReissueIncluded *bool
-	CategoryIDs     []int
+	CategoryIDs     []string
 	Sort            domain.PlateSort
 	Limit           int
 	Cursor          string

@@ -40,13 +40,18 @@ func (h *Handler) GetPlates(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("%w: query: %v", domain.ErrInvalidArgument, err)
 	}
 
+	categoryIds := make([]domain.CategoryID, 0, len(req.CategoryIds))
+	for _, id := range req.CategoryIds {
+		categoryIds = append(categoryIds, domain.CategoryID(id))
+	}
+
 	params := fetchplates.Params{
 		Query:           req.Query,
 		RegionId:        req.RegionId,
 		PriceFrom:       req.PriceFrom,
 		PriceTo:         req.PriceTo,
 		ReissueIncluded: req.ReissueIncluded,
-		CategoryIds:     req.CategoryIds,
+		CategoryIds:     categoryIds,
 		Sort:            data.PlateSort(req.Sort),
 		Limit:           req.Limit,
 	}
