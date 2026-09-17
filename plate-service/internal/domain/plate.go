@@ -32,6 +32,11 @@ type Plate struct {
 	UpdatedAt *time.Time
 }
 
+// Categories - Классифицирует номер по категорями
+func (p *Plate) Categories() []CategoryID {
+	return classifyPlate(p.Number, p.Type)
+}
+
 // NewPlate - Создание номера, которого ещё не существовало
 func NewPlate(number string, plateType PlateType) (*Plate, error) {
 	id, err := newID()

@@ -157,6 +157,12 @@ comment = $10,
 updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
 
+// upsertPlateCategoriesQuery - привязка номеров к их категориям
+const upsertPlateCategoriesQuery = `
+INSERT INTO plate_categories (plate_id, category_id)
+SELECT * FROM unnest($1::uuid[], $2::text[])
+ON CONFLICT (plate_id, category_id) DO NOTHING;`
+
 const getFeedPlates = `
 SELECT id, number, region_id, region_name, region_code, price, type, count, refreshed_at, updated_at, reissue_included
 FROM (
@@ -317,6 +323,10 @@ func (r *OfferRepository) SaveBatch(ctx context.Context, items []domain.OfferWit
 		return nil, err
 	}
 
+	if err := r.upsertPlateCategories(ctx, tx, saved); err != nil {
+		return nil, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
@@ -365,11 +375,42 @@ func (r *OfferRepository) UpdateOrCreate(ctx context.Context, item domain.OfferW
 		return domain.OfferWithPlate{}, err
 	}
 
+	if err := r.upsertPlateCategories(ctx, tx, []domain.OfferWithPlate{saved}); err != nil {
+		return domain.OfferWithPlate{}, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return domain.OfferWithPlate{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	return saved, nil
+}
+
+// upsertPlateCategories - Запись категорий номеров
+func (r *OfferRepository) upsertPlateCategories(ctx context.Context, tx pgx.Tx, items []domain.OfferWithPlate) error {
+	plateIds := make([]string, 0, len(items))
+	categoryIds := make([]string, 0, len(items))
+
+	for _, item := range items {
+		if item.Plate == nil {
+			continue
+		}
+
+		for _, category := range item.Plate.Categories() {
+			plateIds = append(plateIds, item.Plate.ID.String())
+			categoryIds = append(categoryIds, string(category))
+		}
+	}
+
+	if len(plateIds) == 0 {
+		return nil
+	}
+
+	if _, err := tx.Exec(ctx, upsertPlateCategoriesQuery, plateIds, categoryIds); err != nil {
+		return fmt.Errorf("save plate categories (%d rows): %w", len(plateIds), err)
+	}
+
+	return nil
 }
 
 // upsertPriceHistory - Запись наблюдений цены, единственное место записи в price_history

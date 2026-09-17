@@ -31,8 +31,8 @@ const (
 	CategoryIdDigitsAsRegion CategoryID = "digits-as-region"
 )
 
-// GetCategoryIds Возвращает список категорий номера
-func GetCategoryIds() []CategoryID {
+// getCategoryIds Возвращает список категорий номера
+func getCategoryIds() []CategoryID {
 	return []CategoryID{
 		CategoryIdSameLetters,
 		CategoryIdMirroredLetters,
@@ -51,7 +51,7 @@ func GetCategoryIds() []CategoryID {
 
 // Valid - известна ли категория
 func (c CategoryID) Valid() bool {
-	return slices.Contains(GetCategoryIds(), c)
+	return slices.Contains(getCategoryIds(), c)
 }
 
 // Category - Категория номера
