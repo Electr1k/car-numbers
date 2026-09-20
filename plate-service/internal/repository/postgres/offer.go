@@ -7,6 +7,7 @@ import (
 	"plate-service/internal/domain"
 	"plate-service/internal/domain/data"
 	"plate-service/internal/repository"
+	"slices"
 	"strings"
 	"time"
 
@@ -187,10 +188,10 @@ FROM (
 	LEFT JOIN region_codes ON plates.region_code = region_codes.code
 	LEFT JOIN regions ON regions.id = region_codes.region_id
 	WHERE status = $1
-	AND ($8::TEXT[] IS NULL OR EXISTS (
-		SELECT 1 FROM plate_categories
+	AND ($8::TEXT[] IS NULL OR (
+		SELECT count(*) FROM plate_categories
 		WHERE plate_categories.plate_id = plates.id AND plate_categories.category_id = ANY($8::TEXT[])
-	))
+	) = cardinality($8::TEXT[]))
 	GROUP BY plates.id, number, regions.id, regions.name, region_codes.code, type
 	HAVING ($2::TEXT IS NULL OR number LIKE $2::TEXT)
 	AND ($3::BIGINT IS NULL OR regions.id = $3::BIGINT)
@@ -565,11 +566,11 @@ func (r *OfferRepository) GetPlates(ctx context.Context, params repository.GetPl
 		query = &str
 	}
 
+	// Условие по категориям требует их все сразу, поэтому повтор в запросе оставил бы выдачу пустой
 	var categoryIds []string
-	if len(params.CategoryIds) > 0 {
-		categoryIds = make([]string, len(params.CategoryIds))
-		for i, id := range params.CategoryIds {
-			categoryIds[i] = string(id)
+	for _, id := range params.CategoryIds {
+		if !slices.Contains(categoryIds, string(id)) {
+			categoryIds = append(categoryIds, string(id))
 		}
 	}
 

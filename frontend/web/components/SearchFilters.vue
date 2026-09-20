@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { RegionsResponse } from '~/types/api'
-import { PATTERN_LIST } from '@shared/patterns'
+import { CATEGORY_LIST, type CategoryId } from '@shared/categories'
 
 export interface Filters {
   region: string
@@ -8,7 +8,7 @@ export interface Filters {
   price_max: string
   reissue: string
   sort: string
-  pattern: string[]
+  categories: CategoryId[]
 }
 
 const model = defineModel<Filters>({ required: true })
@@ -27,13 +27,13 @@ const SORTS = [
 /* Регионы приходят из справочника уже в алфавитном порядке */
 const { data: regions, pending: regionsPending } = useApi<RegionsResponse>('/api/v1/regions', { lazy: true, server: false })
 
-const digitPatterns = PATTERN_LIST.filter(p => p.group === 'digits')
-const letterPatterns = PATTERN_LIST.filter(p => p.group === 'letters')
+const digitCategories = CATEGORY_LIST.filter(c => c.group === 'digits')
+const letterCategories = CATEGORY_LIST.filter(c => c.group === 'letters')
 
-const toggle = (code: string) => {
-  const set = new Set(model.value.pattern)
-  set.has(code) ? set.delete(code) : set.add(code)
-  model.value = { ...model.value, pattern: [...set] }
+const toggle = (id: CategoryId) => {
+  const set = new Set(model.value.categories)
+  set.has(id) ? set.delete(id) : set.add(id)
+  model.value = { ...model.value, categories: [...set] }
 }
 
 const set = (key: keyof Filters, value: string) => {
@@ -122,9 +122,9 @@ const commitPrice = (key: 'price_min' | 'price_max') => {
       <legend>Узор цифр</legend>
       <div class="chips">
         <button
-          v-for="p in digitPatterns" :key="p.code" type="button" class="chip"
-          :aria-pressed="model.pattern.includes(p.code)" @click="toggle(p.code)"
-        >{{ p.label }}</button>
+          v-for="c in digitCategories" :key="c.id" type="button" class="chip"
+          :aria-pressed="model.categories.includes(c.id)" @click="toggle(c.id)"
+        >{{ c.label }}</button>
       </div>
     </fieldset>
 
@@ -132,9 +132,9 @@ const commitPrice = (key: 'price_min' | 'price_max') => {
       <legend>Буквы и регион</legend>
       <div class="chips">
         <button
-          v-for="p in letterPatterns" :key="p.code" type="button" class="chip"
-          :aria-pressed="model.pattern.includes(p.code)" @click="toggle(p.code)"
-        >{{ p.label }}</button>
+          v-for="c in letterCategories" :key="c.id" type="button" class="chip"
+          :aria-pressed="model.categories.includes(c.id)" @click="toggle(c.id)"
+        >{{ c.label }}</button>
       </div>
     </fieldset>
   </div>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { PlateItem, PlatesResponse } from '~/types/api'
-import { PATTERN_LIST } from '@shared/patterns'
+import { categoryLabel, knownCategories, type CategoryId } from '@shared/categories'
 import type { Filters } from '~/components/SearchFilters.vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const q = computed(() => String(route.query.q || ''))
-const activePatterns = computed(() => String(route.query.categories || '').split(',').filter(Boolean))
+const activeCategories = computed(() => knownCategories(String(route.query.categories || '').split(',')))
 const region = computed(() => String(route.query.region || ''))
 const reissue = computed(() => String(route.query.reissue_included || ''))
 const priceMin = computed(() => String(route.query.price_min || ''))
@@ -18,7 +18,7 @@ const sort = computed(() => String(route.query.sort || 'updated_desc'))
 const filters = computed<Filters>({
   get: () => ({
     region: region.value, price_min: priceMin.value, price_max: priceMax.value, reissue: reissue.value,
-    sort: sort.value, pattern: activePatterns.value
+    sort: sort.value, categories: activeCategories.value
   }),
   set: (f) => router.push({
     path: '/search',
@@ -28,7 +28,7 @@ const filters = computed<Filters>({
       price_min: f.price_min || undefined,
       price_max: f.price_max || undefined,
       reissue_included: f.reissue || undefined,
-      categories: f.pattern.length ? f.pattern.join(',') : undefined,
+      categories: f.categories.length ? f.categories.join(',') : undefined,
       sort: f.sort !== 'updated_desc' ? f.sort : undefined
     }
   })
@@ -45,6 +45,7 @@ const apiQuery = computed(() => ({
   price_from: Number(priceMin.value) || undefined,
   price_to: Number(priceMax.value) || undefined,
   reissue_included: ['true', 'false'].includes(reissue.value) ? reissue.value : undefined,
+  category_ids: activeCategories.value.length ? activeCategories.value : undefined,
   sort: sort.value !== 'updated_desc' ? sort.value : undefined,
   limit: PAGE
 }))
@@ -92,9 +93,9 @@ const setParam = (key: string, value: string | null) => {
   router.push({ path: '/search', query: next })
 }
 
-const togglePattern = (code: string) => {
-  const set = new Set(activePatterns.value)
-  set.has(code) ? set.delete(code) : set.add(code)
+const toggleCategory = (id: CategoryId) => {
+  const set = new Set(activeCategories.value)
+  set.has(id) ? set.delete(id) : set.add(id)
   setParam('categories', [...set].join(',') || null)
 }
 
@@ -107,15 +108,15 @@ const applied = computed(() => {
   if (reissue.value) {
     list.push({ key: 'reissue_included', label: reissue.value === 'true' ? 'с переоформлением' : 'без переоформления' })
   }
-  for (const code of activePatterns.value) {
-    const p = PATTERN_LIST.find(x => x.code === code)
-    if (p) list.push({ key: `pattern:${code}`, label: p.label.toLowerCase() })
+  for (const id of activeCategories.value) {
+    const label = categoryLabel(id)
+    if (label) list.push({ key: `category:${id}`, label: label.toLowerCase() })
   }
   return list
 })
 
 const dropFilter = (key: string) => {
-  if (key.startsWith('pattern:')) return togglePattern(key.slice(8))
+  if (key.startsWith('category:')) return toggleCategory(key.slice(9) as CategoryId)
   setParam(key, null)
 }
 

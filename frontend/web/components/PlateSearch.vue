@@ -16,7 +16,7 @@ const query = ref('')
 const router = useRouter()
 
 const filters = ref<Filters>({
-  region: '', price_min: '', price_max: '', reissue: '', sort: 'updated_desc', pattern: []
+  region: '', price_min: '', price_max: '', reissue: '', sort: 'updated_desc', categories: []
 })
 
 /**
@@ -54,7 +54,7 @@ const submit = () => {
       price_min: f.price_min || undefined,
       price_max: f.price_max || undefined,
       reissue_included: f.reissue || undefined,
-      categories: f.pattern.length ? f.pattern.join(',') : undefined,
+      categories: f.categories.length ? f.categories.join(',') : undefined,
       sort: f.sort !== 'updated_desc' ? f.sort : undefined
     }
   })
