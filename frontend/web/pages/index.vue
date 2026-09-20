@@ -83,8 +83,7 @@ useHead({ title: 'Номерограф — объявления о продаж�
 .feed { padding: 0 24px 56px; }
 .sect { margin-bottom: 16px; }
 
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-@media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 
 .more {
   margin-top: 24px; min-height: 44px; padding: 11px 20px; cursor: pointer;

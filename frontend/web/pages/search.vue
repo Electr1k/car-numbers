@@ -200,7 +200,7 @@ useHead(() => ({ title: q.value ? `${q.value} — поиск номеров` : '
 
 .heading { font-size: 24px; margin-bottom: 18px; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
 
 .more, .btn-primary {
   min-height: 44px; padding: 11px 20px; cursor: pointer;

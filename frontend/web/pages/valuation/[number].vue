@@ -75,21 +75,6 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
             <NuxtLink to="/triggers" class="cta">Сообщить, когда появится</NuxtLink>
           </div>
 
-          <div v-if="valuation && (!similarDone || similar?.items.length)" class="similar">
-            <div class="sect">
-              <h2>Похожие в продаже</h2>
-              <NuxtLink v-if="valuation?.region" :to="`/search?region=${valuation.region.id}`">
-                Все в регионе {{ valuation.region.code }} →
-              </NuxtLink>
-            </div>
-            <div class="grid" :aria-busy="!similarDone">
-              <template v-if="!similarDone">
-                <SkeletonCard v-for="i in 3" :key="i" />
-              </template>
-              <PlateCard v-for="c in similar.items" v-else :key="c.id" :card="c" />
-            </div>
-          </div>
-
           <aside v-if="valuation?.region" class="restrict">
             Номер с кодом {{ valuation.region.code }} можно поставить только на автомобиль,
             зарегистрированный в этом регионе.
@@ -97,6 +82,22 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
           </aside>
         </div>
       </div>
+
+      <!-- Похожие идут во всю ширину: под левой колонкой всё равно пусто -->
+      <section v-if="valuation && (!similarDone || similar?.items.length)" class="similar">
+        <div class="sect">
+          <h2>Похожие в продаже</h2>
+          <NuxtLink v-if="valuation?.region" :to="`/search?region=${valuation.region.id}`">
+            Все в регионе {{ valuation.region.code }} →
+          </NuxtLink>
+        </div>
+        <div class="grid" :aria-busy="!similarDone">
+          <template v-if="!similarDone">
+            <SkeletonCard v-for="i in 3" :key="i" />
+          </template>
+          <PlateCard v-for="c in similar.items" v-else :key="c.id" :card="c" />
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -123,7 +124,9 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
 .right { display: grid; gap: 20px; align-content: start; }
 
 .sect { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.similar { margin-top: 36px; }
+/* 320px — минимум, в который знак помещается со своими полями; на 1180px это ровно три колонки */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 
 .empty {
   background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-lg);

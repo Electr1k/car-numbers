@@ -1,36 +1,52 @@
 <template>
-  <div class="card" aria-hidden="true">
-    <div class="head">
-      <span class="sk plate" />
-      <span class="sk price" />
-    </div>
-    <div class="sub">
-      <span class="sk tag" />
-      <span class="sk region" />
-    </div>
-    <div class="foot">
-      <span class="sk meta" />
-      <span class="sk go" />
+  <div class="hold" aria-hidden="true">
+    <div class="row">
+      <span class="sk sign" />
+      <span class="meta">
+        <span class="sk region" />
+        <span class="sk tag" />
+        <span class="sk sub" />
+      </span>
+      <span class="right">
+        <span class="sk price" />
+        <span class="sk go" />
+      </span>
     </div>
   </div>
 </template>
 
 <style scoped>
-.card {
+.hold { container-type: inline-size; display: grid; }
+
+.row {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 18px 20px; box-shadow: var(--sh-1);
-  display: grid; gap: 12px; align-content: start;
+  padding: 20px 24px; box-shadow: var(--sh-1);
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'sign meta price';
+  align-items: center; gap: 12px 28px;
 }
-.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-.sub { display: flex; gap: 14px; align-items: center; }
-.foot {
-  display: flex; justify-content: space-between; align-items: center; gap: 14px;
-  border-top: 1px solid var(--border); padding-top: 12px;
+.meta { grid-area: meta; display: grid; gap: 8px; justify-items: start; }
+.right { grid-area: price; display: grid; gap: 8px; justify-items: end; }
+
+.sign   { grid-area: sign; width: 218px; height: 62px; border-radius: 6px; }
+.region { width: 92px;  height: 18px; }
+.tag    { width: 138px; height: 25px; }
+.sub    { width: 176px; height: 16px; }
+.price  { width: 128px; height: 26px; }
+.go     { width: 104px; height: 15px; }
+
+@container (max-width: 760px) {
+  .row {
+    grid-template-columns: 1fr auto; grid-template-areas: 'sign sign' 'meta price';
+    padding: 16px 18px; gap: 16px; align-items: end;
+  }
 }
-.plate  { width: 148px; height: 38px; border-radius: var(--r-md); }
-.price  { width: 104px; height: 26px; }
-.tag    { width: 122px; height: 17px; }
-.region { width: 88px;  height: 17px; }
-.meta   { width: 168px; height: 15px; }
-.go     { width: 132px; height: 15px; }
+@container (max-width: 440px) {
+  .row { grid-template-columns: 1fr; grid-template-areas: 'sign' 'meta' 'price'; gap: 14px; }
+  .right { justify-items: start; }
+}
+
+/* Знак мельчает по ширине экрана, а не колонки — так же, как настоящий PlateSign */
+@media (max-width: 620px) {
+  .sign { width: 172px; height: 50px; }
+}
 </style>

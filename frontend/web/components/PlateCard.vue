@@ -15,54 +15,73 @@ const hint = computed(() =>
 </script>
 
 <template>
-  <article class="card">
-    <div class="head">
-      <PlateNumber :number="card.number" size="md" />
-      <p class="price">
-        <template v-if="card.price !== null">
-          <span v-if="many" class="from">от</span>{{ money(card.price) }}
-        </template>
-        <template v-else>Цена не указана</template>
-      </p>
-    </div>
+  <!-- Обёртка нужна только как контейнер запросов: полка перестраивается по своей ширине -->
+  <div class="hold">
+    <NuxtLink :to="`/plates/${card.id}`" class="row">
+      <PlateSign :number="card.number" class="sign" />
 
-    <div class="sub">
-      <BundleTag :reissue="card.reissue_included" />
-      <span v-if="card.region">{{ card.region.name }}</span>
-    </div>
-
-    <p v-if="hint" class="hint">{{ hint }}</p>
-
-    <div class="foot">
       <span class="meta">
-        <template v-if="many">{{ card.count }} предложения · </template>
-        обновлено {{ updated }}
+        <span v-if="card.region" class="region">{{ card.region.name }}</span>
+        <span class="line">
+          <BundleTag :reissue="card.reissue_included" />
+          <span v-if="hint" class="hint">{{ hint }}</span>
+        </span>
+        <span class="faint">
+          <template v-if="many">{{ card.count }} предложения · </template>
+          обновлено {{ updated }}
+        </span>
       </span>
-      <NuxtLink :to="`/plates/${card.id}`" class="go">
-        {{ many ? 'Сравнить цены' : 'Смотреть объявление' }} →
-      </NuxtLink>
-    </div>
-  </article>
+
+      <span class="right">
+        <span class="price">
+          <template v-if="card.price !== null">
+            <span v-if="many" class="from">от</span>{{ money(card.price) }}
+          </template>
+          <template v-else>Цена не указана</template>
+        </span>
+        <span class="go">{{ many ? 'Сравнить цены' : 'Смотреть объявление' }} →</span>
+      </span>
+    </NuxtLink>
+  </div>
 </template>
 
 <style scoped>
-.card {
+.hold { container-type: inline-size; display: grid; }
+
+.row {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 18px 20px; box-shadow: var(--sh-1);
-  display: grid; gap: 12px; align-content: start;
+  padding: 20px 24px; box-shadow: var(--sh-1); color: var(--text); text-decoration: none;
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'sign meta price';
+  align-items: center; gap: 12px 28px;
 }
-.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.row:hover { border-color: var(--border-strong); box-shadow: var(--sh-2); color: var(--text); text-decoration: none; }
+.row:hover .go { color: var(--accent-hover); text-decoration: underline; }
+
+.sign { grid-area: sign; justify-self: start; }
+
+.meta { grid-area: meta; display: grid; gap: 8px; justify-items: start; }
+.line { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.region { font-size: 16px; color: var(--text-muted); }
+.hint { font-size: 14.5px; color: var(--alert); }
+.faint { font-size: 14.5px; color: var(--text-faint); }
+
+.right { grid-area: price; display: grid; gap: 8px; justify-items: end; text-align: right; }
 .price {
   font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
 .from { font-size: 15px; font-weight: 500; color: var(--text-muted); margin-right: .3em; }
-.sub { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14.5px; color: var(--text-muted); }
-.hint { font-size: 14.5px; color: var(--alert); }
-.foot {
-  display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
-  border-top: 1px solid var(--border); padding-top: 12px;
+.go { font-size: 15px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+
+/* Знак не ужимается — при нехватке ширины на свою строку уходит он, а следом и цена */
+@container (max-width: 760px) {
+  .row {
+    grid-template-columns: 1fr auto; grid-template-areas: 'sign sign' 'meta price';
+    padding: 16px 18px; gap: 16px; align-items: end;
+  }
 }
-.meta { font-size: 14.5px; color: var(--text-faint); }
-.go { font-weight: 600; font-size: 15px; }
+@container (max-width: 440px) {
+  .row { grid-template-columns: 1fr; grid-template-areas: 'sign' 'meta' 'price'; gap: 14px; }
+  .right { justify-items: start; text-align: left; }
+}
 </style>

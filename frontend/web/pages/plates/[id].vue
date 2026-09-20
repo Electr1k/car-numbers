@@ -153,27 +153,28 @@ useHead(() => ({
             </div>
           </template>
 
-          <div v-if="plate && (!similarDone || similarItems.length)" class="similar">
-            <div class="sect">
-              <h2>Похожие в продаже</h2>
-              <NuxtLink v-if="plate?.region" :to="`/search?region=${plate.region.id}`">
-                Все в регионе {{ plate.region.code }} →
-              </NuxtLink>
-            </div>
-            <div class="grid" :aria-busy="!similarDone">
-              <template v-if="!similarDone">
-                <SkeletonCard v-for="i in 3" :key="i" />
-              </template>
-              <PlateCard v-for="c in similarItems" v-else :key="c.id" :card="c" />
-            </div>
-          </div>
-
           <aside v-if="restriction" class="restrict">
             {{ restriction }}
             <NuxtLink to="/reissue">Как это устроено</NuxtLink>
           </aside>
         </div>
       </div>
+
+      <!-- Похожие идут во всю ширину: под левой колонкой всё равно пусто -->
+      <section v-if="plate && (!similarDone || similarItems.length)" class="similar">
+        <div class="sect">
+          <h2>Похожие в продаже</h2>
+          <NuxtLink v-if="plate?.region" :to="`/search?region=${plate.region.id}`">
+            Все в регионе {{ plate.region.code }} →
+          </NuxtLink>
+        </div>
+        <div class="grid" :aria-busy="!similarDone">
+          <template v-if="!similarDone">
+            <SkeletonCard v-for="i in 3" :key="i" />
+          </template>
+          <PlateCard v-for="c in similarItems" v-else :key="c.id" :card="c" />
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -197,7 +198,9 @@ useHead(() => ({
 .sect { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
 .note { font-size: 15px; color: var(--text-muted); }
 .stack { display: grid; gap: 14px; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.similar { margin-top: 36px; }
+/* 320px — минимум, в который знак помещается со своими полями; на 1180px это ровно три колонки */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 
 .empty {
   background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--r-lg);
