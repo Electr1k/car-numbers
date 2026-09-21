@@ -1,0 +1,142 @@
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+x-plate: &plate
+  build:
+    context: ./plate-service
+    dockerfile: ../docker/plate-service/Dockerfile
+  image: nomerograf/plate-service
+  env_file: ./plate-service/.env
+  depends_on:
+    plate-migrate:
+      condition: service_completed_successfully
+  restart: always
+  logging: *logging
+
+services:
+  nginx:
+    image: nginx:stable-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?укажите DOMAIN в .env рядом с compose}
+    volumes:
+      - ./docker/nginx:/etc/nginx/site:ro
+      - certbot-www:/var/www/certbot:ro
+      - letsencrypt:/etc/letsencrypt:ro
+    command: >
+      sh -c 'sh /etc/nginx/site/select-conf.sh
+      && (while :; do sleep 6h; sh /etc/nginx/site/select-conf.sh && nginx -s reload; done &)
+      && exec nginx -g "daemon off;"'
+    depends_on:
+      - frontend
+    restart: always
+    logging: *logging
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot-www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    entrypoint: >
+      sh -c 'trap exit TERM;
+      while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    restart: always
+    logging: *logging
+
+  frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile.prod
+      args:
+        CORE_URL: http://core-api:8080
+    environment:
+      NUXT_CORE_URL: http://core-api:8080
+    depends_on:
+      - core-api
+    restart: always
+    logging: *logging
+
+  core-api:
+    build:
+      context: ./core-service
+      dockerfile: ../docker/core-service/Dockerfile
+    env_file: ./core-service/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    logging: *logging
+
+  ml-api:
+    build:
+      context: ./ml-service
+      dockerfile: ../docker/ml/Dockerfile
+    volumes:
+      - ./ml-service/models:/app/models
+      - ./ml-service/data:/app/data:ro
+    restart: always
+    logging: *logging
+
+  plate-api:
+    <<: *plate
+    command: ["/app/api"]
+
+  plate-worker-autonomera:
+    <<: *plate
+    command: ["/app/worker"]
+    environment:
+      WORKER_QUEUES: autonomera
+      WORKER_CONCURRENCY: ${AUTONOMERA_WORKER_CONCURRENCY:-5}
+
+  plate-worker-gosnomeru:
+    <<: *plate
+    command: ["/app/worker"]
+    environment:
+      WORKER_QUEUES: gosnomeru
+      WORKER_CONCURRENCY: ${GOSNOMERU_WORKER_CONCURRENCY:-8}
+
+  plate-worker-anomera:
+    <<: *plate
+    command: ["/app/worker"]
+    environment:
+      WORKER_QUEUES: anomera
+      WORKER_CONCURRENCY: ${ANOMERA_WORKER_CONCURRENCY:-5}
+
+  plate-worker-default:
+    <<: *plate
+    command: ["/app/worker"]
+    environment:
+      WORKER_QUEUES: default
+      WORKER_CONCURRENCY: ${DEFAULT_WORKER_CONCURRENCY:-1}
+
+  plate-migrate:
+    <<: *plate
+    command: ["/app/migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
+
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "${DB_BIND:-127.0.0.1}:${DB_FORWARD_PORT:-8989}:5432"
+    env_file: ./docker/db/.env
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: always
+    logging: *logging
+
+volumes:
+  certbot-www:
+  letsencrypt:

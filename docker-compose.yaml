@@ -16,8 +16,6 @@ services:
     build:
       context: ./plate-service
       dockerfile: ../docker/plate-service/Dockerfile.dev
-    ports:
-      - "${PLATE_HTTP_FORWARD_PORT:-8080}:8080"
     volumes:
       - ./plate-service:/app
       - ./tmp:/app/tmp
@@ -34,8 +32,6 @@ services:
     build:
       context: ./core-service
       dockerfile: ../docker/core-service/Dockerfile.dev
-    ports:
-      - "${CORE_HTTP_FORWARD_PORT:-8081}:8080"
     volumes:
       - ./core-service:/app
     depends_on:
@@ -48,14 +44,12 @@ services:
 
   ml-api:
     build:
-      context: ./ML
+      context: ./ml-service
       dockerfile: ../docker/ml/Dockerfile.dev
     volumes:
       - ./ml-service:/app
       - ./ml-service/models:/app/models
       - ./ml-service/data:/app/data:ro
-    ports:
-      - "8000:8000"
     restart: always
     networks:
       - shared-network
