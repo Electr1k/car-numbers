@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlateDetail, PlatesResponse, Valuation } from '~/types/api'
+import { OFFERS, plural } from '@shared/plural'
 
 const route = useRoute()
 const id = computed(() => String(route.params.id))
@@ -123,7 +124,7 @@ useHead(() => ({
 
           <template v-else-if="hasActive">
             <div class="sect">
-              <h2>{{ plate.active_offers.length }} предложения</h2>
+              <h2>{{ plate.active_offers.length }} {{ plural(plate.active_offers.length, OFFERS) }}</h2>
               <span class="note">Цены отличаются тем, что в них входит</span>
             </div>
             <div class="stack">
@@ -164,7 +165,7 @@ useHead(() => ({
       <section v-if="plate && (!similarDone || similarItems.length)" class="similar">
         <div class="sect">
           <h2>Похожие в продаже</h2>
-          <NuxtLink v-if="plate?.region" :to="`/search?region=${plate.region.id}`">
+          <NuxtLink v-if="plate?.region" :to="`/?region=${plate.region.id}`">
             Все в регионе {{ plate.region.code }} →
           </NuxtLink>
         </div>

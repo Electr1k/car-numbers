@@ -87,7 +87,7 @@ useHead(() => ({ title: `${number.value} — сколько стоит номе�
       <section v-if="valuation && (!similarDone || similar?.items.length)" class="similar">
         <div class="sect">
           <h2>Похожие в продаже</h2>
-          <NuxtLink v-if="valuation?.region" :to="`/search?region=${valuation.region.id}`">
+          <NuxtLink v-if="valuation?.region" :to="`/?region=${valuation.region.id}`">
             Все в регионе {{ valuation.region.code }} →
           </NuxtLink>
         </div>

@@ -1,23 +1,21 @@
 <script setup lang="ts">
 import { sanitizePlateInput } from '@shared/plate'
-import type { Filters } from './SearchFilters.vue'
 
 /** Одно поле принимает и полный номер, и маску: конструктор из селектов не берём */
 const props = withDefaults(defineProps<{
   /** search — в выдачу; estimate — сразу на страницу номера */
   mode?: 'search' | 'estimate'
-  /** показывать ли свёрнутый блок фильтров под полем */
-  advanced?: boolean
   label?: string
   cta?: string
-}>(), { mode: 'search', advanced: false })
+}>(), { mode: 'search' })
 
-const query = ref('')
+const route = useRoute()
 const router = useRouter()
 
-const filters = ref<Filters>({
-  region: '', price_min: '', price_max: '', reissue: '', sort: 'updated_desc', categories: []
-})
+/* В режиме поиска поле показывает маску из адреса: переход по «Поиск» в шапке его очищает */
+const fromRoute = () => (props.mode === 'search' ? String(route.query.q || '') : '')
+const query = ref(fromRoute())
+watch(() => route.query.q, () => { query.value = fromRoute() })
 
 /**
  * Печатать можно только то, что бывает в номере.
@@ -45,19 +43,9 @@ const submit = () => {
     return
   }
 
-  const f = filters.value
-  router.push({
-    path: '/search',
-    query: {
-      q: q || undefined,
-      region: f.region || undefined,
-      price_min: f.price_min || undefined,
-      price_max: f.price_max || undefined,
-      reissue_included: f.reissue || undefined,
-      categories: f.categories.length ? f.categories.join(',') : undefined,
-      sort: f.sort !== 'updated_desc' ? f.sort : undefined
-    }
-  })
+  /* Фильтры остаются в адресе выдачи, меняется только маска */
+  const rest = route.path === '/' ? route.query : {}
+  router.push({ path: '/', query: { ...rest, q: q || undefined } })
 }
 </script>
 
@@ -85,12 +73,6 @@ const submit = () => {
       Латинская раскладка переводится сама.
     </p>
 
-    <details v-if="advanced" class="more">
-      <summary>Дополнительные фильтры</summary>
-      <div class="more-body">
-        <SearchFilters v-model="filters" />
-      </div>
-    </details>
   </form>
 </template>
 
@@ -118,13 +100,6 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
 
 .hint { grid-column: 1 / -1; font-size: 14px; color: var(--text-faint); }
 .hint code { font-family: var(--font-plate); background: var(--surface-sunk); padding: 1px 5px; border-radius: 2px; }
-
-.more { grid-column: 1 / -1; border-top: 1px solid var(--border); padding-top: 4px; }
-.more summary {
-  font-size: 15.5px; font-weight: 600; color: var(--accent); cursor: pointer;
-  min-height: 44px; display: flex; align-items: center;
-}
-.more-body { padding: 8px 0 4px; }
 
 @media (max-width: 620px) {
   .search { grid-template-columns: 1fr; }

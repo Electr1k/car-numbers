@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlateItem } from '~/types/api'
+import { OFFERS, plural } from '@shared/plural'
 
 const props = defineProps<{ card: PlateItem }>()
 
@@ -27,7 +28,7 @@ const hint = computed(() =>
           <span v-if="hint" class="hint">{{ hint }}</span>
         </span>
         <span class="faint">
-          <template v-if="many">{{ card.count }} предложения · </template>
+          <template v-if="many">{{ card.count }} {{ plural(card.count, OFFERS) }} · </template>
           обновлено {{ updated }}
         </span>
       </span>
