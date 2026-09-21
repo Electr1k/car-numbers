@@ -105,7 +105,7 @@ useHead(() => ({
         <div class="left">
           <template v-if="plate">
             <h1 class="visually-hidden">Номер {{ plate.number }}</h1>
-            <PlateSign :number="plate.number" />
+            <PlateTilt :number="plate.number" />
           </template>
           <span v-else class="sk plate-sk" aria-hidden="true" />
 
@@ -187,7 +187,7 @@ useHead(() => ({
 .crumb { display: flex; flex-wrap: wrap; gap: 8px; font-size: 14.5px; color: var(--text-faint); margin-bottom: 20px; }
 .crumb .cur { color: var(--text-muted); }
 .crumb-sk { display: inline-block; width: 104px; height: 15px; }
-.plate-sk { display: block; width: 236px; height: 62px; border-radius: var(--r-md); }
+.plate-sk { display: block; width: 340px; max-width: 100%; height: 92px; border-radius: 9px; }
 .head-sk { display: block; width: 168px; height: 24px; }
 
 .cols { display: grid; grid-template-columns: 2fr 3fr; gap: 32px; align-items: start; }

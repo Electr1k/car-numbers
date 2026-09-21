@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * Настоящий знак — один размер везде: на странице номера и в строке списка.
+ * Настоящий знак: в списках обычный размер, на странице номера — крупный.
  * Знак не инвертируется в тёмной теме — это физический предмет.
  */
-const props = defineProps<{ number: string }>()
+const props = defineProps<{ number: string; large?: boolean }>()
 
 const parts = computed(() => {
   const m = props.number.match(/^(.*?)(\d{2,3})$/)
@@ -12,7 +12,7 @@ const parts = computed(() => {
 </script>
 
 <template>
-  <span class="plate" :aria-label="`Номер ${number}`">
+  <span class="plate" :class="{ large }" :aria-label="`Номер ${number}`">
     <span class="main">{{ parts.main }}</span>
     <span v-if="parts.region" class="reg">
       <span class="n">{{ parts.region }}</span>
@@ -43,8 +43,19 @@ const parts = computed(() => {
 .n { font-size: 29px; line-height: 1; }
 .rus { font-size: 9px; letter-spacing: .06em; line-height: 1; display: flex; align-items: center; gap: 3px; }
 .flag { display: block; border: .5px solid #9a9a9a; }
+
+.large { border-width: 3px; border-radius: 9px; }
+.large .main { padding: 12px 22px 9px; font-size: 68px; }
+.large .reg { border-left-width: 3px; padding: 9px 15px 7px; gap: 4px; }
+.large .n { font-size: 44px; }
+.large .rus { font-size: 13px; gap: 4px; }
+.large .flag { width: 17px; height: 11px; }
+
 @media (max-width: 620px) {
   .main { font-size: 34px; padding: 6px 12px 5px; }
   .n { font-size: 22px; }
+  .large .main { font-size: 50px; padding: 9px 16px 7px; }
+  .large .n { font-size: 33px; }
+  .large .rus { font-size: 11px; }
 }
 </style>
