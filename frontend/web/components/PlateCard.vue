@@ -8,6 +8,9 @@ const money = (v: number) => v.toLocaleString('ru-RU').replace(/ /g, ' ') + ' �
 const updated = computed(() =>
   new Date(props.card.updated_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }))
 
+/* Узкая карточка наклоняется заметнее, широкая строка ленты — едва-едва: иначе её края уезжают на десятки пикселей */
+const { el, style, active, onMove, onLeave } = useTilt(w => Math.min(7, 2400 / w))
+
 const many = computed(() => props.card.count > 1)
 
 /* У многоофферной карточки подпись говорит о комплектации той цены, что показана */
@@ -17,7 +20,7 @@ const hint = computed(() =>
 
 <template>
   <!-- Обёртка нужна только как контейнер запросов: полка перестраивается по своей ширине -->
-  <div class="hold">
+  <div ref="el" class="hold" :class="{ active }" :style="style" @pointermove="onMove" @pointerleave="onLeave">
     <NuxtLink :to="`/plates/${card.id}`" class="row">
       <PlateSign :number="card.number" class="sign" />
 
@@ -47,18 +50,30 @@ const hint = computed(() =>
 </template>
 
 <style scoped>
-.hold { container-type: inline-size; display: grid; }
+.hold { container-type: inline-size; display: grid; perspective: 1200px; }
 
 .row {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 20px 24px; box-shadow: var(--sh-1); color: var(--text); text-decoration: none;
   display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'sign meta price';
   align-items: center; gap: 12px 28px;
+  transform: rotateX(calc(var(--ty) * var(--deg) * -1)) rotateY(calc(var(--tx) * var(--deg)));
+  transform-style: preserve-3d;
+  transition: transform var(--tilt-speed) cubic-bezier(.2, .8, .2, 1), box-shadow .3s ease, border-color .3s ease;
+}
+/* Тень уходит от курсора: карточка как будто приподнимается над лентой */
+.active .row, .active .row:hover {
+  will-change: transform;
+  box-shadow: calc(var(--tx) * -8px) calc(10px - var(--ty) * 4px) 24px -10px rgba(0, 0, 0, .28);
 }
 .row:hover { border-color: var(--border-strong); box-shadow: var(--sh-2); color: var(--text); text-decoration: none; }
 .row:hover .go { color: var(--accent-hover); text-decoration: underline; }
 
-.sign { grid-area: sign; justify-self: start; }
+.sign {
+  grid-area: sign; justify-self: start;
+  transform: translateZ(calc(var(--tilt-on) * 26px));
+  transition: transform var(--tilt-speed) cubic-bezier(.2, .8, .2, 1);
+}
 
 .meta { grid-area: meta; display: grid; gap: 8px; justify-items: start; }
 .line { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }

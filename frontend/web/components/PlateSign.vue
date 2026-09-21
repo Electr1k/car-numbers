@@ -2,6 +2,7 @@
 /**
  * Настоящий знак: в списках обычный размер, на странице номера — крупный.
  * Знак не инвертируется в тёмной теме — это физический предмет.
+ * Внутри наклоняемого родителя (useTilt) надписи и блик смещаются за курсором; без него стоят на месте.
  */
 const props = defineProps<{ number: string; large?: boolean }>()
 
@@ -29,7 +30,7 @@ const parts = computed(() => {
 
 <style scoped>
 .plate {
-  display: inline-flex; align-items: stretch;
+  position: relative; display: inline-flex; align-items: stretch;
   background: var(--plate-face); color: var(--plate-ink);
   border: 2px solid var(--plate-edge); border-radius: 6px; overflow: hidden;
   font-family: var(--font-plate); font-weight: 700; font-variant-numeric: tabular-nums;
@@ -43,6 +44,22 @@ const parts = computed(() => {
 .n { font-size: 29px; line-height: 1; }
 .rus { font-size: 9px; letter-spacing: .06em; line-height: 1; display: flex; align-items: center; gap: 3px; }
 .flag { display: block; border: .5px solid #9a9a9a; }
+
+/* Надписи «ближе» к зрителю, чем пластина: смещаются сильнее её наклона */
+.main, .reg {
+  transform: translate(calc(var(--tx, 0) * 4px), calc(var(--ty, 0) * 3px));
+  transition: transform var(--tilt-speed, .6s) cubic-bezier(.2, .8, .2, 1);
+}
+
+/* Пластина белая, осветлять нечего: «блик» — это тень, отступающая от места, куда светит лампа */
+.plate::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(
+    circle at calc(50% - var(--tx, 0) * 45%) calc(50% - var(--ty, 0) * 60%),
+    rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, .14) 85%
+  );
+  mix-blend-mode: multiply; opacity: var(--tilt-on, 0); transition: opacity .4s ease;
+}
 
 .large { border-width: 3px; border-radius: 9px; }
 .large .main { padding: 12px 22px 9px; font-size: 68px; }
