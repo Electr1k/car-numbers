@@ -29,11 +29,11 @@ func Wrap(logger *slog.Logger, handler HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		WriteAPIError(responseWriter, r, logger, err)
+		writeAPIError(responseWriter, r, logger, err)
 	}
 }
 
-func WriteAPIError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, err error) {
+func writeAPIError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, err error) {
 	status, code, message := http.StatusInternalServerError, "internal_error", "Произошла ошибка"
 
 	switch {
@@ -53,9 +53,6 @@ func WriteAPIError(w http.ResponseWriter, r *http.Request, logger *slog.Logger, 
 	case errors.Is(err, context.Canceled):
 		status, code, message = statusClientClosedRequest, "client_closed_request", "Запрос отменён клиентом"
 		logger.WarnContext(r.Context(), "request canceled by client", logAttrs(r, err)...)
-	case errors.Is(err, service.ErrTooManyRequests):
-		status, code, message = http.StatusTooManyRequests, "too_many_requests", "Превышен лимит запросов"
-		logger.WarnContext(r.Context(), "too many requests", logAttrs(r, err)...)
 	default:
 		logger.ErrorContext(r.Context(), "request failed", logAttrs(r, err)...)
 	}

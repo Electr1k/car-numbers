@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"core-service/internal/http/response"
-	"core-service/internal/service"
 	"fmt"
 	"log/slog"
 	"net"
@@ -96,14 +95,11 @@ func timeout(d time.Duration) func(http.Handler) http.Handler {
 	}
 }
 
-// visitorTTL
-const visitorTTL = 10 * time.Minute
-
-// visitorsCleanupInterval
-const visitorsCleanupInterval = 5 * time.Minute
-
-// realIPHeader - заголовок с IP клиента
-const realIPHeader = "X-Real-IP"
+const (
+	visitorTTL              = 10 * time.Minute
+	visitorsCleanupInterval = 5 * time.Minute
+	realIPHeader            = "X-Real-IP"
+)
 
 // visitor - лимитер клиента и время его последнего запроса
 type visitor struct {
@@ -113,65 +109,84 @@ type visitor struct {
 
 // ipLimiter - рейт лимит запросов по IP клиента
 type ipLimiter struct {
-	mu       sync.Mutex
-	visitors map[string]*visitor
-	limit    rate.Limit
-	burst    int
-	logger   *slog.Logger
+	mu          sync.Mutex
+	visitors    map[string]*visitor
+	lastCleanup time.Time
+	limit       rate.Limit
+	burst       int
+	endpoint    string
+	logger      *slog.Logger
 }
 
-func newIPLimiter(rpm int, logger *slog.Logger) *ipLimiter {
+// rateLimit - лимит по IP для эндпоинта
+func rateLimit(endpoint string, rpm int, logger *slog.Logger) func(http.Handler) http.Handler {
+	if rpm <= 0 {
+		return func(next http.Handler) http.Handler { return next }
+	}
+
+	return newIPLimiter(endpoint, rpm, logger).handler
+}
+
+// newIPLimiter - лимитер на rpm запросов в минуту с одного IP
+func newIPLimiter(endpoint string, rpm int, logger *slog.Logger) *ipLimiter {
 	return &ipLimiter{
-		visitors: make(map[string]*visitor),
-		limit:    rate.Every(time.Minute / time.Duration(rpm)),
-		burst:    rpm,
-		logger:   logger,
+		visitors:    make(map[string]*visitor),
+		lastCleanup: time.Now(),
+		limit:       rate.Every(time.Minute / time.Duration(rpm)),
+		burst:       rpm,
+		endpoint:    endpoint,
+		logger:      logger,
 	}
 }
 
-// middleware - рейт лимит
-func (l *ipLimiter) middleware(next http.Handler) http.Handler {
+// handler - отдает 429, если клиент превысил лимит
+func (l *ipLimiter) handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		limiter := l.visitor(clientIP(r))
-		if !limiter.Allow() {
-			response.WriteAPIError(w, r, l.logger, service.ErrTooManyRequests)
+		now := time.Now()
+		ip := clientIP(r)
+
+		limiter := l.getLimiter(ip, now)
+		if !limiter.AllowN(now, 1) {
+			l.logger.WarnContext(r.Context(), "too many requests",
+				"endpoint", l.endpoint,
+				"ip", ip,
+				"request_id", middleware.GetReqID(r.Context()),
+			)
+			if err := response.WriteError(w, r, http.StatusTooManyRequests, "too_many_requests", "Превышен лимит запросов"); err != nil {
+				l.logger.ErrorContext(r.Context(), "write rate limit response failed", "error", err)
+			}
 			return
 		}
 
-		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(int(limiter.Tokens())))
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(int(limiter.TokensAt(now))))
 
 		next.ServeHTTP(w, r)
 	})
 }
 
 // visitor - возвращает лимитер клиента
-func (l *ipLimiter) visitor(ip string) *rate.Limiter {
+func (l *ipLimiter) getLimiter(ip string, now time.Time) *rate.Limiter {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
+	if now.Sub(l.lastCleanup) > visitorsCleanupInterval {
+		for k, v := range l.visitors {
+			if now.Sub(v.lastSeen) > visitorTTL {
+				delete(l.visitors, k)
+			}
+		}
+		l.lastCleanup = now
+	}
 
 	v, ok := l.visitors[ip]
 	if !ok {
 		v = &visitor{limiter: rate.NewLimiter(l.limit, l.burst)}
 		l.visitors[ip] = v
-		l.logger.Info("New user call endpoint", "ip", ip)
+		l.logger.Info("New user call endpoint", "endpoint", l.endpoint, "ip", ip)
 	}
-	v.lastSeen = time.Now()
+	v.lastSeen = now
 
 	return v.limiter
-}
-
-// cleanup - удаляет клиентов без запросов дольше visitorTTL
-func (l *ipLimiter) cleanup() {
-	for {
-		time.Sleep(visitorsCleanupInterval)
-		l.mu.Lock()
-		for ip, v := range l.visitors {
-			if time.Now().Sub(v.lastSeen) > visitorTTL {
-				delete(l.visitors, ip)
-			}
-		}
-		l.mu.Unlock()
-	}
 }
 
 // clientIP - достает IP из запроса

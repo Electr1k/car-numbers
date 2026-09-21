@@ -34,7 +34,14 @@ type HTTPServer struct {
 	RequestTimeout  time.Duration `env:"REQUEST_TIMEOUT" env-default:"30s"`
 	IdleTimeout     time.Duration `env:"IDLE_TIMEOUT" env-default:"60s"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
-	RateLimitRPM    int           `env:"RATE_LIMIT_RPM" env-default:"20"`
+	RateLimit       RateLimit     `env-prefix:"RATE_LIMIT_"`
+}
+
+// RateLimit - лимиты рпм по эндпоинтам
+type RateLimit struct {
+	Plates    int `env:"PLATES_RPM" env-default:"25"`
+	Plate     int `env:"PLATE_RPM" env-default:"15"`
+	Valuation int `env:"VALUATION_RPM" env-default:"15"`
 }
 
 type LogConfig struct {

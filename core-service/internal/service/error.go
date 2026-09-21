@@ -15,8 +15,6 @@ var (
 	ErrUnprocessable = errors.New("unprocessable")
 
 	ErrInternalServiceError = errors.New("internal service error")
-
-	ErrTooManyRequests = errors.New("too many requests")
 )
 
 type ClientError struct {

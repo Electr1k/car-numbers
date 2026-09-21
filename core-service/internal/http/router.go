@@ -27,17 +27,12 @@ func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) ch
 	r.Use(accessLog(logger))
 	r.Use(recoverer(logger))
 	r.Use(timeout(cfg.RequestTimeout))
-	if cfg.RateLimitRPM > 0 {
-		limiter := newIPLimiter(cfg.RateLimitRPM, logger)
-		go limiter.cleanup()
-		r.Use(limiter.middleware)
-	}
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/plates", response.Wrap(logger, handlers.Plate.FetchPlates))
-		r.Get("/plates/{id}", response.Wrap(logger, handlers.Plate.FetchPlateByID))
+		r.With(rateLimit("/plates", cfg.RateLimit.Plates, logger)).Get("/plates", response.Wrap(logger, handlers.Plate.FetchPlates))
+		r.With(rateLimit("/plates/{id}", cfg.RateLimit.Plate, logger)).Get("/plates/{id}", response.Wrap(logger, handlers.Plate.FetchPlateByID))
 		r.Get("/regions", response.Wrap(logger, handlers.Regions.FetchRegions))
-		r.Get("/valuation", response.Wrap(logger, handlers.Valuation.FetchValuation))
+		r.With(rateLimit("/valuation", cfg.RateLimit.Valuation, logger)).Get("/valuation", response.Wrap(logger, handlers.Valuation.FetchValuation))
 	})
 
 	return r
