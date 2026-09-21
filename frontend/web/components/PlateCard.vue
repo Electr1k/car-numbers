@@ -53,7 +53,7 @@ const hint = computed(() =>
 .hold { container-type: inline-size; display: grid; perspective: 1200px; }
 
 .row {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   padding: 20px 24px; box-shadow: var(--sh-1); color: var(--text); text-decoration: none;
   display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: 'sign meta price';
   align-items: center; gap: 12px 28px;
@@ -65,6 +65,16 @@ const hint = computed(() =>
 .active .row, .active .row:hover {
   will-change: transform;
   box-shadow: calc(var(--tx) * -8px) calc(10px - var(--ty) * 4px) 24px -10px rgba(0, 0, 0, .28);
+}
+/* Подсветка рамки со стороны курсора: градиент под маской, оставляющей только кольцо толщиной в рамку */
+.row::before {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background: radial-gradient(
+    320px circle at calc((var(--tx) + 1) * 50%) calc((var(--ty) + 1) * 50%),
+    var(--accent) 0%, transparent 65%
+  );
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: var(--tilt-on); transition: opacity .3s ease;
 }
 .row:hover { border-color: var(--border-strong); box-shadow: var(--sh-2); color: var(--text); text-decoration: none; }
 .row:hover .go { color: var(--accent-hover); text-decoration: underline; }

@@ -41,6 +41,8 @@ export default defineNuxtConfig({
 
   // Браузер ходит в core-service через тот же хост: без CORS и без публичного адреса core. В продакшене то же правило держит nginx
   routeRules: {
+    // Поиск живёт на главной; старые ссылки ведут туда же, параметры запроса Nitro переносит сам
+    '/search': { redirect: { to: '/', statusCode: 301 } },
     '/api/**': { proxy: `${process.env.CORE_URL || 'http://localhost:8081'}/api/**` }
   },
 
