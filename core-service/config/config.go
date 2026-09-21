@@ -34,6 +34,7 @@ type HTTPServer struct {
 	RequestTimeout  time.Duration `env:"REQUEST_TIMEOUT" env-default:"30s"`
 	IdleTimeout     time.Duration `env:"IDLE_TIMEOUT" env-default:"60s"`
 	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" env-default:"5s"`
+	RateLimitRPM    int           `env:"RATE_LIMIT_RPM" env-default:"20"`
 }
 
 type LogConfig struct {

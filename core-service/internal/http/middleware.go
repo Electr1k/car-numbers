@@ -3,13 +3,18 @@ package http
 import (
 	"context"
 	"core-service/internal/http/response"
+	"core-service/internal/service"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime/debug"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"golang.org/x/time/rate"
 )
 
 func requestIDHeader(next http.Handler) http.Handler {
@@ -89,4 +94,96 @@ func timeout(d time.Duration) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// visitorTTL
+const visitorTTL = 10 * time.Minute
+
+// visitorsCleanupInterval
+const visitorsCleanupInterval = 5 * time.Minute
+
+// realIPHeader - заголовок с IP клиента
+const realIPHeader = "X-Real-IP"
+
+// visitor - лимитер клиента и время его последнего запроса
+type visitor struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+// ipLimiter - рейт лимит запросов по IP клиента
+type ipLimiter struct {
+	mu       sync.Mutex
+	visitors map[string]*visitor
+	limit    rate.Limit
+	burst    int
+	logger   *slog.Logger
+}
+
+func newIPLimiter(rpm int, logger *slog.Logger) *ipLimiter {
+	return &ipLimiter{
+		visitors: make(map[string]*visitor),
+		limit:    rate.Every(time.Minute / time.Duration(rpm)),
+		burst:    rpm,
+		logger:   logger,
+	}
+}
+
+// middleware - рейт лимит
+func (l *ipLimiter) middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		limiter := l.visitor(clientIP(r))
+		if !limiter.Allow() {
+			response.WriteAPIError(w, r, l.logger, service.ErrTooManyRequests)
+			return
+		}
+
+		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(int(limiter.Tokens())))
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// visitor - возвращает лимитер клиента
+func (l *ipLimiter) visitor(ip string) *rate.Limiter {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	v, ok := l.visitors[ip]
+	if !ok {
+		v = &visitor{limiter: rate.NewLimiter(l.limit, l.burst)}
+		l.visitors[ip] = v
+		l.logger.Info("New user call endpoint", "ip", ip)
+	}
+	v.lastSeen = time.Now()
+
+	return v.limiter
+}
+
+// cleanup - удаляет клиентов без запросов дольше visitorTTL
+func (l *ipLimiter) cleanup() {
+	for {
+		time.Sleep(visitorsCleanupInterval)
+		l.mu.Lock()
+		for ip, v := range l.visitors {
+			if time.Now().Sub(v.lastSeen) > visitorTTL {
+				delete(l.visitors, ip)
+			}
+		}
+		l.mu.Unlock()
+	}
+}
+
+// clientIP - достает IP из запроса
+func clientIP(r *http.Request) string {
+	if ip := r.Header.Get(realIPHeader); ip != "" {
+		return ip
+	}
+
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+
+	return host
 }

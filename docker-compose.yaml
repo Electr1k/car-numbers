@@ -85,6 +85,7 @@ services:
     env_file: ./docker/db/.env
     volumes:
       - ./pgdata:/var/lib/postgresql/data
+    restart: always
 
   plate-worker-autonomera:
     <<: *plate-worker
