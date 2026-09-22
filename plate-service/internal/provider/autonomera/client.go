@@ -27,6 +27,8 @@ const (
 	maxResponseBytes = 8 << 20
 
 	maxErrorPreviewBytes = 512
+
+	userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 )
 
 // Client - HTTP-клиент к autonomera777
@@ -54,6 +56,7 @@ func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
+	request.Header.Set("User-Agent", userAgent)
 
 	c.logger.Debug("fetching section page", "url", requestURL)
 
@@ -87,6 +90,7 @@ func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, 
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
+	request.Header.Set("User-Agent", userAgent)
 
 	c.logger.Debug("fetching offer detail page", "url", url)
 
