@@ -40,6 +40,12 @@ const (
 
 	// FeatureKeyDispatchSyncActiveOffers - Вызов синхронизации активных офферов
 	FeatureKeyDispatchSyncActiveOffers FeatureKey = "dispatch-sync-active-offers"
+
+	// FeatureKeyImportProfile - Импорт профиля
+	FeatureKeyImportProfile FeatureKey = "import-profile"
+
+	// FeatureKeyDispatchImportProfile - Вызов импорта профиля
+	FeatureKeyDispatchImportProfile FeatureKey = "dispatch-import-profile"
 )
 
 var (
