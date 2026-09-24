@@ -30,6 +30,8 @@ const (
 
 	offerDetailSelector = "div.wrap-table"
 
+	userSelector = "div.user-info"
+
 	offerDetailNumber = "input.filter-plate-number__input"
 
 	offerDetailRegion = "input.filter-plate-region-code__input"
@@ -41,6 +43,9 @@ const (
 	offerDetailReissueInclude = "div.func__item--key"
 
 	priceNegotiable = "Договорная"
+
+	// lastVisitOnline - пользователь сейчас на сайте
+	lastVisitOnline = "Онлайн"
 )
 
 type Mapper struct {
@@ -303,6 +308,132 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 	}
 
 	return offer, nil
+}
+
+// MapUserToProfile - Маппит страницу пользователя в профиль
+func (m *Mapper) MapUserToProfile(sel *goquery.Selection, externalID string) (domain.Profile, error) {
+	var empty domain.Profile
+
+	raw, err := sel.Html()
+	if err != nil {
+		return empty, fmt.Errorf("%w: read user html: %w", provider.ErrBrokenProfile, err)
+	}
+
+	table := sel.Find(".user-info-data__table.user-data-table")
+	if table.Length() == 0 {
+		return empty, fmt.Errorf("%w: no user-data table for user %q", provider.ErrBrokenProfile, externalID)
+	}
+
+	var (
+		name         string
+		login        *string
+		phone        *string
+		email        *string
+		rating       *int
+		registeredAt *time.Time
+		lastVisitAt  *time.Time
+		parseErr     error
+	)
+
+	table.Find("div.user-data-table__tr").Each(func(i int, s *goquery.Selection) {
+		title := strings.TrimSpace(s.Find(".user-data-table__th").Text())
+		value := strings.TrimSpace(s.Find(".user-data-table__td").Text())
+		switch title {
+		case "Имя":
+			name = value
+		case "Логин":
+			login = optionalString(value)
+		case "Телефон":
+			phone = normalizePhone(value)
+		case "Почта":
+			email = optionalString(strings.ToLower(value))
+		case "Рейтинг":
+			rating, parseErr = parseRating(value)
+		case "Дата регистрации":
+			registeredAt, parseErr = parseDateFromDetail(value)
+		case "Дата последнего входа":
+			lastVisitAt, parseErr = parseLastVisit(value)
+		}
+	})
+
+	if parseErr != nil {
+		return empty, fmt.Errorf("%w: user %q: %w", provider.ErrBrokenProfile, externalID, parseErr)
+	}
+
+	// Имя не заполнено - показываем логин
+	if name == "" && login != nil {
+		name = *login
+	}
+
+	profile, err := domain.NewProfile(
+		nil,
+		domain.ProviderAutonomera,
+		externalID,
+		m.baseURL+getUserPath+externalID,
+		login,
+		name,
+		phone,
+		email,
+		nil,
+		rating,
+		registeredAt,
+		lastVisitAt,
+		raw,
+	)
+	if err != nil {
+		return empty, fmt.Errorf("%w: invalid profile %q: %w", provider.ErrRowSkipped, externalID, err)
+	}
+
+	return *profile, nil
+}
+
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+
+	return &value
+}
+
+func normalizePhone(value string) *string {
+	digits := strings.Map(func(r rune) rune {
+		if unicode.IsDigit(r) {
+			return r
+		}
+
+		return -1
+	}, value)
+
+	if len(digits) != 11 || (digits[0] != '7' && digits[0] != '8') {
+		return nil
+	}
+
+	phone := "7" + digits[1:]
+
+	return &phone
+}
+
+func parseRating(value string) (*int, error) {
+	fields := strings.Fields(value)
+	if len(fields) == 0 {
+		return nil, nil
+	}
+
+	rating, err := strconv.Atoi(fields[0])
+	if err != nil {
+		return nil, fmt.Errorf("invalid rating %q", value)
+	}
+
+	return &rating, nil
+}
+
+func parseLastVisit(value string) (*time.Time, error) {
+	if value == lastVisitOnline {
+		now := time.Now()
+		return &now, nil
+	}
+
+	return parseDateFromDetail(value)
 }
 
 func parseNumberFromDetail(sel *goquery.Selection) (string, error) {

@@ -75,3 +75,13 @@ func (r *Resolver) Resolve(name domain.Provider) (provider.OfferDetailProvider, 
 
 	return nil, fmt.Errorf("provider %s is not supported", name)
 }
+
+// ResolveUserProvider - провайдер юзеров по имени поставщика оффера
+func (r *Resolver) ResolveUserProvider(name domain.Provider) (provider.UserProvider, error) {
+	switch name {
+	case domain.ProviderAutonomera:
+		return r.autonomeraProvider, nil
+	}
+
+	return nil, fmt.Errorf("provider %s is not supported", name)
+}

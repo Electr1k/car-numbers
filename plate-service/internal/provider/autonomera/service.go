@@ -74,3 +74,17 @@ func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithPl
 
 	return s.mapper.MapOfferDetailToDomain(document.Find(offerDetailSelector), offer)
 }
+
+func (s *Service) FetchUser(ctx context.Context, id string) (domain.Profile, error) {
+	response, err := s.client.FetchUserHTML(ctx, id)
+	if err != nil {
+		return domain.Profile{}, err
+	}
+
+	document, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
+	if err != nil {
+		return domain.Profile{}, fmt.Errorf("parse html document: %w", err)
+	}
+
+	return s.mapper.MapUserToProfile(document.Find(userSelector), id)
+}

@@ -21,6 +21,7 @@ const (
 	JobNameImportAnomeraOffers    JobName = "import-anomera-offers"
 	JobNameImportOfferDetail      JobName = "import-offer-detail"
 	JobNameSyncActiveOffers       JobName = "sync-active-offers"
+	JobNameImportProfile          JobName = "import-profile"
 )
 
 type JobStatus string

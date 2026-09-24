@@ -11,6 +11,7 @@ import (
 	"plate-service/internal/usecase/importautonomera"
 	"plate-service/internal/usecase/importgosnomeru"
 	"plate-service/internal/usecase/importofferdetail"
+	"plate-service/internal/usecase/importprofile"
 	"plate-service/internal/usecase/syncactiveoffers"
 
 	"github.com/google/uuid"
@@ -23,6 +24,12 @@ type OfferRepository interface {
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }
 
+type ProfileRepository interface {
+	GetUserByContacts(ctx context.Context, phone *string, email *string) (*domain.User, error)
+	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
+	UpsertProfile(ctx context.Context, profile *domain.Profile) (*domain.Profile, error)
+}
+
 type Features interface {
 	Enabled(ctx context.Context, key domain.FeatureKey) (bool, error)
 }
@@ -32,6 +39,7 @@ type Deps struct {
 	Producer   *job.Producer
 	Providers  *resolver.Resolver
 	Offers     OfferRepository
+	Profiles   ProfileRepository
 	Features   Features
 	AutoNomera config.AutoNomeraConfig
 	Logger     *slog.Logger
@@ -91,5 +99,17 @@ func Register(r *Resolver, d Deps) {
 			d.Features,
 			d.Logger,
 		)),
+	)
+
+	r.Register(
+		domain.JobNameImportProfile,
+		NewImportProfileConsumer(
+			importprofile.New(
+				d.Providers,
+				d.Profiles,
+				d.Features,
+				d.Logger,
+			),
+		),
 	)
 }

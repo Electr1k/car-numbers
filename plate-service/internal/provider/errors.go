@@ -22,4 +22,6 @@ var (
 	ErrRowSkipped = errors.New("row skipped: does not satisfy domain rules")
 	// ErrMapOffer - ошибка маппинга оффера (например изменился номер в оффере)
 	ErrMapOffer = errors.New("failed to map offer")
+	// ErrBrokenProfile - ошибка получения профиля пользователя (вероятно изменилась верстка)
+	ErrBrokenProfile = errors.New("failed to parse profile")
 )

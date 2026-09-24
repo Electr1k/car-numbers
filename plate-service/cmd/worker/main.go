@@ -22,6 +22,7 @@ func main() {
 			Producer:   job.NewProducer(jobRepository, features),
 			Providers:  resolver.New(a.Config, a.Logger),
 			Offers:     postgres.NewOfferRepository(a.Database),
+			Profiles:   postgres.NewProfileRepository(a.Database),
 			Features:   features,
 			AutoNomera: a.Config.AutoNomeraConfig,
 			Logger:     a.Logger,

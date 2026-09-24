@@ -16,6 +16,7 @@ import (
 const (
 	// getNumbersPath - постраничная выдача номеров
 	getNumbersPath = "/ajax/get_numbers.php"
+	getUserPath    = "/user?user_id="
 
 	// Порядок выдачи: свежие сверху
 	orderColumn    = "a.`created`"
@@ -48,55 +49,18 @@ func NewClient(baseURL string, logger *slog.Logger) *Client {
 	return client
 }
 
-// FetchOffersHTML забирает одну страницу предложений и отдаёт сырой HTML
-func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int) ([]byte, error) {
-	requestURL := c.buildURL(section, start)
+func (c *Client) request(ctx context.Context, method string, url string) ([]byte, error) {
+	c.logger.Debug("request", "url", url, "method", method)
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	request, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 	request.Header.Set("User-Agent", userAgent)
 
-	c.logger.Debug("fetching section page", "url", requestURL)
-
 	response, err := c.http.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, requestURL, err)
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != http.StatusOK {
-		return nil, processBadStatus(response, requestURL)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
-	if err != nil {
-		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestURL, err)
-	}
-
-	c.logger.Debug("section page fetched",
-		"section", section,
-		"start", start,
-		"status_code", response.StatusCode,
-		"bytes", len(body))
-
-	return body, nil
-}
-
-// FetchOfferDetailHTML забирает одну страницу предложений и отдаёт сырой HTML
-func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-	request.Header.Set("User-Agent", userAgent)
-
-	c.logger.Debug("fetching offer detail page", "url", url)
-
-	response, err := c.http.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("%w: get %s: %w", provider.ErrProviderUnavailable, url, err)
+		return nil, fmt.Errorf("%w: %s %s: %w", provider.ErrProviderUnavailable, method, url, err)
 	}
 	defer response.Body.Close()
 
@@ -104,17 +68,35 @@ func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, 
 		return nil, processBadStatus(response, url)
 	}
 
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
+	responseByte, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes))
 	if err != nil {
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
 	}
-
-	c.logger.Debug("offer detail fetched",
+	c.logger.Debug("response",
 		"url", url,
-		"status_code", response.StatusCode,
-		"bytes", len(body))
+		"method", method,
+		"status", response.StatusCode,
+		"body", string(responseByte),
+	)
 
-	return body, nil
+	return responseByte, nil
+}
+
+// FetchOffersHTML забирает одну страницу предложений и отдаёт сырой HTML
+func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int) ([]byte, error) {
+	requestURL := c.buildURL(section, start)
+
+	return c.request(ctx, http.MethodGet, requestURL)
+}
+
+// FetchOfferDetailHTML забирает одну страницу предложений и отдаёт сырой HTML
+func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, error) {
+	return c.request(ctx, http.MethodGet, url)
+}
+
+// FetchUserHTML забирает страницу пользователя и отдаёт сырой HTML
+func (c *Client) FetchUserHTML(ctx context.Context, id string) ([]byte, error) {
+	return c.request(ctx, http.MethodGet, c.baseURL+getUserPath+url.QueryEscape(id))
 }
 
 func (c *Client) buildURL(section Section, start int) string {
