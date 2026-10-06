@@ -21,6 +21,9 @@ const (
 	orderColumn    = "a.`created`"
 	orderDirection = "DESC"
 
+	// detailRateLimitTimeout - пауза перед запросом деталки
+	detailRateLimitTimeout = time.Second
+
 	// defaultTimeout - таймаут по умолчанию
 	defaultTimeout = 60 * time.Second
 
@@ -58,7 +61,7 @@ func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int
 	}
 	request.Header.Set("User-Agent", userAgent)
 
-	c.logger.Debug("fetching section page", "url", requestURL)
+	c.logger.DebugContext(ctx, "fetching section page", "url", requestURL)
 
 	response, err := c.http.Do(request)
 	if err != nil {
@@ -75,7 +78,7 @@ func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestURL, err)
 	}
 
-	c.logger.Debug("section page fetched",
+	c.logger.DebugContext(ctx, "section page fetched",
 		"section", section,
 		"start", start,
 		"status_code", response.StatusCode,
@@ -92,7 +95,14 @@ func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, 
 	}
 	request.Header.Set("User-Agent", userAgent)
 
-	c.logger.Debug("fetching offer detail page", "url", url)
+	c.logger.DebugContext(ctx, "fetching offer detail page", "url", url)
+
+	// Спим для рейтлимитов
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(detailRateLimitTimeout):
+	}
 
 	response, err := c.http.Do(request)
 	if err != nil {
@@ -109,7 +119,7 @@ func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, 
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
 	}
 
-	c.logger.Debug("offer detail fetched",
+	c.logger.DebugContext(ctx, "offer detail fetched",
 		"url", url,
 		"status_code", response.StatusCode,
 		"bytes", len(body))

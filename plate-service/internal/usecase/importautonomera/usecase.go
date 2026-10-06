@@ -101,11 +101,11 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		return nil
 	}
 
-	logger.Info("import started", "start_offset", offset, "stop_date", stopDate, "page_limit", pageLimit)
+	logger.InfoContext(ctx, "import started", "start_offset", offset, "stop_date", stopDate, "page_limit", pageLimit)
 
 	// Итоговый лог
 	defer func() {
-		logger.Info("import finished", "result", result, "offset", offset, "saved", saved, "skipped", skipped, "dispatched", dispatched)
+		logger.InfoContext(ctx, "import finished", "result", result, "offset", offset, "saved", saved, "skipped", skipped, "dispatched", dispatched)
 	}()
 
 	for page := 1; page <= pageLimit; page++ {
@@ -128,7 +128,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 				return nil
 			}
 
-			logger.Warn("empty page", "page", page, "offset", offset)
+			logger.WarnContext(ctx, "empty page", "page", page, "offset", offset)
 			offset += uc.config.BatchSize
 
 			continue
@@ -137,7 +137,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 
 		// Проверка максимального количества кривых офферов
 		if err := checkBrokenOffers(offers); err != nil {
-			logger.Error("stopping import",
+			logger.ErrorContext(ctx, "stopping import",
 				"page", page,
 				"offset", offset,
 				"error", err,
@@ -172,7 +172,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		skipped += len(offers.RowErrors)
 		dispatched += dispatchedOnPage
 
-		logPage(logger, page, offset, offers, len(savedOnPage), dispatchedOnPage)
+		logPage(ctx, logger, page, offset, offers, len(savedOnPage), dispatchedOnPage)
 
 		// Проверка нижнего порога по дате
 		if checkStopDate(offers, stopDate) {
@@ -209,7 +209,7 @@ func checkBrokenOffers(result provider.FetchResult) error {
 }
 
 // logPage - итог по обработанной странице
-func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult, saved, dispatched int) {
+func logPage(ctx context.Context, logger *slog.Logger, page, offset int, result provider.FetchResult, saved, dispatched int) {
 	attrs := []any{
 		"page", page,
 		"offset", offset,
@@ -220,10 +220,10 @@ func logPage(logger *slog.Logger, page, offset int, result provider.FetchResult,
 	}
 
 	if len(result.RowErrors) == 0 {
-		logger.Info("page processed", attrs...)
+		logger.InfoContext(ctx, "page processed", attrs...)
 		return
 	}
 
-	logger.Warn("page processed with skipped rows",
+	logger.WarnContext(ctx, "page processed with skipped rows",
 		append(attrs, "errors", result.ErrorMessages())...)
 }

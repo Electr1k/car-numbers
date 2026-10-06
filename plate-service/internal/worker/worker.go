@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"plate-service/internal/domain"
 	"plate-service/internal/job/consumer"
+	pkglogger "plate-service/pkg/logger"
 	"runtime/debug"
 	"time"
 
@@ -120,8 +121,14 @@ func (w *Worker) processNext(ctx context.Context, workerLogger *slog.Logger) (bo
 	logger := workerLogger.With("job_id", domainJob.ID, "job", domainJob.Name, "queue", domainJob.Queue)
 	logger.Info("job taken")
 
+	jobCtx := pkglogger.WithAttrs(ctx,
+		slog.String("job_id", domainJob.ID.String()),
+		slog.String("job", string(domainJob.Name)),
+		slog.String("queue", string(domainJob.Queue)),
+	)
+
 	started := time.Now()
-	handleErr := w.handle(ctx, *domainJob)
+	handleErr := w.handle(jobCtx, *domainJob)
 
 	if handleErr != nil && ctx.Err() != nil {
 		logger.Info("job interrupted by shutdown, will be retaken after lock expires")

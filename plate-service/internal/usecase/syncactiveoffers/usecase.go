@@ -58,7 +58,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 	}
 
 	logger := uc.logger.With("provider", params.Provider)
-	logger.Info("sync started")
+	logger.InfoContext(ctx, "sync started")
 
 	offerIds, err := uc.repository.GetOfferIdsByProviderAndStatus(ctx, params.Provider, domain.OfferStatusActive)
 	if err != nil {
@@ -76,7 +76,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		}
 	}
 
-	logger.Info("sync finished", "offers", len(offerIds), "dispatched", dispatched)
+	logger.InfoContext(ctx, "sync finished", "offers", len(offerIds), "dispatched", dispatched)
 
 	return nil
 }

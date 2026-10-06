@@ -74,7 +74,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		}
 	}
 
-	uc.logger.Info("start import offers by enumeration id", "startID", startID, "endID", endID)
+	uc.logger.InfoContext(ctx, "start import offers by enumeration id", "startID", startID, "endID", endID)
 
 	for ; startID <= endID; startID++ {
 		select {
@@ -100,13 +100,13 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		if err != nil {
 			msg := "failed to process offer"
 			if errors.Is(err, provider.ErrNotFound) || errors.Is(err, provider.ErrRowSkipped) {
-				uc.logger.Debug(msg, "err", err, "external_id", externalID)
+				uc.logger.DebugContext(ctx, msg, "err", err, "external_id", externalID)
 			} else {
-				uc.logger.Error(msg, "err", err, "external_id", externalID)
+				uc.logger.ErrorContext(ctx, msg, "err", err, "external_id", externalID)
 			}
 		}
 	}
-	uc.logger.Info("end import offers by enumeration id", "endID", endID)
+	uc.logger.InfoContext(ctx, "end import offers by enumeration id", "endID", endID)
 
 	return nil
 }

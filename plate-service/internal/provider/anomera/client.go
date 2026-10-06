@@ -59,7 +59,7 @@ func (c *Client) FetchOffers(ctx context.Context, page int) ([]byte, error) {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	c.logger.Debug("fetching page", "url", requestURL)
+	c.logger.DebugContext(ctx, "fetching page", "url", requestURL)
 
 	response, err := c.http.Do(request)
 	if err != nil {
@@ -76,7 +76,7 @@ func (c *Client) FetchOffers(ctx context.Context, page int) ([]byte, error) {
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, requestURL, err)
 	}
 
-	c.logger.Debug("page fetched",
+	c.logger.DebugContext(ctx, "page fetched",
 		"page", page,
 		"status_code", response.StatusCode,
 		"bytes", len(body))
@@ -99,7 +99,7 @@ func (c *Client) FetchOfferDetail(ctx context.Context, url string) ([]byte, erro
 		return nil, fmt.Errorf("create request: %w", err)
 	}
 
-	c.logger.Debug("fetching offer detail page", "url", url)
+	c.logger.DebugContext(ctx, "fetching offer detail page", "url", url)
 
 	response, err := c.http.Do(request)
 	if err != nil {
@@ -116,7 +116,7 @@ func (c *Client) FetchOfferDetail(ctx context.Context, url string) ([]byte, erro
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
 	}
 
-	c.logger.Debug("offer detail fetched",
+	c.logger.DebugContext(ctx, "offer detail fetched",
 		"url", url,
 		"status_code", response.StatusCode,
 		"bytes", len(body))

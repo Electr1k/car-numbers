@@ -33,15 +33,15 @@ func NewResolver(
 func New(cfg *config.Config, logger *slog.Logger) *Resolver {
 	return NewResolver(
 		autonomera.NewService(
-			autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, logger),
+			autonomera.NewClient(cfg.AutoNomeraConfig.BaseURL, logger.With("provider", domain.ProviderAutonomera)),
 			autonomera.NewMapper(cfg.AutoNomeraConfig.BaseURL),
 		),
 		gosnomeru.NewService(
-			gosnomeru.NewClient(cfg.GosnomeruConfig.BaseURL, logger),
+			gosnomeru.NewClient(cfg.GosnomeruConfig.BaseURL, logger.With("provider", domain.ProviderGosnomeru)),
 			gosnomeru.NewMapper(cfg.GosnomeruConfig.BaseURL),
 		),
 		anomera.NewService(
-			anomera.NewClient(cfg.AnomeraConfig.BaseURL, logger),
+			anomera.NewClient(cfg.AnomeraConfig.BaseURL, logger.With("provider", domain.ProviderAnomera)),
 			anomera.NewMapper(cfg.AnomeraConfig.BaseURL),
 		),
 	)
