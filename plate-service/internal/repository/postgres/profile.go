@@ -53,6 +53,36 @@ ON CONFLICT (provider, external_id) DO UPDATE SET
 RETURNING id, user_id, provider, external_id, url, login, name, phone, email, badge, rating,
 	registered_at, last_visit_at, raw, created_at, updated_at;`
 
+const getExistingProfileExternalIDsQuery = `
+SELECT external_id
+FROM profiles
+WHERE provider = $1 AND external_id = ANY($2);`
+
+// GetExistingProfileExternalIDs - Внешние идентификаторы профилей, которые уже есть в базе
+func (r *ProfileRepository) GetExistingProfileExternalIDs(
+	ctx context.Context,
+	provider domain.Provider,
+	externalIDs []string,
+) ([]string, error) {
+	rows, err := r.postgres.pool.Query(ctx, getExistingProfileExternalIDsQuery, provider, externalIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get existing profiles: %w", err)
+	}
+	defer rows.Close()
+
+	existing := make([]string, 0, len(externalIDs))
+	for rows.Next() {
+		var externalID string
+		if err := rows.Scan(&externalID); err != nil {
+			return nil, fmt.Errorf("scan existing profile: %w", err)
+		}
+
+		existing = append(existing, externalID)
+	}
+
+	return existing, rows.Err()
+}
+
 // GetUserByContacts - Пользователь по телефону или email
 func (r *ProfileRepository) GetUserByContacts(ctx context.Context, phone *string, email *string) (*domain.User, error) {
 	if phone == nil && email == nil {

@@ -17,10 +17,16 @@ const (
 	// getNumbersPath - постраничная выдача номеров
 	getNumbersPath = "/ajax/get_numbers.php"
 	getUserPath    = "/user?user_id="
+	getUsersPath   = "/ajax/get_usersrating.php"
 
-	// Порядок выдачи: свежие сверху
-	orderColumn    = "a.`created`"
-	orderDirection = "DESC"
+	// Порядок выдачи офферов
+	orderColumnOffers    = "a.`created`"
+	orderDirectionOffers = "DESC"
+
+	// Порядок выдачи профилей
+	usersBlog           = "usersrating"
+	orderColumnUsers    = "registerDate"
+	orderDirectionUsers = "DESC"
 
 	// defaultTimeout - таймаут по умолчанию
 	defaultTimeout = 60 * time.Second
@@ -94,6 +100,17 @@ func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, 
 	return c.request(ctx, http.MethodGet, url)
 }
 
+// FetchUsersHTML забирает страницу списка пользователей и отдаёт сырой HTML
+func (c *Client) FetchUsersHTML(ctx context.Context, start int) ([]byte, error) {
+	query := url.Values{}
+	query.Set("blog", usersBlog)
+	query.Set("order", orderColumnUsers)
+	query.Set("dir", orderDirectionUsers)
+	query.Set("start", strconv.Itoa(start))
+
+	return c.request(ctx, http.MethodGet, c.baseURL+getUsersPath+"?"+query.Encode())
+}
+
 // FetchUserHTML забирает страницу пользователя и отдаёт сырой HTML
 func (c *Client) FetchUserHTML(ctx context.Context, id string) ([]byte, error) {
 	return c.request(ctx, http.MethodGet, c.baseURL+getUserPath+url.QueryEscape(id))
@@ -101,8 +118,8 @@ func (c *Client) FetchUserHTML(ctx context.Context, id string) ([]byte, error) {
 
 func (c *Client) buildURL(section Section, start int) string {
 	query := url.Values{}
-	query.Set("order", orderColumn)
-	query.Set("dir", orderDirection)
+	query.Set("order", orderColumnOffers)
+	query.Set("dir", orderDirectionOffers)
 	query.Set("start", strconv.Itoa(start))
 
 	if value, ok := section.queryValue(); ok {

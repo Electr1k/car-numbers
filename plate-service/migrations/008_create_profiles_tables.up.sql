@@ -70,3 +70,17 @@ VALUES(
     'dispatch-import-profile',
     'Вызов импорта профиля пользователя (из любого провайдера)'
 ) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a0d57d-0f80-7806-af31-7ed47390044e',
+    'import-autonomera-profiles',
+    'Импорт профилей из autonomera777'
+) ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO features (id, key, name)
+VALUES(
+    '01a0d57d-0f8a-767e-a5e8-7eaba33e42a2',
+    'dispatch-import-autonomera-profiles',
+    'Вызов импорта профилей из autonomera777'
+) ON CONFLICT (key) DO NOTHING;

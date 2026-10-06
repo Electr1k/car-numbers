@@ -9,6 +9,7 @@ import (
 	"plate-service/internal/provider/resolver"
 	"plate-service/internal/usecase/importanomera"
 	"plate-service/internal/usecase/importautonomera"
+	"plate-service/internal/usecase/importautonomeraprofiles"
 	"plate-service/internal/usecase/importgosnomeru"
 	"plate-service/internal/usecase/importofferdetail"
 	"plate-service/internal/usecase/importprofile"
@@ -28,6 +29,7 @@ type ProfileRepository interface {
 	GetUserByContacts(ctx context.Context, phone *string, email *string) (*domain.User, error)
 	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
 	UpsertProfile(ctx context.Context, profile *domain.Profile) (*domain.Profile, error)
+	GetExistingProfileExternalIDs(ctx context.Context, provider domain.Provider, externalIDs []string) ([]string, error)
 }
 
 type Features interface {
@@ -99,6 +101,20 @@ func Register(r *Resolver, d Deps) {
 			d.Features,
 			d.Logger,
 		)),
+	)
+
+	r.Register(
+		domain.JobNameImportAutonomeraProfiles,
+		NewImportAutonomeraProfilesConsumer(
+			importautonomeraprofiles.New(
+				d.Providers.Autonomera(),
+				d.Producer,
+				d.Profiles,
+				d.Features,
+				d.AutoNomera,
+				d.Logger,
+			),
+		),
 	)
 
 	r.Register(

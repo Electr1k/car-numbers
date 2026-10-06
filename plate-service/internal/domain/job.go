@@ -16,12 +16,13 @@ var ErrNoJob = errors.New("no job available")
 type JobName string
 
 const (
-	JobNameImportAutonomeraOffers JobName = "import-autonomera-offers"
-	JobNameImportGosnomeruOffers  JobName = "import-gosnomeru-offers"
-	JobNameImportAnomeraOffers    JobName = "import-anomera-offers"
-	JobNameImportOfferDetail      JobName = "import-offer-detail"
-	JobNameSyncActiveOffers       JobName = "sync-active-offers"
-	JobNameImportProfile          JobName = "import-profile"
+	JobNameImportAutonomeraOffers   JobName = "import-autonomera-offers"
+	JobNameImportGosnomeruOffers    JobName = "import-gosnomeru-offers"
+	JobNameImportAnomeraOffers      JobName = "import-anomera-offers"
+	JobNameImportOfferDetail        JobName = "import-offer-detail"
+	JobNameSyncActiveOffers         JobName = "sync-active-offers"
+	JobNameImportProfile            JobName = "import-profile"
+	JobNameImportAutonomeraProfiles JobName = "import-autonomera-profiles"
 )
 
 type JobStatus string

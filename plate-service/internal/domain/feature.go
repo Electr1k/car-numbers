@@ -46,6 +46,12 @@ const (
 
 	// FeatureKeyDispatchImportProfile - Вызов импорта профиля
 	FeatureKeyDispatchImportProfile FeatureKey = "dispatch-import-profile"
+
+	// FeatureKeyImportAutonomeraProfiles - Импорт профилей из autonomera777
+	FeatureKeyImportAutonomeraProfiles FeatureKey = "import-autonomera-profiles"
+
+	// FeatureKeyDispatchImportAutonomeraProfiles - Вызов импорта профилей из autonomera777
+	FeatureKeyDispatchImportAutonomeraProfiles FeatureKey = "dispatch-import-autonomera-profiles"
 )
 
 var (

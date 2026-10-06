@@ -16,6 +16,9 @@ const (
 	// offerRowSelector - строка таблицы с одним предложением
 	offerRowSelector = "a.table__tr--td"
 
+	// userRowSelector - строка таблицы с одним предложением
+	userRowSelector = "a.table__tr--td"
+
 	// dateSelector - ячейка с датой публикации
 	dateSelector = ".table-date span"
 
@@ -310,8 +313,24 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 	return offer, nil
 }
 
-// MapUserToProfile - Маппит страницу пользователя в профиль
-func (m *Mapper) MapUserToProfile(sel *goquery.Selection, externalID string) (domain.Profile, error) {
+// MapUserToExternalProfileId - Маппит строку профиля в id пользователя autonomera
+func (m *Mapper) MapUserToExternalProfileId(sel *goquery.Selection) (string, error) {
+	var result = ""
+
+	href, err := requiredAttr(sel, "href")
+	if err != nil {
+		return result, err
+	}
+	result = strings.Replace(href, "/user?user_id=", "", -1)
+	if result == "" {
+		return result, fmt.Errorf("%w: empty user id", provider.ErrBrokenProfile)
+	}
+
+	return result, nil
+}
+
+// MapUserDetailToProfile - Маппит страницу пользователя в профиль
+func (m *Mapper) MapUserDetailToProfile(sel *goquery.Selection, externalID string) (domain.Profile, error) {
 	var empty domain.Profile
 
 	raw, err := sel.Html()
@@ -360,9 +379,11 @@ func (m *Mapper) MapUserToProfile(sel *goquery.Selection, externalID string) (do
 		return empty, fmt.Errorf("%w: user %q: %w", provider.ErrBrokenProfile, externalID, parseErr)
 	}
 
-	// Имя не заполнено - показываем логин
-	if name == "" && login != nil {
+	if len(name) == 0 && login != nil {
 		name = *login
+	}
+	if lastVisitAt == nil && registeredAt != nil {
+		lastVisitAt = registeredAt
 	}
 
 	profile, err := domain.NewProfile(

@@ -75,7 +75,37 @@ func (s *Service) FetchOfferDetail(ctx context.Context, offer domain.OfferWithPl
 	return s.mapper.MapOfferDetailToDomain(document.Find(offerDetailSelector), offer)
 }
 
-func (s *Service) FetchUser(ctx context.Context, id string) (domain.Profile, error) {
+func (s *Service) FetchProfileExternalIds(ctx context.Context, offset int) ([]string, error) {
+	var result = make([]string, 0)
+
+	response, err := s.client.FetchUsersHTML(ctx, offset)
+	if err != nil {
+		return result, err
+	}
+
+	document, err := goquery.NewDocumentFromReader(bytes.NewReader(response))
+	if err != nil {
+		return result, fmt.Errorf("parse html document: %w", err)
+	}
+
+	document.Find(userRowSelector).Each(func(index int, row *goquery.Selection) {
+		id, mapError := s.mapper.MapUserToExternalProfileId(row)
+		if mapError != nil {
+			err = mapError
+			return
+		}
+
+		result = append(result, id)
+	})
+
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
+}
+
+func (s *Service) FetchProfile(ctx context.Context, id string) (domain.Profile, error) {
 	response, err := s.client.FetchUserHTML(ctx, id)
 	if err != nil {
 		return domain.Profile{}, err
@@ -86,5 +116,5 @@ func (s *Service) FetchUser(ctx context.Context, id string) (domain.Profile, err
 		return domain.Profile{}, fmt.Errorf("parse html document: %w", err)
 	}
 
-	return s.mapper.MapUserToProfile(document.Find(userSelector), id)
+	return s.mapper.MapUserDetailToProfile(document.Find(userSelector), id)
 }

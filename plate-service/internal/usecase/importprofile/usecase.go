@@ -10,7 +10,7 @@ import (
 
 // resolver - выбирает провайдера профилей по имени поставщика
 type resolver interface {
-	ResolveUserProvider(name domain.Provider) (provider.UserProvider, error)
+	ResolveProfileProvider(name domain.Provider) (provider.ProfileProvider, error)
 }
 
 type profileRepository interface {
@@ -61,12 +61,12 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 
 	logger.Info("import profile started")
 
-	userProvider, err := uc.resolver.ResolveUserProvider(params.Provider)
+	profileProvider, err := uc.resolver.ResolveProfileProvider(params.Provider)
 	if err != nil {
 		return err
 	}
 
-	profile, err := userProvider.FetchUser(ctx, params.ProfileExternalID)
+	profile, err := profileProvider.FetchProfile(ctx, params.ProfileExternalID)
 	if err != nil {
 		return err
 	}
