@@ -221,3 +221,46 @@ func TestParsePriceSeparators(t *testing.T) {
 		})
 	}
 }
+
+func TestParseProfileExternalIDFromDetail(t *testing.T) {
+	visibleID := "61796"
+
+	cases := map[string]struct {
+		html string
+		want *string
+	}{
+		"visible profile": {
+			html: `<div class="user-data-table__td"><a href="/user?user_id=61796" class="table-user"><div class="table-user__name"> Vladisval001 </div></a></div>`,
+			want: &visibleID,
+		},
+		"hidden profile": {
+			html: `<div class="user-data-table__td"><a href="javascript:;" class="table-user"><div class="table-user__name"><span class="item-notextended">Скрыт</span></div></a></div>`,
+		},
+		"empty id": {
+			html: `<div class="user-data-table__td"><a href="/user?user_id=" class="table-user"></a></div>`,
+		},
+		"no link": {
+			html: `<div class="user-data-table__td"></div>`,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			document, err := goquery.NewDocumentFromReader(strings.NewReader(tc.html))
+			if err != nil {
+				t.Fatalf("parse html: %v", err)
+			}
+
+			got := parseProfileExternalIDFromDetail(document.Find(".user-data-table__td"))
+
+			switch {
+			case tc.want == nil && got != nil:
+				t.Fatalf("want nil, got %q", *got)
+			case tc.want != nil && got == nil:
+				t.Fatalf("want %q, got nil", *tc.want)
+			case tc.want != nil && *got != *tc.want:
+				t.Fatalf("want %q, got %q", *tc.want, *got)
+			}
+		})
+	}
+}

@@ -45,6 +45,8 @@ const (
 
 	offerDetailReissueInclude = "div.func__item--key"
 
+	offerDetailProfileLink = "a.table-user"
+
 	priceNegotiable = "Договорная"
 
 	// lastVisitOnline - пользователь сейчас на сайте
@@ -121,6 +123,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection, status domain.OfferSta
 		&postedAt,
 		m.baseURL+href,
 		raw,
+		nil,
 		nil,
 		nil,
 	)
@@ -251,11 +254,12 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 	reissueIncluded := parseReissueFromDetailed(sel)
 
 	var (
-		price       *float64
-		views       *int
-		postedAt    *time.Time
-		refreshedAt *time.Time
-		parseErr    error
+		price             *float64
+		views             *int
+		postedAt          *time.Time
+		refreshedAt       *time.Time
+		profileExternalID *string
+		parseErr          error
 	)
 
 	table := sel.Find(".article__table.user-data-table")
@@ -282,6 +286,8 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 			postedAt, parseErr = parseDateFromDetail(value.Text())
 		case "Дата поднятия":
 			refreshedAt, parseErr = parseDateFromDetail(value.Text())
+		case "Логин":
+			profileExternalID = parseProfileExternalIDFromDetail(value)
 		}
 	})
 
@@ -305,6 +311,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 		refreshedAt,
 		raw,
 		comment,
+		profileExternalID,
 	)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)
@@ -474,6 +481,18 @@ func parseNumberFromDetail(sel *goquery.Selection) (string, error) {
 	}
 
 	return strings.Join(parts, "") + region, nil
+}
+
+// parseProfileExternalIDFromDetail - id профиля из ссылки на продавца, у скрытого профиля ссылки нет
+func parseProfileExternalIDFromDetail(sel *goquery.Selection) *string {
+	href, _ := sel.Find(offerDetailProfileLink).Attr("href")
+
+	id, found := strings.CutPrefix(href, getUserPath)
+	if !found {
+		return nil
+	}
+
+	return optionalString(strings.TrimSpace(id))
 }
 
 func parseWhereaboutsFromDetail(sel *goquery.Selection) *domain.OfferWhereabouts {

@@ -51,11 +51,11 @@ comment on column profiles.registered_at is 'Дата регистрации у 
 comment on column profiles.last_visit_at is 'Дата последнего визита у провайдера';
 comment on column profiles.raw is 'Сырой профиль поставщика';
 
-ALTER TABLE offers ADD COLUMN IF NOT EXISTS profile_external_id UUID REFERENCES profiles(id);
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS profile_external_id text;
 
 CREATE INDEX IF NOT EXISTS idx_offers_profile_external_id ON offers(profile_external_id);
 
-comment on column offers.profile_external_id is 'Пользователь провайдера, разместивший предложение';
+comment on column offers.profile_external_id is 'Идентификатор пользователя у провайдера, разместившего предложение';
 
 INSERT INTO features (id, key, name)
 VALUES(

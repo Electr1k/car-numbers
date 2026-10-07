@@ -26,6 +26,7 @@ func newTestOffer(plateID uuid.UUID, provider Provider, status OfferStatus) (*Of
 		"<tr></tr>",
 		nil,
 		nil,
+		nil,
 	)
 }
 
@@ -86,6 +87,7 @@ func TestRestoreOfferRequiresID(t *testing.T) {
 		&postedAt,
 		"https://example.com/42",
 		"<tr></tr>",
+		nil,
 		nil,
 		nil,
 		nil,

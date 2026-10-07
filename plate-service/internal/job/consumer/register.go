@@ -88,6 +88,8 @@ func Register(r *Resolver, d Deps) {
 		NewImportOfferDetailConsumer(importofferdetail.New(
 			d.Providers,
 			d.Offers,
+			d.Profiles,
+			d.Producer,
 			d.Features,
 			d.Logger,
 		)),

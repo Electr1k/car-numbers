@@ -78,6 +78,7 @@ func (m *Mapper) MapOfferToDomain(externalOffer OffersItem) (domain.OfferWithPla
 		string(raw),
 		nil,
 		nil,
+		nil,
 	)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, externalOffer.ID, err)
@@ -140,6 +141,7 @@ func (m *Mapper) ApplyOfferDetailToDomain(response OfferDetail, offer domain.Off
 		newOffer.Offer.RefreshedAt,
 		*newOffer.Offer.RawDetailed,
 		newOffer.Offer.Comment,
+		nil,
 	)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrRowSkipped, err)
@@ -212,6 +214,7 @@ func (m *Mapper) MapOfferDetailToDomain(response OfferDetail) (domain.OfferWithP
 		rawStr,
 		&rawStr,
 		comment,
+		nil,
 	)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, response.ID, err)

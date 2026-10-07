@@ -241,6 +241,7 @@ func (m *Mapper) MapOfferToDomain(sel *goquery.Selection) (domain.OfferWithPlate
 		raw,
 		nil,
 		nil,
+		nil,
 	)
 	if err != nil {
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, ref.externalID, err)
@@ -276,6 +277,7 @@ func (m *Mapper) ApplyOfferDetailToDomain(sel *goquery.Selection, offer domain.O
 		newOffer.Offer.RefreshedAt,
 		*newOffer.Offer.RawDetailed,
 		newOffer.Offer.Comment,
+		nil,
 	)
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrRowSkipped, err)
@@ -561,6 +563,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 		raw,
 		&raw,
 		parseComment(product),
+		nil,
 	)
 	if err != nil {
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, ref.externalID, err)

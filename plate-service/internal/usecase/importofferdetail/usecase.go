@@ -20,29 +20,43 @@ type offerRepository interface {
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }
 
+type profileRepository interface {
+	GetExistingProfileExternalIDs(ctx context.Context, provider domain.Provider, externalIDs []string) ([]string, error)
+}
+
+type profileDispatcher interface {
+	DispatchImportProfile(ctx context.Context, provider domain.Provider, profileExternalId string) (bool, error)
+}
+
 type feature interface {
 	Enabled(ctx context.Context, key domain.FeatureKey) (bool, error)
 }
 
 // UseCase - догрузка деталки по офферу
 type UseCase struct {
-	resolver   resolver
-	repository offerRepository
-	features   feature
-	logger     *slog.Logger
+	resolver          resolver
+	offerRepository   offerRepository
+	profileRepository profileRepository
+	profileDispatcher profileDispatcher
+	features          feature
+	logger            *slog.Logger
 }
 
 func New(
 	resolver resolver,
-	repository offerRepository,
+	offerRepository offerRepository,
+	profileRepository profileRepository,
+	profileDispatcher profileDispatcher,
 	features feature,
 	logger *slog.Logger,
 ) *UseCase {
 	return &UseCase{
-		resolver:   resolver,
-		repository: repository,
-		features:   features,
-		logger:     logger,
+		resolver:          resolver,
+		offerRepository:   offerRepository,
+		profileRepository: profileRepository,
+		profileDispatcher: profileDispatcher,
+		features:          features,
+		logger:            logger,
 	}
 }
 
@@ -60,7 +74,7 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 
 	logger.InfoContext(ctx, "import detail started")
 
-	offer, err := uc.repository.GetOfferByID(ctx, id)
+	offer, err := uc.offerRepository.GetOfferByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -75,11 +89,27 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	err = uc.repository.UpdateOffer(ctx, enriched.Offer)
+	err = uc.offerRepository.UpdateOffer(ctx, enriched.Offer)
 	if err != nil {
 		return err
 	}
-	logger.InfoContext(ctx, "import detail finished")
+
+	dispatched := false
+	if enriched.Offer.ProfileExternalId != nil {
+		ids, err := uc.profileRepository.GetExistingProfileExternalIDs(ctx, offer.Offer.Provider, []string{*enriched.Offer.ProfileExternalId})
+		if err != nil {
+			return err
+		}
+
+		if len(ids) == 0 {
+			dispatched, err = uc.profileDispatcher.DispatchImportProfile(ctx, offer.Offer.Provider, *enriched.Offer.ProfileExternalId)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	logger.InfoContext(ctx, "import detail finished", "profile_dispatched", dispatched)
 
 	return nil
 }

@@ -36,23 +36,24 @@ const (
 
 // Offer - Предложение
 type Offer struct {
-	ID              uuid.UUID         `validate:"required"`                                    // ID - Идентификатор
-	PlateID         uuid.UUID         `validate:"required"`                                    // PlateID - Идентификатор номера
-	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найдено предложение
-	ExternalID      string            `validate:"required"`                                    // ExternalID - Идентификатор у провайдера
-	Price           *float64          `validate:"omitempty,gt=0"`                              // Price - Цена
-	Status          OfferStatus       `validate:"required,oneof=active sold inactive"`         // Status - Статус предложения
-	Whereabouts     *OfferWhereabouts `validate:"omitempty,oneof=on-car on-storage"`           // Whereabouts - Где находится номер (на авто/хранении)
-	ReissueIncluded *bool             `validate:"omitempty"`                                   // ReissueIncluded - Переоформление включено в стоимость
-	ViewCount       *int              `validate:"omitempty,gte=0"`                             // ViewCount - Число просмотров у провайдера
-	PostedAt        *time.Time        `validate:"required"`                                    // PostedAt - Дата создания предложения у провайдера
-	RefreshedAt     *time.Time        `validate:"required"`                                    // RefreshedAt - Дата поднятия/обновления предложения у провайдера
-	URL             string            `validate:"required"`                                    // URL - Ссылка на предложение
-	Raw             string            `validate:"required"`                                    // Raw - Сырой объект поставщика
-	RawDetailed     *string           `validate:"omitempty"`                                   // RawDetailed - Сырой объект поставщика с детальной информацией
-	Comment         *string           `validate:"omitempty"`                                   // Comment - Комментарий
-	CreatedAt       *time.Time
-	UpdatedAt       *time.Time
+	ID                uuid.UUID         `validate:"required"`                                    // ID - Идентификатор
+	PlateID           uuid.UUID         `validate:"required"`                                    // PlateID - Идентификатор номера
+	Provider          Provider          `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найдено предложение
+	ExternalID        string            `validate:"required"`                                    // ExternalID - Идентификатор у провайдера
+	Price             *float64          `validate:"omitempty,gt=0"`                              // Price - Цена
+	Status            OfferStatus       `validate:"required,oneof=active sold inactive"`         // Status - Статус предложения
+	Whereabouts       *OfferWhereabouts `validate:"omitempty,oneof=on-car on-storage"`           // Whereabouts - Где находится номер (на авто/хранении)
+	ReissueIncluded   *bool             `validate:"omitempty"`                                   // ReissueIncluded - Переоформление включено в стоимость
+	ViewCount         *int              `validate:"omitempty,gte=0"`                             // ViewCount - Число просмотров у провайдера
+	PostedAt          *time.Time        `validate:"required"`                                    // PostedAt - Дата создания предложения у провайдера
+	RefreshedAt       *time.Time        `validate:"required"`                                    // RefreshedAt - Дата поднятия/обновления предложения у провайдера
+	URL               string            `validate:"required"`                                    // URL - Ссылка на предложение
+	Raw               string            `validate:"required"`                                    // Raw - Сырой объект поставщика
+	RawDetailed       *string           `validate:"omitempty"`                                   // RawDetailed - Сырой объект поставщика с детальной информацией
+	Comment           *string           `validate:"omitempty"`                                   // Comment - Комментарий
+	ProfileExternalId *string           `validate:"omitempty"`                                   // ProfileExternalId - Идентификатор профиля у провайдера
+	CreatedAt         *time.Time
+	UpdatedAt         *time.Time
 }
 
 // ApplyDetail - Добавление детальной информации в предложение
@@ -66,6 +67,7 @@ func (o *Offer) ApplyDetail(
 	refreshAt *time.Time,
 	rawDetailed string,
 	comment *string,
+	profileExternalId *string,
 ) (*Offer, error) {
 	o.Status = status
 	o.Price = price
@@ -80,6 +82,9 @@ func (o *Offer) ApplyDetail(
 		o.RefreshedAt = refreshAt
 	}
 	o.Comment = comment
+	if profileExternalId != nil {
+		o.ProfileExternalId = profileExternalId
+	}
 
 	if err := validate.Struct(o); err != nil {
 		return nil, err
@@ -104,6 +109,7 @@ func NewOffer(
 	raw string,
 	rawDetailed *string,
 	comment *string,
+	profileExternalId *string,
 ) (*Offer, error) {
 	id, err := newID()
 	if err != nil {
@@ -126,6 +132,7 @@ func NewOffer(
 		raw,
 		rawDetailed,
 		comment,
+		profileExternalId,
 		nil,
 		nil,
 	)
@@ -148,6 +155,7 @@ func RestoreOffer(
 	raw string,
 	rawDetailed *string,
 	comment *string,
+	profileExternalId *string,
 	createdAt *time.Time,
 	updatedAt *time.Time,
 ) (*Offer, error) {
@@ -167,6 +175,7 @@ func RestoreOffer(
 		raw,
 		rawDetailed,
 		comment,
+		profileExternalId,
 		createdAt,
 		updatedAt,
 	)
@@ -188,27 +197,29 @@ func newOffer(
 	raw string,
 	rawDetailed *string,
 	comment *string,
+	profileExternalId *string,
 	createdAt *time.Time,
 	updatedAt *time.Time,
 ) (*Offer, error) {
 	offer := &Offer{
-		ID:              id,
-		PlateID:         plateID,
-		Provider:        provider,
-		ExternalID:      externalID,
-		Price:           price,
-		Status:          status,
-		Whereabouts:     whereabouts,
-		ReissueIncluded: reissueIncluded,
-		ViewCount:       viewCount,
-		PostedAt:        postedAt,
-		RefreshedAt:     refreshedAt,
-		URL:             url,
-		Raw:             raw,
-		RawDetailed:     rawDetailed,
-		Comment:         comment,
-		CreatedAt:       createdAt,
-		UpdatedAt:       updatedAt,
+		ID:                id,
+		PlateID:           plateID,
+		Provider:          provider,
+		ExternalID:        externalID,
+		Price:             price,
+		Status:            status,
+		Whereabouts:       whereabouts,
+		ReissueIncluded:   reissueIncluded,
+		ViewCount:         viewCount,
+		PostedAt:          postedAt,
+		RefreshedAt:       refreshedAt,
+		URL:               url,
+		Raw:               raw,
+		RawDetailed:       rawDetailed,
+		Comment:           comment,
+		ProfileExternalId: profileExternalId,
+		CreatedAt:         createdAt,
+		UpdatedAt:         updatedAt,
 	}
 
 	if err := validate.Struct(offer); err != nil {

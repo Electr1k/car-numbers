@@ -115,6 +115,7 @@ func resultWith(t *testing.T, count int, postedAt time.Time, rowErrs ...error) p
 			"<tr></tr>",
 			nil,
 			nil,
+			nil,
 		)
 		if err != nil {
 			t.Fatalf("build offer: %v", err)
