@@ -22,7 +22,7 @@ const (
 	orderDirection = "DESC"
 
 	// detailRateLimitTimeout - пауза перед запросом деталки
-	detailRateLimitTimeout = 12 * time.Second
+	detailRateLimitTimeout = 61 * time.Second
 
 	// defaultTimeout - таймаут по умолчанию
 	defaultTimeout = 60 * time.Second
