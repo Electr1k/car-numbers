@@ -28,6 +28,9 @@ const (
 	orderColumnUsers    = "registerDate"
 	orderDirectionUsers = "DESC"
 
+	// detailRateLimitTimeout - пауза перед запросом деталки
+	detailRateLimitTimeout = 61 * time.Second
+
 	// defaultTimeout - таймаут по умолчанию
 	defaultTimeout = 60 * time.Second
 
@@ -56,7 +59,7 @@ func NewClient(baseURL string, logger *slog.Logger) *Client {
 }
 
 func (c *Client) request(ctx context.Context, method string, url string) ([]byte, error) {
-	c.logger.Debug("request", "url", url, "method", method)
+	c.logger.DebugContext(ctx, "request", "url", url, "method", method)
 
 	request, err := http.NewRequestWithContext(ctx, method, url, nil)
 	if err != nil {
@@ -78,7 +81,8 @@ func (c *Client) request(ctx context.Context, method string, url string) ([]byte
 	if err != nil {
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
 	}
-	c.logger.Debug("response",
+	c.logger.DebugContext(ctx,
+		"response",
 		"url", url,
 		"method", method,
 		"status", response.StatusCode,
@@ -90,13 +94,26 @@ func (c *Client) request(ctx context.Context, method string, url string) ([]byte
 
 // FetchOffersHTML забирает одну страницу предложений и отдаёт сырой HTML
 func (c *Client) FetchOffersHTML(ctx context.Context, section Section, start int) ([]byte, error) {
-	requestURL := c.buildURL(section, start)
+	query := url.Values{}
+	query.Set("order", orderColumnOffers)
+	query.Set("dir", orderDirectionOffers)
+	query.Set("start", strconv.Itoa(start))
+	if value, ok := section.queryValue(); ok {
+		query.Set("blog", value)
+	}
 
-	return c.request(ctx, http.MethodGet, requestURL)
+	return c.request(ctx, http.MethodGet, c.baseURL+getNumbersPath+"?"+query.Encode())
 }
 
 // FetchOfferDetailHTML забирает одну страницу предложений и отдаёт сырой HTML
 func (c *Client) FetchOfferDetailHTML(ctx context.Context, url string) ([]byte, error) {
+	// Спим для рейтлимитов
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(detailRateLimitTimeout):
+	}
+
 	return c.request(ctx, http.MethodGet, url)
 }
 
@@ -113,20 +130,14 @@ func (c *Client) FetchUsersHTML(ctx context.Context, start int) ([]byte, error) 
 
 // FetchUserHTML забирает страницу пользователя и отдаёт сырой HTML
 func (c *Client) FetchUserHTML(ctx context.Context, id string) ([]byte, error) {
-	return c.request(ctx, http.MethodGet, c.baseURL+getUserPath+url.QueryEscape(id))
-}
-
-func (c *Client) buildURL(section Section, start int) string {
-	query := url.Values{}
-	query.Set("order", orderColumnOffers)
-	query.Set("dir", orderDirectionOffers)
-	query.Set("start", strconv.Itoa(start))
-
-	if value, ok := section.queryValue(); ok {
-		query.Set("blog", value)
+	// Спим для рейтлимитов
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(detailRateLimitTimeout):
 	}
 
-	return c.baseURL + getNumbersPath + "?" + query.Encode()
+	return c.request(ctx, http.MethodGet, c.baseURL+getUserPath+url.QueryEscape(id))
 }
 
 // processBadStatus - Процессинг ошибки по статус коду

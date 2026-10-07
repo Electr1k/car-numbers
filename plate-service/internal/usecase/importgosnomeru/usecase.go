@@ -93,11 +93,11 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		return nil
 	}
 
-	logger.Info("import started", "start_page", startPage, "stop_date", stopDate, "page_limit", pageLimit)
+	logger.InfoContext(ctx, "import started", "start_page", startPage, "stop_date", stopDate, "page_limit", pageLimit)
 
 	// Итоговый лог
 	defer func() {
-		logger.Info("import finished", "result", result, "page", page, "saved", saved, "skipped", skipped, "dispatched", dispatched)
+		logger.InfoContext(ctx, "import finished", "result", result, "page", page, "saved", saved, "skipped", skipped, "dispatched", dispatched)
 	}()
 
 	for taken := range pageLimit {
@@ -116,7 +116,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 
 		// Проверка максимального количества кривых офферов
 		if err := checkBrokenOffers(offers); err != nil {
-			logger.Error("stopping import",
+			logger.ErrorContext(ctx, "stopping import",
 				"page", page,
 				"error", err,
 				"errors", offers.ErrorMessages())
@@ -150,7 +150,7 @@ func (uc *UseCase) Handle(ctx context.Context, params Params) error {
 		skipped += len(offers.RowErrors)
 		dispatched += dispatchedOnPage
 
-		logPage(logger, page, offers, len(savedOnPage), dispatchedOnPage)
+		logPage(ctx, logger, page, offers, len(savedOnPage), dispatchedOnPage)
 
 		// Проверка нижнего порога по дате
 		if checkStopDate(offers, stopDate) {
@@ -191,7 +191,7 @@ func checkBrokenOffers(result provider.FetchResult) error {
 }
 
 // logPage - итог по обработанной странице
-func logPage(logger *slog.Logger, page int, result provider.FetchResult, saved, dispatched int) {
+func logPage(ctx context.Context, logger *slog.Logger, page int, result provider.FetchResult, saved, dispatched int) {
 	attrs := []any{
 		"page", page,
 		"found", result.RowsFound,
@@ -201,10 +201,10 @@ func logPage(logger *slog.Logger, page int, result provider.FetchResult, saved, 
 	}
 
 	if len(result.RowErrors) == 0 {
-		logger.Info("page processed", attrs...)
+		logger.InfoContext(ctx, "page processed", attrs...)
 		return
 	}
 
-	logger.Warn("page processed with skipped rows",
+	logger.WarnContext(ctx, "page processed with skipped rows",
 		append(attrs, "errors", result.ErrorMessages())...)
 }

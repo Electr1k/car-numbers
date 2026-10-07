@@ -58,7 +58,7 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 		return nil
 	}
 
-	logger.Info("import detail started")
+	logger.InfoContext(ctx, "import detail started")
 
 	offer, err := uc.repository.GetOfferByID(ctx, id)
 	if err != nil {
@@ -79,7 +79,7 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	logger.Info("import detail finished")
+	logger.InfoContext(ctx, "import detail finished")
 
 	return nil
 }

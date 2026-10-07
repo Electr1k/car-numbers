@@ -63,7 +63,7 @@ func NewClient(baseURL string, logger *slog.Logger) *Client {
 }
 
 func (c *Client) request(ctx context.Context, method string, url string) ([]byte, error) {
-	c.logger.Debug("request", "url", url, "method", method)
+	c.logger.DebugContext(ctx, "request", "url", url, "method", method)
 
 	// Спим для рейтлимитов
 	select {
@@ -91,7 +91,7 @@ func (c *Client) request(ctx context.Context, method string, url string) ([]byte
 	if err != nil {
 		return nil, fmt.Errorf("%w: read body from %s: %w", provider.ErrInvalidResponse, url, err)
 	}
-	c.logger.Debug("response",
+	c.logger.DebugContext(ctx, "response",
 		"url", url,
 		"method", method,
 		"status", response.StatusCode,

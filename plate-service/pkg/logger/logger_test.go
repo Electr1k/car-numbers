@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -242,5 +243,36 @@ func TestNew_DefaultLevel(t *testing.T) {
 	}
 	if !strings.Contains(output, "info message") {
 		t.Error("Info message should be logged with default (info) level")
+	}
+}
+
+func TestContextAttrs(t *testing.T) {
+	var buf bytes.Buffer
+	log := slog.New(contextHandler{slog.NewJSONHandler(&buf, nil)}).With("provider", "autonomera")
+
+	ctx := WithAttrs(context.Background(), slog.String("job_id", "42"))
+	nested := WithAttrs(ctx, slog.String("queue", "autonomera"))
+
+	log.InfoContext(nested, "nested")
+	log.InfoContext(ctx, "parent")
+	log.Info("plain")
+
+	var lines []map[string]any
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		var entry map[string]any
+		if err := json.Unmarshal([]byte(line), &entry); err != nil {
+			t.Fatalf("unmarshal %q: %v", line, err)
+		}
+		lines = append(lines, entry)
+	}
+
+	if lines[0]["job_id"] != "42" || lines[0]["queue"] != "autonomera" || lines[0]["provider"] != "autonomera" {
+		t.Errorf("nested context attrs missing: %v", lines[0])
+	}
+	if _, ok := lines[1]["queue"]; ok || lines[1]["job_id"] != "42" {
+		t.Errorf("parent context must keep only its own attrs: %v", lines[1])
+	}
+	if _, ok := lines[2]["job_id"]; ok {
+		t.Errorf("log without context must not have job attrs: %v", lines[2])
 	}
 }

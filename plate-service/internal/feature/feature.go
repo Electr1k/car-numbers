@@ -29,7 +29,7 @@ func NewFeature(storage Storage, logger *slog.Logger) *Feature {
 func (g *Feature) Enabled(ctx context.Context, key domain.FeatureKey) (bool, error) {
 	feature, err := g.storage.GetFeatureByKey(ctx, key)
 	if errors.Is(err, domain.ErrFeatureNotFound) {
-		g.logger.Warn("feature not found, treating as disabled", "feature", key)
+		g.logger.WarnContext(ctx, "feature not found, treating as disabled", "feature", key)
 		return false, nil
 	}
 	if err != nil {
@@ -37,7 +37,7 @@ func (g *Feature) Enabled(ctx context.Context, key domain.FeatureKey) (bool, err
 	}
 
 	if !feature.Active {
-		g.logger.Info("feature disabled, skipping", "feature", key)
+		g.logger.InfoContext(ctx, "feature disabled, skipping", "feature", key)
 	}
 
 	return feature.Active, nil
