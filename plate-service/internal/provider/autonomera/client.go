@@ -147,10 +147,7 @@ func (c *Client) buildURL(section Section, start int) string {
 	query.Set("order", orderColumn)
 	query.Set("dir", orderDirection)
 	query.Set("start", strconv.Itoa(start))
-
-	if value, ok := section.queryValue(); ok {
-		query.Set("blog", value)
-	}
+	query.Set("blog", section.blog())
 
 	return c.baseURL + getNumbersPath + "?" + query.Encode()
 }

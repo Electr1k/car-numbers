@@ -71,11 +71,10 @@ func TestQueryParams(t *testing.T) {
 	cases := []struct {
 		section     Section
 		wantBlog    string
-		hasBlog     bool
 		wantReferer string
 	}{
-		{SectionActive, "", false, "/"},
-		{SectionArchive, "numbersarchive", true, "/arkhiv"},
+		{SectionActive, "numbers", "/"},
+		{SectionArchive, "numbersarchive", "/arkhiv"},
 	}
 
 	for _, c := range cases {
@@ -95,9 +94,6 @@ func TestQueryParams(t *testing.T) {
 		}
 		if query.Get("order") != "a.`created`" || query.Get("dir") != "DESC" {
 			t.Fatalf("%s: order/dir = %q/%q", c.section, query.Get("order"), query.Get("dir"))
-		}
-		if _, present := query["blog"]; present != c.hasBlog {
-			t.Fatalf("%s: blog present = %v, want %v", c.section, present, c.hasBlog)
 		}
 		if query.Get("blog") != c.wantBlog {
 			t.Fatalf("%s: blog = %q, want %q", c.section, query.Get("blog"), c.wantBlog)

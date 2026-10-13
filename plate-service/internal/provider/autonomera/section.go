@@ -16,14 +16,13 @@ const (
 	SectionArchive Section = "archive"
 )
 
-// queryValue - значение параметра blog
-func (s Section) queryValue() (string, bool) {
-	switch s {
-	case SectionArchive:
-		return "numbersarchive", true
-	default:
-		return "", false
+// blog - значение параметра blog
+func (s Section) blog() string {
+	if s == SectionArchive {
+		return "numbersarchive"
 	}
+
+	return "numbers"
 }
 
 // pagePath - страница раздела, с которой браузер шлёт ajax
