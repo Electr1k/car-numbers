@@ -26,6 +26,15 @@ func (s Section) queryValue() (string, bool) {
 	}
 }
 
+// pagePath - страница раздела, с которой браузер шлёт ajax
+func (s Section) pagePath() string {
+	if s == SectionArchive {
+		return "/arkhiv"
+	}
+
+	return "/"
+}
+
 // statusForSection - в каком статусе находятся предложения из этого раздела
 func statusForSection(section Section) (domain.OfferStatus, error) {
 	switch section {

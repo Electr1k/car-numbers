@@ -69,12 +69,13 @@ func TestEmptyErrorBodyPreview(t *testing.T) {
 
 func TestQueryParams(t *testing.T) {
 	cases := []struct {
-		section  Section
-		wantBlog string
-		hasBlog  bool
+		section     Section
+		wantBlog    string
+		hasBlog     bool
+		wantReferer string
 	}{
-		{SectionActive, "", false},
-		{SectionArchive, "numbersarchive", true},
+		{SectionActive, "", false, "/"},
+		{SectionArchive, "numbersarchive", true, "/arkhiv"},
 	}
 
 	for _, c := range cases {
@@ -101,6 +102,26 @@ func TestQueryParams(t *testing.T) {
 		if query.Get("blog") != c.wantBlog {
 			t.Fatalf("%s: blog = %q, want %q", c.section, query.Get("blog"), c.wantBlog)
 		}
+		if got.Header.Get("X-Requested-With") != "XMLHttpRequest" {
+			t.Fatalf("%s: X-Requested-With = %q", c.section, got.Header.Get("X-Requested-With"))
+		}
+		if !strings.HasSuffix(got.Header.Get("Referer"), c.wantReferer) {
+			t.Fatalf("%s: Referer = %q, want suffix %q", c.section, got.Header.Get("Referer"), c.wantReferer)
+		}
+	}
+}
+
+func TestEndOfListBodyIsEmpty(t *testing.T) {
+	client := newTestClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		io.WriteString(w, "no")
+	})
+
+	body, err := client.FetchOffersHTML(context.Background(), SectionActive, 0)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(body) != 0 {
+		t.Fatalf("body = %q, want empty", body)
 	}
 }
 
