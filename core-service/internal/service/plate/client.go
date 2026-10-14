@@ -173,17 +173,25 @@ type FetchPlateByIDResponse struct {
 }
 
 type FetchPlateByIDOffer struct {
-	ID              uuid.UUID `json:"id"`
-	Provider        string    `json:"provider"`
-	Price           *float64  `json:"price"`
-	Status          string    `json:"status"`
-	ReissueIncluded *bool     `json:"reissue_included"`
-	Whereabouts     *string   `json:"whereabouts"`
-	ViewCount       *int      `json:"view_count"`
-	Comment         *string   `json:"comment"`
-	RefreshedAt     time.Time `json:"refreshed_at"`
-	PostedAt        time.Time `json:"posted_at"`
-	URL             string    `json:"url"`
+	ID              uuid.UUID              `json:"id"`
+	Provider        string                 `json:"provider"`
+	Price           *float64               `json:"price"`
+	Status          string                 `json:"status"`
+	ReissueIncluded *bool                  `json:"reissue_included"`
+	Whereabouts     *string                `json:"whereabouts"`
+	ViewCount       *int                   `json:"view_count"`
+	Comment         *string                `json:"comment"`
+	RefreshedAt     time.Time              `json:"refreshed_at"`
+	PostedAt        time.Time              `json:"posted_at"`
+	URL             string                 `json:"url"`
+	Profile         *FetchPlateByIDProfile `json:"profile"`
+}
+
+type FetchPlateByIDProfile struct {
+	ID      uuid.UUID `json:"id"`
+	Login   string    `json:"login"`
+	Name    *string   `json:"name"`
+	IconURL *string   `json:"icon_url"`
 }
 
 // FetchPlateByID возвращает деталку номера

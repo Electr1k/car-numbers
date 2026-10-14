@@ -27,6 +27,14 @@ type Offer struct {
 	RefreshedAt     time.Time
 	PostedAt        time.Time
 	URL             string
+	Profile         *Profile
+}
+
+type Profile struct {
+	ID      uuid.UUID
+	Login   string
+	Name    *string
+	IconURL *string
 }
 
 type Region struct {

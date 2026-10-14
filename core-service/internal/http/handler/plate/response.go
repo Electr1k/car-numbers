@@ -70,17 +70,25 @@ type fetchPlateByIDResponse struct {
 }
 
 type fetchPlateByIDOffer struct {
-	ID              uuid.UUID `json:"id"`
-	Provider        string    `json:"provider"`
-	Price           *float64  `json:"price"`
-	Status          string    `json:"status"`
-	ReissueIncluded *bool     `json:"reissue_included"`
-	Whereabouts     *string   `json:"whereabouts"`
-	ViewCount       *int      `json:"view_count"`
-	Comment         *string   `json:"comment"`
-	RefreshedAt     time.Time `json:"refreshed_at"`
-	PostedAt        time.Time `json:"posted_at"`
-	URL             string    `json:"url"`
+	ID              uuid.UUID              `json:"id"`
+	Provider        string                 `json:"provider"`
+	Price           *float64               `json:"price"`
+	Status          string                 `json:"status"`
+	ReissueIncluded *bool                  `json:"reissue_included"`
+	Whereabouts     *string                `json:"whereabouts"`
+	ViewCount       *int                   `json:"view_count"`
+	Comment         *string                `json:"comment"`
+	RefreshedAt     time.Time              `json:"refreshed_at"`
+	PostedAt        time.Time              `json:"posted_at"`
+	URL             string                 `json:"url"`
+	Profile         *fetchPlateByIDProfile `json:"profile"`
+}
+
+type fetchPlateByIDProfile struct {
+	ID      uuid.UUID `json:"id"`
+	Login   string    `json:"login"`
+	Name    *string   `json:"name"`
+	IconURL *string   `json:"icon_url"`
 }
 
 type fetchPlateByIDRegion struct {
@@ -100,7 +108,7 @@ func mapFetchPlateByIDResponse(result fetchplate.Result) fetchPlateByIDResponse 
 	}
 
 	mapOffer := func(offer fetchplate.Offer) fetchPlateByIDOffer {
-		return fetchPlateByIDOffer{
+		o := fetchPlateByIDOffer{
 			ID:              offer.ID,
 			Provider:        offer.Provider,
 			Price:           offer.Price,
@@ -113,6 +121,16 @@ func mapFetchPlateByIDResponse(result fetchplate.Result) fetchPlateByIDResponse 
 			PostedAt:        offer.PostedAt,
 			URL:             offer.URL,
 		}
+		if offer.Profile != nil {
+			o.Profile = &fetchPlateByIDProfile{
+				ID:      offer.Profile.ID,
+				Login:   offer.Profile.Login,
+				Name:    offer.Profile.Name,
+				IconURL: offer.Profile.IconURL,
+			}
+		}
+
+		return o
 	}
 
 	activeOffers := make([]fetchPlateByIDOffer, 0, len(result.ActiveOffers))

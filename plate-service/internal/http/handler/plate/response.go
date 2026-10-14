@@ -79,6 +79,14 @@ type offer struct {
 	PostedAt        time.Time `json:"posted_at"`
 	RefreshedAt     time.Time `json:"refreshed_at"`
 	URL             string    `json:"url"`
+	Profile         *profile  `json:"profile"`
+}
+
+type profile struct {
+	ID      uuid.UUID `json:"id"`
+	Login   string    `json:"login"`
+	Name    *string   `json:"name"`
+	IconURL *string   `json:"icon_url"`
 }
 
 // mapPlate - маппинг номера в ответ API
@@ -99,7 +107,7 @@ func mapPlate(plate data.Plate) plateResponse {
 			w := string(*offerDomain.Whereabouts)
 			whereabouts = &w
 		}
-		offersJSON = append(offersJSON, offer{
+		offerJson := offer{
 			ID:              offerDomain.ID,
 			Provider:        string(offerDomain.Provider),
 			Price:           offerDomain.Price,
@@ -111,7 +119,17 @@ func mapPlate(plate data.Plate) plateResponse {
 			PostedAt:        offerDomain.PostedAt,
 			RefreshedAt:     offerDomain.RefreshedAt,
 			URL:             offerDomain.URL,
-		})
+		}
+
+		if offerDomain.Profile != nil {
+			offerJson.Profile = &profile{
+				ID:      offerDomain.Profile.ID,
+				Login:   offerDomain.Profile.Login,
+				Name:    offerDomain.Profile.Name,
+				IconURL: offerDomain.Profile.IconURL,
+			}
+		}
+		offersJSON = append(offersJSON, offerJson)
 	}
 
 	return plateResponse{

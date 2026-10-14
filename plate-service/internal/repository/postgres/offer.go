@@ -256,7 +256,7 @@ SELECT
 	region_codes.code,
 	type,
 	offers.id as offer_id,
-	provider,
+	offers.provider,
 	price,
 	status,
 	reissue_included,
@@ -265,9 +265,14 @@ SELECT
 	comment,
 	posted_at,
 	refreshed_at,
-	url
+	offers.url,
+	offers.profile_id,
+	profiles.login,
+	profiles.name,
+	profiles.icon_url
 FROM public.plates
 LEFT JOIN offers ON offers.plate_id = plates.id
+LEFT JOIN profiles ON profiles.id = offers.profile_id
 LEFT JOIN region_codes ON plates.region_code = region_codes.code
 LEFT JOIN regions ON regions.id = region_codes.region_id
 WHERE plates.id = $1
@@ -651,10 +656,14 @@ func (r *OfferRepository) GetPlateWithOffersByID(ctx context.Context, id uuid.UU
 			postedAt        *time.Time
 			refreshedAt     *time.Time
 			url             *string
+			profileID       *uuid.UUID
+			login           *string
+			name            *string
+			iconURL         *string
 		)
 
 		if err = rows.Scan(&plateID, &number, &regionID, &regionName, &regionCode, &plateType, &offerID, &provider, &price, &status,
-			&reissueIncluded, &whereabouts, &viewCount, &comment, &postedAt, &refreshedAt, &url); err != nil {
+			&reissueIncluded, &whereabouts, &viewCount, &comment, &postedAt, &refreshedAt, &url, &profileID, &login, &name, &iconURL); err != nil {
 			return nil, fmt.Errorf("get plate with offers (id=%s): %w", id, err)
 		}
 
@@ -670,7 +679,7 @@ func (r *OfferRepository) GetPlateWithOffersByID(ctx context.Context, id uuid.UU
 		}
 
 		if offerID != nil {
-			offers = append(offers, data.Offer{
+			offer := data.Offer{
 				ID:              *offerID,
 				Provider:        domain.Provider(*provider),
 				Price:           price,
@@ -682,7 +691,17 @@ func (r *OfferRepository) GetPlateWithOffersByID(ctx context.Context, id uuid.UU
 				PostedAt:        *postedAt,
 				RefreshedAt:     *refreshedAt,
 				URL:             *url,
-			})
+			}
+
+			if profileID != nil {
+				offer.Profile = &data.Profile{
+					ID:      *profileID,
+					Login:   *login,
+					Name:    name,
+					IconURL: iconURL,
+				}
+			}
+			offers = append(offers, offer)
 		}
 	}
 

@@ -58,6 +58,15 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) (*Result, error) {
 			PostedAt:        o.PostedAt,
 			URL:             o.URL,
 		}
+		if o.Profile != nil {
+			offer.Profile = &Profile{
+				ID:      o.Profile.ID,
+				Login:   o.Profile.Login,
+				Name:    o.Profile.Name,
+				IconURL: o.Profile.IconURL,
+			}
+		}
+
 		if o.Status == activeOffer {
 			activeOffers = append(activeOffers, offer)
 		} else {

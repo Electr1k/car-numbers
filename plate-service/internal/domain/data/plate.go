@@ -30,4 +30,12 @@ type Offer struct {
 	PostedAt        time.Time
 	RefreshedAt     time.Time
 	URL             string
+	Profile         *Profile
+}
+
+type Profile struct {
+	ID      uuid.UUID
+	Login   string
+	Name    *string
+	IconURL *string
 }
