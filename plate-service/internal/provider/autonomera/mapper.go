@@ -41,6 +41,9 @@ const (
 	offerDetailReissueInclude = "div.func__item--key"
 
 	priceNegotiable = "Договорная"
+
+	// profileHrefPrefix - ссылка на профиль продавца без идентификатора
+	profileHrefPrefix = "/user?user_id="
 )
 
 type Mapper struct {
@@ -302,7 +305,87 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 		return emptyOffer, fmt.Errorf("%w: read row html: %w", provider.ErrRowSkipped, err)
 	}
 
+	offer.Profile, err = m.parseProfileFromDetail(table)
+	if err != nil {
+		return emptyOffer, err
+	}
+
 	return offer, nil
+}
+
+// parseProfileFromDetail - Профиль продавца из таблицы деталки, nil если продавец скрыт
+func (m *Mapper) parseProfileFromDetail(table *goquery.Selection) (*domain.Profile, error) {
+	var (
+		externalID string
+		login      string
+		name       *string
+		phone      *string
+		email      *string
+		raw        strings.Builder
+	)
+
+	table.Find("div.user-data-table__tr").Each(func(i int, s *goquery.Selection) {
+		value := s.Find(".user-data-table__td")
+		switch strings.TrimSpace(s.Find(".user-data-table__th").Text()) {
+		case "Логин":
+			href, _ := value.Find("a.table-user").Attr("href")
+			if id, ok := strings.CutPrefix(href, profileHrefPrefix); ok {
+				externalID = id
+			}
+			login = strings.TrimSpace(value.Find(".table-user__name").Text())
+		case "Имя":
+			name = parseProfileValue(value)
+		case "Телефон":
+			if text := parseProfileValue(value); text != nil {
+				phone = domain.NormalizePhone(*text)
+			}
+		case "E-mail":
+			email = parseProfileValue(value)
+		case "Рейтинг пользователя":
+		default:
+			return
+		}
+
+		html, _ := goquery.OuterHtml(s)
+		raw.WriteString(html)
+	})
+
+	if externalID == "" {
+		return nil, nil
+	}
+
+	profile, err := domain.NewProfile(
+		domain.ProviderAutonomera,
+		externalID,
+		m.baseURL+profileHrefPrefix+externalID,
+		login,
+		name,
+		phone,
+		email,
+		nil,
+		nil,
+		raw.String(),
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: profile %s: %w", provider.ErrRowSkipped, externalID, err)
+	}
+
+	return profile, nil
+}
+
+// parseProfileValue - Значение поля профиля, nil если пусто или скрыто
+func parseProfileValue(value *goquery.Selection) *string {
+	if value.Find(".item-notextended").Length() > 0 {
+		return nil
+	}
+
+	text := strings.TrimSpace(value.Text())
+	if text == "" {
+		return nil
+	}
+
+	return &text
 }
 
 func parseNumberFromDetail(sel *goquery.Selection) (string, error) {

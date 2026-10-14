@@ -47,12 +47,12 @@ upserted_offer AS (
 		raw          = EXCLUDED.raw,
 		updated_at   = CURRENT_TIMESTAMP
 	RETURNING id, provider, external_id, price, status, whereabouts, reissue_included, view_count,
-		posted_at, refreshed_at, url, raw, raw_detail, comment, created_at, updated_at
+		posted_at, refreshed_at, url, raw, raw_detail, comment, profile_id, created_at, updated_at
 )
 SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, upserted_offer.price,
 	upserted_offer.status, upserted_offer.whereabouts, upserted_offer.reissue_included, upserted_offer.view_count,
 	upserted_offer.posted_at, upserted_offer.refreshed_at, upserted_offer.url, upserted_offer.raw,
-	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.created_at, upserted_offer.updated_at,
+	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.profile_id, upserted_offer.created_at, upserted_offer.updated_at,
 	upserted_plate.id, upserted_plate.number, upserted_plate.type,
 	upserted_plate.created_at, upserted_plate.updated_at
 FROM upserted_offer, upserted_plate;`
@@ -86,12 +86,12 @@ upserted_offer AS (
 		comment          = EXCLUDED.comment,
 		updated_at       = CURRENT_TIMESTAMP
 	RETURNING id, provider, external_id, price, status, whereabouts, reissue_included, view_count,
-		posted_at, refreshed_at, url, raw, raw_detail, comment, created_at, updated_at
+		posted_at, refreshed_at, url, raw, raw_detail, comment, profile_id, created_at, updated_at
 )
 SELECT upserted_offer.id, upserted_offer.provider, upserted_offer.external_id, upserted_offer.price,
 	upserted_offer.status, upserted_offer.whereabouts, upserted_offer.reissue_included, upserted_offer.view_count,
 	upserted_offer.posted_at, upserted_offer.refreshed_at, upserted_offer.url, upserted_offer.raw,
-	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.created_at, upserted_offer.updated_at,
+	upserted_offer.raw_detail, upserted_offer.comment, upserted_offer.profile_id, upserted_offer.created_at, upserted_offer.updated_at,
 	upserted_plate.id, upserted_plate.number, upserted_plate.type,
 	upserted_plate.created_at, upserted_plate.updated_at
 FROM upserted_offer, upserted_plate;`
@@ -99,7 +99,7 @@ FROM upserted_offer, upserted_plate;`
 const getOfferByIdQuery = `
 SELECT 
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
-    refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
+    refreshed_at, url, raw, raw_detail, comment, profile_id, offers.created_at, offers.updated_at,
     plates.id, number, type, plates.created_at, plates.updated_at
 FROM offers
 JOIN plates ON offers.plate_id = plates.id
@@ -109,7 +109,7 @@ WHERE offers.id = $1
 const getOfferByExternalIdQuery = `
 SELECT
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
-    refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
+    refreshed_at, url, raw, raw_detail, comment, profile_id, offers.created_at, offers.updated_at,
     plates.id, number, type, plates.created_at, plates.updated_at
 FROM offers
 JOIN plates ON offers.plate_id = plates.id
@@ -119,7 +119,7 @@ WHERE offers.provider = $1 AND offers.external_id = $2
 const getOffersQuery = `
 SELECT
     offers.id, provider, external_id, price, status, whereabouts, reissue_included, view_count, posted_at,
-    refreshed_at, url, raw, raw_detail, comment, offers.created_at, offers.updated_at,
+    refreshed_at, url, raw, raw_detail, comment, profile_id, offers.created_at, offers.updated_at,
     plates.id, number, type, plates.created_at, plates.updated_at
 FROM offers
 JOIN plates ON offers.plate_id = plates.id
@@ -155,6 +155,7 @@ posted_at = $7,
 refreshed_at = $8,
 raw_detail = $9,
 comment = $10,
+profile_id = $11,
 updated_at = CURRENT_TIMESTAMP
 WHERE id = $1`
 
@@ -532,7 +533,7 @@ func (r *OfferRepository) UpdateOffer(ctx context.Context, offer *domain.Offer) 
 
 	tag, err := tx.Exec(ctx, updateOfferQuery, offer.ID, offer.Price, offer.Status, offer.Whereabouts,
 		offer.ReissueIncluded, offer.ViewCount, offer.PostedAt, offer.RefreshedAt,
-		offer.RawDetailed, offer.Comment,
+		offer.RawDetailed, offer.Comment, offer.ProfileID,
 	)
 	if err != nil {
 		return fmt.Errorf("update offer %s: %w", offer.ID, err)
@@ -724,6 +725,7 @@ func scanOfferWithPlate(row rowScanner) (domain.OfferWithPlate, error) {
 		raw             string
 		rawDetailed     *string
 		comment         *string
+		profileID       *uuid.UUID
 		offerCreatedAt  *time.Time
 		offerUpdatedAt  *time.Time
 		plateID         uuid.UUID
@@ -734,7 +736,7 @@ func scanOfferWithPlate(row rowScanner) (domain.OfferWithPlate, error) {
 	)
 
 	err := row.Scan(&offerID, &provider, &externalID, &price, &status, &whereabouts, &reissueIncluded, &viewCount, &postedAt,
-		&refreshedAt, &url, &raw, &rawDetailed, &comment, &offerCreatedAt, &offerUpdatedAt, &plateID, &number, &vehicleType, &plateCreatedAt, &plateUpdatedAt)
+		&refreshedAt, &url, &raw, &rawDetailed, &comment, &profileID, &offerCreatedAt, &offerUpdatedAt, &plateID, &number, &vehicleType, &plateCreatedAt, &plateUpdatedAt)
 	if err != nil {
 		return domain.OfferWithPlate{}, err
 	}
@@ -751,7 +753,7 @@ func scanOfferWithPlate(row rowScanner) (domain.OfferWithPlate, error) {
 	}
 
 	offer, err := domain.RestoreOffer(
-		offerID, plateID, domain.Provider(provider), externalID, price, domain.OfferStatus(status), whereaboutsVO, reissueIncluded,
+		offerID, plateID, profileID, domain.Provider(provider), externalID, price, domain.OfferStatus(status), whereaboutsVO, reissueIncluded,
 		viewCount, postedAt, refreshedAt, url, raw, rawDetailed, comment, offerCreatedAt, offerUpdatedAt,
 	)
 	if err != nil {

@@ -75,6 +75,7 @@ func TestRestoreOfferRequiresID(t *testing.T) {
 	_, err := RestoreOffer(
 		uuid.Nil,
 		uuid.New(),
+		nil,
 		ProviderAutonomera,
 		"42",
 		&price,

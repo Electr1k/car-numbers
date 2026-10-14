@@ -102,7 +102,51 @@ const (
 	// motoURLPrefix, trailerURLPrefix - префиксы слага деталки: у мото и прицепов свои разделы и своя нумерация
 	motoURLPrefix    = "moto-"
 	trailerURLPrefix = "pricep-"
+
+	// sellerSelector - блок продавца в карточке
+	sellerSelector = ".product__seller"
+
+	// sellerLinkSelector - ссылка на профиль продавца, текст ссылки - логин
+	sellerLinkSelector = ".product-seller__name a"
+
+	// sellerNameSelector - имя продавца в скобках под логином
+	sellerNameSelector = ".product-seller__name p"
+
+	// sellerLastVisitSelector - последний визит продавца
+	sellerLastVisitSelector = ".lvisit"
+
+	// sellerDescriptionSelector - описание профиля продавца
+	sellerDescriptionSelector = ".product-seller__descr"
+
+	// sellerWhatsAppSelector, sellerTelegramSelector, sellerMaxSelector - ссылки на мессенджеры, в них бывает телефон
+	sellerWhatsAppSelector = "a.user-wa-link"
+	sellerTelegramSelector = "a.user-tg-link.js-show-messenger"
+	sellerMaxSelector      = "a.user-max-link"
+
+	// registeredLayout, lastVisitLayout - форматы дат в блоке продавца
+	registeredLayout = "02.01.2006"
+	lastVisitLayout  = "02.01.06"
+
+	// lastVisit* - относительные значения последнего визита
+	lastVisitOnline    = "Онлайн"
+	lastVisitToday     = "сегодня в "
+	lastVisitYesterday = "вчера в "
 )
+
+// moscow - часовой пояс дат провайдера
+var moscow = time.FixedZone("MSK", 3*60*60)
+
+// sellerHrefPattern - идентификатор продавца из ссылки на профиль
+var sellerHrefPattern = regexp.MustCompile(`^/user-(\d+)\.html$`)
+
+// registeredPattern - дата регистрации продавца
+var registeredPattern = regexp.MustCompile(`Зарегистрирован: (\d{2}\.\d{2}\.\d{4})`)
+
+// messengerPhonePattern - в ссылке на мессенджер телефон, а не username
+var messengerPhonePattern = regexp.MustCompile(`^[-+0-9 ()]+$`)
+
+// emailPattern - логин, который продавец завёл в виде email
+var emailPattern = regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$`)
 
 // offerSlugPattern - слаг деталки
 var offerSlugPattern = regexp.MustCompile(`^(` + motoURLPrefix + `|` + trailerURLPrefix + `)?(\d+)-([a-z0-9]+)\.html$`)
@@ -280,6 +324,8 @@ func (m *Mapper) ApplyOfferDetailToDomain(sel *goquery.Selection, offer domain.O
 	if err != nil {
 		return emptyOffer, fmt.Errorf("%w: read row json: %w", provider.ErrRowSkipped, err)
 	}
+
+	offer.Profile = newOffer.Profile
 
 	return offer, nil
 }
@@ -566,7 +612,155 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection) (domain.OfferWit
 		return empty, fmt.Errorf("%w: invalid offer %q: %w", provider.ErrRowSkipped, ref.externalID, err)
 	}
 
-	return domain.OfferWithPlate{Plate: plate, Offer: offer}, nil
+	profile, err := m.parseProfileFromDetail(product, time.Now())
+	if err != nil {
+		return empty, err
+	}
+
+	return domain.OfferWithPlate{Plate: plate, Offer: offer, Profile: profile}, nil
+}
+
+// parseProfileFromDetail - Профиль продавца из карточки, nil если блока продавца нет
+func (m *Mapper) parseProfileFromDetail(product *goquery.Selection, now time.Time) (*domain.Profile, error) {
+	seller := product.Find(sellerSelector).First()
+	link := seller.Find(sellerLinkSelector).First()
+
+	groups := sellerHrefPattern.FindStringSubmatch(link.AttrOr("href", ""))
+	if groups == nil {
+		return nil, nil
+	}
+	externalID := groups[1]
+
+	raw, err := goquery.OuterHtml(seller)
+	if err != nil {
+		return nil, fmt.Errorf("%w: read seller html: %w", provider.ErrBrokenOffer, err)
+	}
+
+	login := strings.TrimSpace(link.Text())
+
+	var email *string
+	if emailPattern.MatchString(login) {
+		email = &login
+	}
+
+	profile, err := domain.NewProfile(
+		domain.ProviderAnomera,
+		externalID,
+		m.baseURL+"/user-"+externalID+".html",
+		login,
+		parseSellerName(seller),
+		parseSellerPhone(seller),
+		email,
+		parseSellerRegisteredAt(seller),
+		parseSellerLastVisit(seller.Find(sellerLastVisitSelector).First().Text(), now),
+		raw,
+		optionalText(seller.Find(sellerDescriptionSelector).First()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: profile %s: %w", provider.ErrRowSkipped, externalID, err)
+	}
+
+	return profile, nil
+}
+
+// parseSellerName - имя продавца без скобок
+func parseSellerName(seller *goquery.Selection) *string {
+	name := strings.TrimSpace(seller.Find(sellerNameSelector).First().Text())
+	name = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(name, "("), ")"))
+	if name == "" {
+		return nil
+	}
+
+	return &name
+}
+
+// parseSellerPhone - телефон из ссылок на мессенджеры: WhatsApp, затем Telegram и Max
+func parseSellerPhone(seller *goquery.Selection) *string {
+	if phone := domain.NormalizePhone(messengerContact(seller, sellerWhatsAppSelector)); phone != nil {
+		return phone
+	}
+
+	for _, selector := range []string{sellerTelegramSelector, sellerMaxSelector} {
+		contact := messengerContact(seller, selector)
+		if !messengerPhonePattern.MatchString(contact) {
+			continue
+		}
+
+		if phone := domain.NormalizePhone(contact); phone != nil {
+			return phone
+		}
+	}
+
+	return nil
+}
+
+// messengerContact - контакт из ссылки на мессенджер: последний сегмент пути
+func messengerContact(seller *goquery.Selection, selector string) string {
+	parsed, err := url.Parse(seller.Find(selector).First().AttrOr("href", ""))
+	if err != nil {
+		return ""
+	}
+
+	return path.Base(parsed.Path)
+}
+
+// parseSellerRegisteredAt - дата регистрации продавца
+func parseSellerRegisteredAt(seller *goquery.Selection) *time.Time {
+	groups := registeredPattern.FindStringSubmatch(seller.Text())
+	if groups == nil {
+		return nil
+	}
+
+	registeredAt, err := time.ParseInLocation(registeredLayout, groups[1], moscow)
+	if err != nil {
+		return nil
+	}
+
+	return &registeredAt
+}
+
+// parseSellerLastVisit - последний визит: дата, "сегодня/вчера в 16:49" или "Онлайн" относительно момента загрузки
+func parseSellerLastVisit(text string, now time.Time) *time.Time {
+	text = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(text), "был(-а) на сайте:"))
+	now = now.In(moscow)
+
+	if text == lastVisitOnline {
+		return &now
+	}
+
+	day := now
+	clock, relative := strings.CutPrefix(text, lastVisitToday)
+	if !relative {
+		clock, relative = strings.CutPrefix(text, lastVisitYesterday)
+		day = now.AddDate(0, 0, -1)
+	}
+
+	if relative {
+		at, err := time.Parse("15:04", clock)
+		if err != nil {
+			return nil
+		}
+
+		visit := time.Date(day.Year(), day.Month(), day.Day(), at.Hour(), at.Minute(), 0, 0, moscow)
+		return &visit
+	}
+
+	visit, err := time.ParseInLocation(lastVisitLayout, text, moscow)
+	if err != nil {
+		return nil
+	}
+
+	return &visit
+}
+
+// optionalText - текст узла, nil если пусто
+func optionalText(sel *goquery.Selection) *string {
+	text := strings.TrimSpace(sel.Text())
+	if text == "" {
+		return nil
+	}
+
+	return &text
 }
 
 // parseDetailNumber - номер и тип ТС карточки

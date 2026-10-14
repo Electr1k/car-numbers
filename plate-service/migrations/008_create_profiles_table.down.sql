@@ -1,0 +1,3 @@
+ALTER TABLE offers DROP COLUMN IF EXISTS profile_id;
+
+DROP TABLE IF EXISTS profiles;

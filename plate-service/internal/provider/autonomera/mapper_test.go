@@ -221,3 +221,87 @@ func TestParsePriceSeparators(t *testing.T) {
 		})
 	}
 }
+
+// profileTable - таблица деталки с блоком продавца
+func profileTable(t *testing.T, rows string) *goquery.Selection {
+	t.Helper()
+
+	document, err := goquery.NewDocumentFromReader(strings.NewReader(
+		`<div class="article__table user-data-table">` + rows + `</div>`))
+	if err != nil {
+		t.Fatalf("build fixture: %v", err)
+	}
+
+	return document.Find(".article__table.user-data-table")
+}
+
+func profileRow(title, value string) string {
+	return `<div class="user-data-table__tr"><div class="user-data-table__th">` + title +
+		`</div><div class="user-data-table__td">` + value + `</div></div>`
+}
+
+func TestParseProfileFromDetail(t *testing.T) {
+	table := profileTable(t,
+		profileRow("Цена авто с номером", `<div class="table-price">40 000</div>`)+
+			profileRow("Логин", `<a href="/user?user_id=55716" class="table-user"><div class="table-user__name"> Dan&#39;ka </div></a>`)+
+			profileRow("Имя", ` Владислав  `)+
+			profileRow("Телефон", `<span class="user-data-table__data user-data-table__data--conf">+7 (966) 032-65-80</span>`)+
+			profileRow("E-mail", `seller@mail.ru`)+
+			profileRow("Рейтинг пользователя", `<span class="user-data-table__rating">30 баллов</span>`))
+
+	profile, err := newTestMapper().parseProfileFromDetail(table)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if profile == nil {
+		t.Fatal("expected profile, got nil")
+	}
+
+	if profile.ExternalID != "55716" || profile.URL != "https://autonomera777.ru/user?user_id=55716" {
+		t.Fatalf("unexpected id/url: %s %s", profile.ExternalID, profile.URL)
+	}
+
+	if profile.Login != "Dan'ka" || profile.Name == nil || *profile.Name != "Владислав" {
+		t.Fatalf("unexpected login/name: %q %v", profile.Login, profile.Name)
+	}
+
+	if profile.Phone == nil || *profile.Phone != "79660326580" {
+		t.Fatalf("unexpected phone: %v", profile.Phone)
+	}
+
+	if profile.Email == nil || *profile.Email != "seller@mail.ru" {
+		t.Fatalf("unexpected email: %v", profile.Email)
+	}
+
+	if strings.Contains(profile.Raw, "Цена авто с номером") || !strings.Contains(profile.Raw, "Рейтинг пользователя") {
+		t.Fatalf("raw must contain only seller rows: %s", profile.Raw)
+	}
+}
+
+func TestParseProfileFromDetailHidden(t *testing.T) {
+	hidden := `<span class="item-notextended">Скрыт</span>`
+	table := profileTable(t,
+		profileRow("Логин", `<a href="javascript:;" class="table-user"><div class="table-user__name">`+hidden+`</div></a>`)+
+			profileRow("Имя", hidden)+
+			profileRow("Телефон", hidden)+
+			profileRow("E-mail", hidden))
+
+	profile, err := newTestMapper().parseProfileFromDetail(table)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if profile != nil {
+		t.Fatalf("expected nil profile for hidden seller, got %+v", profile)
+	}
+}
+
+func TestParseProfileFromDetailRejectsEmptyLogin(t *testing.T) {
+	table := profileTable(t,
+		profileRow("Логин", `<a href="/user?user_id=55716" class="table-user"><div class="table-user__name"> </div></a>`))
+
+	if _, err := newTestMapper().parseProfileFromDetail(table); !errors.Is(err, provider.ErrRowSkipped) {
+		t.Fatalf("expected ErrRowSkipped, got %v", err)
+	}
+}

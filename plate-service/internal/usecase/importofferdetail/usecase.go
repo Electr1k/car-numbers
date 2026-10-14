@@ -20,6 +20,10 @@ type offerRepository interface {
 	UpdateOffer(ctx context.Context, offer *domain.Offer) error
 }
 
+type profileRepository interface {
+	UpdateOrCreateProfile(ctx context.Context, profile *domain.Profile) (*domain.Profile, error)
+}
+
 type feature interface {
 	Enabled(ctx context.Context, key domain.FeatureKey) (bool, error)
 }
@@ -28,6 +32,7 @@ type feature interface {
 type UseCase struct {
 	resolver   resolver
 	repository offerRepository
+	profiles   profileRepository
 	features   feature
 	logger     *slog.Logger
 }
@@ -35,12 +40,14 @@ type UseCase struct {
 func New(
 	resolver resolver,
 	repository offerRepository,
+	profiles profileRepository,
 	features feature,
 	logger *slog.Logger,
 ) *UseCase {
 	return &UseCase{
 		resolver:   resolver,
 		repository: repository,
+		profiles:   profiles,
 		features:   features,
 		logger:     logger,
 	}
@@ -75,11 +82,31 @@ func (uc *UseCase) Handle(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
+	if err := uc.linkProfile(ctx, enriched); err != nil {
+		return err
+	}
+
 	err = uc.repository.UpdateOffer(ctx, enriched.Offer)
 	if err != nil {
 		return err
 	}
 	logger.InfoContext(ctx, "import detail finished")
+
+	return nil
+}
+
+// linkProfile - сохраняет профиль из деталки и привязывает к нему оффер
+func (uc *UseCase) linkProfile(ctx context.Context, enriched domain.OfferWithPlate) error {
+	if enriched.Profile == nil {
+		return nil
+	}
+
+	profile, err := uc.profiles.UpdateOrCreateProfile(ctx, enriched.Profile)
+	if err != nil {
+		return err
+	}
+
+	enriched.Offer.ProfileID = &profile.ID
 
 	return nil
 }

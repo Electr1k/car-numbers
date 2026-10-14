@@ -38,6 +38,7 @@ const (
 type Offer struct {
 	ID              uuid.UUID         `validate:"required"`                                    // ID - Идентификатор
 	PlateID         uuid.UUID         `validate:"required"`                                    // PlateID - Идентификатор номера
+	ProfileID       *uuid.UUID        `validate:"omitempty"`                                   // ProfileID - Профиль продавца
 	Provider        Provider          `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найдено предложение
 	ExternalID      string            `validate:"required"`                                    // ExternalID - Идентификатор у провайдера
 	Price           *float64          `validate:"omitempty,gt=0"`                              // Price - Цена
@@ -113,6 +114,7 @@ func NewOffer(
 	return newOffer(
 		id,
 		plateID,
+		nil,
 		provider,
 		externalID,
 		price,
@@ -135,6 +137,7 @@ func NewOffer(
 func RestoreOffer(
 	id uuid.UUID,
 	plateID uuid.UUID,
+	profileID *uuid.UUID,
 	provider Provider,
 	externalID string,
 	price *float64,
@@ -154,6 +157,7 @@ func RestoreOffer(
 	return newOffer(
 		id,
 		plateID,
+		profileID,
 		provider,
 		externalID,
 		price,
@@ -175,6 +179,7 @@ func RestoreOffer(
 func newOffer(
 	id uuid.UUID,
 	plateID uuid.UUID,
+	profileID *uuid.UUID,
 	provider Provider,
 	externalID string,
 	price *float64,
@@ -194,6 +199,7 @@ func newOffer(
 	offer := &Offer{
 		ID:              id,
 		PlateID:         plateID,
+		ProfileID:       profileID,
 		Provider:        provider,
 		ExternalID:      externalID,
 		Price:           price,
@@ -220,6 +226,7 @@ func newOffer(
 
 // OfferWithPlate - Предложение вместе с номером, к которому оно относится
 type OfferWithPlate struct {
-	Plate *Plate
-	Offer *Offer
+	Plate   *Plate
+	Offer   *Offer
+	Profile *Profile
 }
