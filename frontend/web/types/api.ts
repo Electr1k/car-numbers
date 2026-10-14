@@ -27,6 +27,13 @@ export interface PlatesResponse {
   next_cursor: string | null
 }
 
+export interface SellerProfile {
+  id: string
+  login: string
+  name: string | null
+  icon_url: string | null
+}
+
 export interface Offer {
   id: string
   provider: Provider
@@ -39,6 +46,7 @@ export interface Offer {
   posted_at: string
   refreshed_at: string
   url: string
+  profile: SellerProfile | null
 }
 
 export interface PlateDetail {
