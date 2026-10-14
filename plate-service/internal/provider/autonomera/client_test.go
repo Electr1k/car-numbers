@@ -95,6 +95,9 @@ func TestQueryParams(t *testing.T) {
 		if query.Get("order") != "a.`created`" || query.Get("dir") != "DESC" {
 			t.Fatalf("%s: order/dir = %q/%q", c.section, query.Get("order"), query.Get("dir"))
 		}
+		if !strings.Contains(got.URL.RawQuery, "&order=") || strings.Index(got.URL.RawQuery, "&order=") > strings.Index(got.URL.RawQuery, "&dir=") {
+			t.Fatalf("%s: order must go before dir: %s", c.section, got.URL.RawQuery)
+		}
 		if query.Get("blog") != c.wantBlog {
 			t.Fatalf("%s: blog = %q, want %q", c.section, query.Get("blog"), c.wantBlog)
 		}

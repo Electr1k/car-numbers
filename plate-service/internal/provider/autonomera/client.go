@@ -143,13 +143,19 @@ func (c *Client) pageHeaders() http.Header {
 }
 
 func (c *Client) buildURL(section Section, start int) string {
-	query := url.Values{}
-	query.Set("order", orderColumn)
-	query.Set("dir", orderDirection)
-	query.Set("start", strconv.Itoa(start))
-	query.Set("blog", section.blog())
+	params := [][2]string{
+		{"blog", section.blog()},
+		{"order", orderColumn},
+		{"dir", orderDirection},
+		{"start", strconv.Itoa(start)},
+	}
 
-	return c.baseURL + getNumbersPath + "?" + query.Encode()
+	encoded := make([]string, 0, len(params))
+	for _, param := range params {
+		encoded = append(encoded, param[0]+"="+url.QueryEscape(param[1]))
+	}
+
+	return c.baseURL + getNumbersPath + "?" + strings.Join(encoded, "&")
 }
 
 // processBadStatus - Процессинг ошибки по статус коду
