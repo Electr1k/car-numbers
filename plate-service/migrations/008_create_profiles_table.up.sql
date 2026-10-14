@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     provider VARCHAR(255) NOT NULL,
     external_id text NOT NULL,
     url VARCHAR(255) NOT NULL,
+    icon_url VARCHAR(255),
     login text NOT NULL,
     name text,
     phone VARCHAR(16),
@@ -20,6 +21,7 @@ comment on column profiles.id is 'Идентификатор профиля';
 comment on column profiles.provider is 'Провайдер, в котором найден профиль';
 comment on column profiles.external_id is 'Идентификатор у провайдера';
 comment on column profiles.url is 'Ссылка на профиль у провайдера';
+comment on column profiles.icon_url is 'Ссылка на иконку профиля';
 comment on column profiles.login is 'Логин';
 comment on column profiles.name is 'Имя';
 comment on column profiles.phone is 'Номер';

@@ -106,6 +106,12 @@ const (
 	// sellerSelector - блок продавца в карточке
 	sellerSelector = ".product__seller"
 
+	// sellerIconSelector - иконка продавца
+	sellerIconSelector = ".product-seller__img img"
+
+	// sellerIconPlaceholder - заглушка вместо иконки
+	sellerIconPlaceholder = "/images/avatars/0.svg"
+
 	// sellerLinkSelector - ссылка на профиль продавца, текст ссылки - логин
 	sellerLinkSelector = ".product-seller__name a"
 
@@ -647,6 +653,7 @@ func (m *Mapper) parseProfileFromDetail(product *goquery.Selection, now time.Tim
 		domain.ProviderAnomera,
 		externalID,
 		m.baseURL+"/user-"+externalID+".html",
+		m.parseSellerIcon(seller),
 		login,
 		parseSellerName(seller),
 		parseSellerPhone(seller),
@@ -661,6 +668,17 @@ func (m *Mapper) parseProfileFromDetail(product *goquery.Selection, now time.Tim
 	}
 
 	return profile, nil
+}
+
+// parseSellerIcon - ссылка на иконку продавца, nil если вместо неё заглушка
+func (m *Mapper) parseSellerIcon(seller *goquery.Selection) *string {
+	path := strings.TrimSpace(seller.Find(sellerIconSelector).First().AttrOr("src", ""))
+	if !strings.HasPrefix(path, "/") || path == sellerIconPlaceholder {
+		return nil
+	}
+
+	iconURL := m.baseURL + path
+	return &iconURL
 }
 
 // parseSellerName - имя продавца без скобок

@@ -44,6 +44,9 @@ const (
 
 	// profileHrefPrefix - ссылка на профиль продавца без идентификатора
 	profileHrefPrefix = "/user?user_id="
+
+	// profileIconSelector - иконка продавца, загружается лениво из data-src; без неё на её месте заглушка icon-user
+	profileIconSelector = ".table-user__ava img"
 )
 
 type Mapper struct {
@@ -317,6 +320,7 @@ func (m *Mapper) MapOfferDetailToDomain(sel *goquery.Selection, offer domain.Off
 func (m *Mapper) parseProfileFromDetail(table *goquery.Selection) (*domain.Profile, error) {
 	var (
 		externalID string
+		iconURL    *string
 		login      string
 		name       *string
 		phone      *string
@@ -332,6 +336,7 @@ func (m *Mapper) parseProfileFromDetail(table *goquery.Selection) (*domain.Profi
 			if id, ok := strings.CutPrefix(href, profileHrefPrefix); ok {
 				externalID = id
 			}
+			iconURL = m.absoluteURL(value.Find(profileIconSelector).AttrOr("data-src", ""))
 			login = strings.TrimSpace(value.Find(".table-user__name").Text())
 		case "Имя":
 			name = parseProfileValue(value)
@@ -358,6 +363,7 @@ func (m *Mapper) parseProfileFromDetail(table *goquery.Selection) (*domain.Profi
 		domain.ProviderAutonomera,
 		externalID,
 		m.baseURL+profileHrefPrefix+externalID,
+		iconURL,
 		login,
 		name,
 		phone,
@@ -372,6 +378,17 @@ func (m *Mapper) parseProfileFromDetail(table *goquery.Selection) (*domain.Profi
 	}
 
 	return profile, nil
+}
+
+// absoluteURL - ссылка на ресурс провайдера по относительному пути, nil если пути нет
+func (m *Mapper) absoluteURL(path string) *string {
+	path = strings.TrimSpace(path)
+	if !strings.HasPrefix(path, "/") {
+		return nil
+	}
+
+	url := m.baseURL + path
+	return &url
 }
 
 // parseProfileValue - Значение поля профиля, nil если пусто или скрыто

@@ -18,6 +18,7 @@ type Profile struct {
 	Provider     Provider   `validate:"required,oneof=autonomera gosnomeru anomera"` // Provider - Провайдер, в котором найден профиль
 	ExternalID   string     `validate:"required"`                                    // ExternalID - Идентификатор у провайдера
 	URL          string     `validate:"required,max=255"`                            // URL - Ссылка на профиль у провайдера
+	IconURL      *string    `validate:"omitempty,max=255"`                           // IconURL - Ссылка на иконку профиля
 	Login        string     `validate:"required"`                                    // Login - Логин
 	Name         *string    `validate:"omitempty"`                                   // Name - Имя
 	Phone        *string    `validate:"omitempty,len=11,numeric,startswith=7"`       // Phone - Номер в виде 79999999999
@@ -56,6 +57,7 @@ func NewProfile(
 	provider Provider,
 	externalID string,
 	url string,
+	iconURL *string,
 	login string,
 	name *string,
 	phone *string,
@@ -75,6 +77,7 @@ func NewProfile(
 		provider,
 		externalID,
 		url,
+		iconURL,
 		login,
 		name,
 		phone,
@@ -94,6 +97,7 @@ func RestoreProfile(
 	provider Provider,
 	externalID string,
 	url string,
+	iconURL *string,
 	login string,
 	name *string,
 	phone *string,
@@ -110,6 +114,7 @@ func RestoreProfile(
 		provider,
 		externalID,
 		url,
+		iconURL,
 		login,
 		name,
 		phone,
@@ -128,6 +133,7 @@ func newProfile(
 	provider Provider,
 	externalID string,
 	url string,
+	iconURL *string,
 	login string,
 	name *string,
 	phone *string,
@@ -144,6 +150,7 @@ func newProfile(
 		Provider:     provider,
 		ExternalID:   externalID,
 		URL:          url,
+		IconURL:      iconURL,
 		Login:        login,
 		Name:         name,
 		Phone:        phone,

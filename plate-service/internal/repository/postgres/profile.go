@@ -20,11 +20,12 @@ func NewProfileRepository(postgres *Postgres) *ProfileRepository {
 
 // upsertProfileQuery - вставка профиля или обновление по (provider, external_id), id существующего профиля сохраняется
 const upsertProfileQuery = `
-INSERT INTO profiles (id, provider, external_id, url, login, name, phone, email,
+INSERT INTO profiles (id, provider, external_id, url, icon_url, login, name, phone, email,
 	registered_at, last_visit_at, raw, description)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 ON CONFLICT (provider, external_id) DO UPDATE SET
 	url           = EXCLUDED.url,
+	icon_url      = EXCLUDED.icon_url,
 	login         = EXCLUDED.login,
 	name          = EXCLUDED.name,
 	phone         = EXCLUDED.phone,
@@ -34,13 +35,13 @@ ON CONFLICT (provider, external_id) DO UPDATE SET
 	raw           = EXCLUDED.raw,
 	description   = EXCLUDED.description,
 	updated_at    = CURRENT_TIMESTAMP
-RETURNING id, provider, external_id, url, login, name, phone, email,
+RETURNING id, provider, external_id, url, icon_url, login, name, phone, email,
 	registered_at, last_visit_at, raw, description, created_at, updated_at`
 
 // UpdateOrCreateProfile - Сохранение профиля из свежей деталки поверх сохранённого
 func (r *ProfileRepository) UpdateOrCreateProfile(ctx context.Context, profile *domain.Profile) (*domain.Profile, error) {
 	row := r.postgres.pool.QueryRow(ctx, upsertProfileQuery,
-		profile.ID, profile.Provider, profile.ExternalID, profile.URL, profile.Login, profile.Name, profile.Phone,
+		profile.ID, profile.Provider, profile.ExternalID, profile.URL, profile.IconURL, profile.Login, profile.Name, profile.Phone,
 		profile.Email, profile.RegisteredAt, profile.LastVisitAt, profile.Raw, profile.Description,
 	)
 
@@ -49,6 +50,7 @@ func (r *ProfileRepository) UpdateOrCreateProfile(ctx context.Context, profile *
 		provider     string
 		externalID   string
 		url          string
+		iconURL      *string
 		login        string
 		name         *string
 		phone        *string
@@ -61,14 +63,14 @@ func (r *ProfileRepository) UpdateOrCreateProfile(ctx context.Context, profile *
 		updatedAt    *time.Time
 	)
 
-	err := row.Scan(&id, &provider, &externalID, &url, &login, &name, &phone, &email,
+	err := row.Scan(&id, &provider, &externalID, &url, &iconURL, &login, &name, &phone, &email,
 		&registeredAt, &lastVisitAt, &raw, &description, &createdAt, &updatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("save profile %s/%s: %w", profile.Provider, profile.ExternalID, err)
 	}
 
 	stored, err := domain.RestoreProfile(
-		id, domain.Provider(provider), externalID, url, login, name, phone, email,
+		id, domain.Provider(provider), externalID, url, iconURL, login, name, phone, email,
 		registeredAt, lastVisitAt, raw, description, createdAt, updatedAt,
 	)
 	if err != nil {
