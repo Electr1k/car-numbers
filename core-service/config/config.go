@@ -39,9 +39,11 @@ type HTTPServer struct {
 
 // RateLimit - лимиты рпм по эндпоинтам
 type RateLimit struct {
-	Plates    int `env:"PLATES_RPM" env-default:"25"`
-	Plate     int `env:"PLATE_RPM" env-default:"15"`
-	Valuation int `env:"VALUATION_RPM" env-default:"15"`
+	Plates        int `env:"PLATES_RPM" env-default:"25"`
+	Plate         int `env:"PLATE_RPM" env-default:"15"`
+	Profile       int `env:"PROFILE_RPM" env-default:"15"`
+	ProfileOffers int `env:"PROFILE_OFFERS_RPM" env-default:"30"`
+	Valuation     int `env:"VALUATION_RPM" env-default:"15"`
 }
 
 type LogConfig struct {

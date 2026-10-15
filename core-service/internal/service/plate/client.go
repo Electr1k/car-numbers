@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	fetchPlates  = "/api/v1/plates"
-	fetchRegions = "/api/v1/regions"
+	fetchPlates   = "/api/v1/plates"
+	fetchRegions  = "/api/v1/regions"
+	fetchProfiles = "/api/v1/profiles"
 
 	maxResponseSize     = 8 << 20
 	maxIdleConns        = 100
@@ -204,6 +205,103 @@ func (c *Client) FetchPlateByID(ctx context.Context, id uuid.UUID) (*FetchPlateB
 	}
 
 	var jsonResponse FetchPlateByIDResponse
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
+		return nil, fmt.Errorf("parse json from %s: %w", requestURL, err)
+	}
+
+	return &jsonResponse, nil
+}
+
+type FetchProfileByIDResponse struct {
+	ID       uuid.UUID                 `json:"id"`
+	Provider string                    `json:"provider"`
+	URL      string                    `json:"url"`
+	IconURL  *string                   `json:"icon_url"`
+	Login    string                    `json:"login"`
+	Name     *string                   `json:"name"`
+	Phone    *string                   `json:"phone"`
+	Email    *string                   `json:"email"`
+	Offers   FetchProfileOffers        `json:"offers"`
+	Related  []FetchProfileRelatedItem `json:"related"`
+}
+
+type FetchProfileOffers struct {
+	Active int `json:"active"`
+	Total  int `json:"total"`
+}
+
+type FetchProfileRelatedItem struct {
+	ID       uuid.UUID          `json:"id"`
+	Provider string             `json:"provider"`
+	URL      string             `json:"url"`
+	IconURL  *string            `json:"icon_url"`
+	Login    string             `json:"login"`
+	Name     *string            `json:"name"`
+	Offers   FetchProfileOffers `json:"offers"`
+	Matches  []string           `json:"matches"`
+}
+
+// FetchProfileByID возвращает профиль продавца со связанными аккаунтами
+func (c *Client) FetchProfileByID(ctx context.Context, id uuid.UUID) (*FetchProfileByIDResponse, error) {
+	requestURL := c.baseURL + fetchProfiles + "/" + id.String()
+
+	response, err := c.request(ctx, http.MethodGet, requestURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonResponse FetchProfileByIDResponse
+	if err := json.Unmarshal(response, &jsonResponse); err != nil {
+		return nil, fmt.Errorf("parse json from %s: %w", requestURL, err)
+	}
+
+	return &jsonResponse, nil
+}
+
+type FetchProfileOffersParams struct {
+	ProfileID uuid.UUID
+	Statuses  []string
+	Limit     int
+	Cursor    string
+}
+
+type FetchProfileOffersResponse struct {
+	Items      []FetchProfileOffersItem `json:"items"`
+	NextCursor *string                  `json:"next_cursor"`
+}
+
+type FetchProfileOffersItem struct {
+	ID          uuid.UUID `json:"id"`
+	PlateID     uuid.UUID `json:"plate_id"`
+	Number      string    `json:"number"`
+	Price       *float64  `json:"price"`
+	Status      string    `json:"status"`
+	PostedAt    time.Time `json:"posted_at"`
+	RefreshedAt time.Time `json:"refreshed_at"`
+	URL         string    `json:"url"`
+}
+
+// FetchProfileOffers возвращает страницу предложений продавца
+func (c *Client) FetchProfileOffers(ctx context.Context, params FetchProfileOffersParams) (*FetchProfileOffersResponse, error) {
+	query := url.Values{}
+	for _, status := range params.Statuses {
+		query.Add("statuses", status)
+	}
+	if params.Limit > 0 {
+		query.Set("limit", strconv.Itoa(params.Limit))
+	}
+	if params.Cursor != "" {
+		query.Set("cursor", params.Cursor)
+	}
+
+	requestURL := c.baseURL + fetchProfiles + "/" + params.ProfileID.String() + "/offers?" + query.Encode()
+
+	response, err := c.request(ctx, http.MethodGet, requestURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonResponse FetchProfileOffersResponse
 	if err := json.Unmarshal(response, &jsonResponse); err != nil {
 		return nil, fmt.Errorf("parse json from %s: %w", requestURL, err)
 	}

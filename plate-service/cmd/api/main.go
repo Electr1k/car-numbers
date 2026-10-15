@@ -7,6 +7,7 @@ import (
 	"plate-service/internal/feature"
 	httptransport "plate-service/internal/http"
 	"plate-service/internal/http/handler/plate"
+	"plate-service/internal/http/handler/profile"
 	"plate-service/internal/http/handler/region"
 	"plate-service/internal/job"
 	"plate-service/internal/job/cron"
@@ -14,6 +15,8 @@ import (
 	"plate-service/internal/scheduler"
 	"plate-service/internal/usecase/fetchplate"
 	"plate-service/internal/usecase/fetchplates"
+	"plate-service/internal/usecase/fetchprofile"
+	"plate-service/internal/usecase/fetchprofileoffers"
 	"plate-service/internal/usecase/fetchregions"
 
 	"golang.org/x/sync/errgroup"
@@ -37,10 +40,12 @@ func main() {
 		}
 
 		offerRepository := postgres.NewOfferRepository(a.Database)
+		profileRepository := postgres.NewProfileRepository(a.Database)
 
 		router := httptransport.NewRouter(a.Config.HTTPServer, a.Logger, httptransport.Handlers{
-			Region: region.New(fetchregions.New(postgres.NewRegionRepository(a.Database))),
-			Plate:  plate.New(fetchplate.New(offerRepository), fetchplates.New(offerRepository)),
+			Region:  region.New(fetchregions.New(postgres.NewRegionRepository(a.Database))),
+			Plate:   plate.New(fetchplate.New(offerRepository), fetchplates.New(offerRepository)),
+			Profile: profile.New(fetchprofile.New(profileRepository), fetchprofileoffers.New(profileRepository)),
 		})
 		httpServer := httptransport.NewServer(a.Config.HTTPServer, router)
 

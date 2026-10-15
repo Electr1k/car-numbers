@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"plate-service/config"
 	"plate-service/internal/http/handler/plate"
+	"plate-service/internal/http/handler/profile"
 	"plate-service/internal/http/handler/region"
 	"plate-service/internal/http/response"
 
@@ -13,8 +14,9 @@ import (
 
 // Handlers - хендлеры, обслуживающие маршруты api
 type Handlers struct {
-	Region *region.Handler
-	Plate  *plate.Handler
+	Region  *region.Handler
+	Plate   *plate.Handler
+	Profile *profile.Handler
 }
 
 func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) chi.Router {
@@ -29,6 +31,8 @@ func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) ch
 		r.Get("/regions", response.Wrap(logger, handlers.Region.Handle))
 		r.Get("/plates", response.Wrap(logger, handlers.Plate.GetPlates))
 		r.Get("/plates/{id}", response.Wrap(logger, handlers.Plate.GetPlateByID))
+		r.Get("/profiles/{id}", response.Wrap(logger, handlers.Profile.GetProfileByID))
+		r.Get("/profiles/{id}/offers", response.Wrap(logger, handlers.Profile.GetProfileOffers))
 	})
 
 	return r

@@ -4,6 +4,7 @@
     <main>
       <NuxtPage />
     </main>
+    <SellerPanel />
   </div>
 </template>
 

@@ -24,6 +24,15 @@ const (
 	OfferStatusInactive OfferStatus = "inactive"
 )
 
+// Valid - Известный статус предложения
+func (s OfferStatus) Valid() bool {
+	switch s {
+	case OfferStatusActive, OfferStatusSold, OfferStatusInactive:
+		return true
+	}
+	return false
+}
+
 type OfferWhereabouts string
 
 const (

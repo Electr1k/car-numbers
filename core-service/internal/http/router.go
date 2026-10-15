@@ -3,6 +3,7 @@ package http
 import (
 	"core-service/config"
 	"core-service/internal/http/handler/plate"
+	"core-service/internal/http/handler/profile"
 	"core-service/internal/http/handler/region"
 	"core-service/internal/http/handler/valuation"
 	"core-service/internal/http/response"
@@ -15,6 +16,7 @@ import (
 // Handlers - хендлеры, обслуживающие маршруты api
 type Handlers struct {
 	Plate     *plate.Handler
+	Profile   *profile.Handler
 	Regions   *region.Handler
 	Valuation *valuation.Handler
 }
@@ -31,6 +33,8 @@ func NewRouter(cfg config.HTTPServer, logger *slog.Logger, handlers Handlers) ch
 	r.Route("/api/v1", func(r chi.Router) {
 		r.With(rateLimit("/plates", cfg.RateLimit.Plates, logger)).Get("/plates", response.Wrap(logger, handlers.Plate.FetchPlates))
 		r.With(rateLimit("/plates/{id}", cfg.RateLimit.Plate, logger)).Get("/plates/{id}", response.Wrap(logger, handlers.Plate.FetchPlateByID))
+		r.With(rateLimit("/profiles/{id}", cfg.RateLimit.Profile, logger)).Get("/profiles/{id}", response.Wrap(logger, handlers.Profile.FetchProfileByID))
+		r.With(rateLimit("/profiles/{id}/offers", cfg.RateLimit.ProfileOffers, logger)).Get("/profiles/{id}/offers", response.Wrap(logger, handlers.Profile.FetchProfileOffers))
 		r.Get("/regions", response.Wrap(logger, handlers.Regions.FetchRegions))
 		r.With(rateLimit("/valuation", cfg.RateLimit.Valuation, logger)).Get("/valuation", response.Wrap(logger, handlers.Valuation.FetchValuation))
 	})

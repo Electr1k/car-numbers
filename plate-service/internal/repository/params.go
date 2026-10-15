@@ -3,6 +3,8 @@ package repository
 import (
 	"plate-service/internal/domain"
 	"plate-service/internal/domain/data"
+
+	"github.com/google/uuid"
 )
 
 type GetPlatesParams struct {
@@ -15,4 +17,11 @@ type GetPlatesParams struct {
 	Sort            data.PlateSort
 	Limit           int
 	Cursor          *data.FeedCursor
+}
+
+type GetProfileOffersParams struct {
+	ProfileID uuid.UUID
+	Statuses  []domain.OfferStatus
+	Limit     int
+	Cursor    *data.ProfileOffersCursor
 }

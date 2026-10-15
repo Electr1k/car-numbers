@@ -49,6 +49,49 @@ export interface Offer {
   profile: SellerProfile | null
 }
 
+/** Признак, по которому другой аккаунт считается тем же продавцом */
+export type ProfileMatch = 'phone' | 'email' | 'login'
+
+export interface ProfileOffers { active: number; total: number }
+
+export interface RelatedProfile {
+  id: string
+  provider: Provider
+  url: string
+  icon_url: string | null
+  login: string
+  name: string | null
+  offers: ProfileOffers
+  matches: ProfileMatch[]
+}
+
+export interface ProfileDetail {
+  id: string
+  provider: Provider
+  url: string
+  icon_url: string | null
+  login: string
+  name: string | null
+  /** 11 цифр вида 79991234567 */
+  phone: string | null
+  email: string | null
+  offers: ProfileOffers
+  related: RelatedProfile[]
+}
+
+export interface ProfileOffer {
+  id: string
+  plate_id: string
+  number: string
+  price: number | null
+  status: OfferStatus
+  posted_at: string
+  refreshed_at: string
+  url: string
+}
+
+export interface ProfileOffersResponse { items: ProfileOffer[]; next_cursor: string | null }
+
 export interface PlateDetail {
   id: string
   number: string
